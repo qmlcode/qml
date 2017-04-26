@@ -5,6 +5,7 @@ A toolkit for representation learning of molecules and solids.
 Current author list:
 * Anders S. Christensen (University of Basel)
 * Felix Faber (University of Basel)
+* O. Anatole von Lilienfeld (University of Basel)
 
 ## 1) Installation
 
@@ -28,25 +29,105 @@ Note: If you access to the Intel compilers, you can replace the default `Makefil
 
     export PYTHONPATH=/path/to/installation/qml:$PYTHONPATH
 
-## 2) How to use:
+1.4) TODO: create `setup.py` install script
+
+## 2) Representations of compounds:
+
+### 2.1) Supported representations:
+
+Currently QML supports the following representations for molecules:
+
+* Molecular coulomb matrix (sorted by row-norm, or unsorted)
+* Atomic coulomb matrix (sorted by distance to query atom, or row-norm)
+* ARAD
+
+Currently QML supports the following representations for solids:
+
+* ARAD
+
+### 2.2) Generating representations using the `Compound` class:
+    The following example demonstrates how to generate a representation via the `qml.Compound` class.
+
+    from qml import Compound
+
+    # Read in an xyz or cif file.
+    water = Compound(xyz="water.xyz")
+
+    # Generate a molecular coulomb matrices sorted by row norm.
+    water.generate_coulomb_matrix(size=5, sort="row-norm")
+
+    print water.coulomb_matrix
 
 
-## 2.1) Generating representations using the `Compound` class:
-
-## 2.2) Generating representations via the `qml.representations` module:
-
+## 2.3) Generating representations via the `qml.representations` module:
 
     from qml.representations import *
 
+    # Dummy atomtypes and coordinates
+    atomtypes = ["O", "H", H"]
+    coordinates = np.array([1.464, 0.707, 1.056],
+                           [0.878, 1.218, 0.498],
+                           [2.319, 1.126, 0.952])
+
+    # Generate a molecular coulomb matrices sorted by row norm.
+    cm1 = generate_coulomb_matrix(atomtypes, coordinates,
+                                    size=5, sort="row-norm")
+    print cm1
+
+    # Generate all atomic coulomb matrices sorted by distance to
+    # query atom.
+    cm2 = generate_atomic_coulomb_matrix(atomtypes, coordinates,
+                                    size=5, sort="distance")
+    print cm2
 
 
+## 2.4) Benchmarks for QM7:
+Following benchmarks were executed on a single core on an Intel Core i5-6260U @ 1.80 GHz CPU.
+
+Generate ~7K molecular coulomb matrices = 0.06s 
+Generate ~100K atomic coulomb matrices = 0.22s
 
 
-## 2.3) Benchmarks for QM7:
-
+ 
 ## 3.1) Calculate kernels using the `Compound` class:
 
-## 3.2) Calculate kernels using the `qml.kernels` module:
+Example 1: Using a coulomb matrix
+
+    from qml.kernels import laplacian_kernel
+
+    comps = ... # load a Python list of Compunds
+
+    for comp in comps:
+        comp.generate_coulomb_matrix()
+
+    training = comps[:1000]
+
+    K = laplacian_kernel(training, training, sigma=100.0) 
+
+
+Example 1: Using ARAD representation 
+
+    from qml.kernels import arad_kernel
+
+    comps = ... # load a Python list of Compunds
+
+    for comp in comps:
+        comp.generate_coulomb_matrix()
+
+    training = comps[:1000]
+
+    K = arad_kernel(training, training, sigma=100.0)
+
+Additionally for ARAD, when the two sets of `Compound` are identical, it is possible to calculate only the upper triangle, which reduces the computational load by a factor of two.
+
+    from qml.kernels import arad_training_kernel
+    K = arad_training_kernel(training, sigma=100.0) 
+
+
+## 3.2) Calculate kernels using the `qml.kernels` module directly
+
+
+    from qml.kernels import laplacian_kernel
 
 ## 3.3) Benchmarks for QM7:
 
