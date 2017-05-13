@@ -53,46 +53,45 @@ class Compound:
 
         # Representations:
         self.coulomb_matrix = None
-        self.unsorted_coulomb_matrix = None
-        self.local_coulomb_matrix = None
         self.atomic_coulomb_matrix = None
         self.arad_representation = None
+        self.aras_representation = None
 
         if xyz is not None:
             self.read_xyz(xyz)
 
-    def generate_coulomb_matrix(self, size=23):
-        self.coulomb_matrix = fgenerate_coulomb_matrix(self.nuclear_charges, \
+    def generate_coulomb_matrix(self, size=23, sort="row-norm"):
+
+        if (sort == "row-norm"):
+            self.coulomb_matrix = fgenerate_coulomb_matrix(self.nuclear_charges, \
                 self.coordinates, self.natoms, size)
 
-    def generate_unsorted_coulomb_matrix(self, size=23):
-        self.unsorted_coulomb_matrix = fgenerate_unsorted_coulomb_matrix(self.nuclear_charges, \
+        elif (sort == "unsorted"):
+            self.coulomb_matrix = fgenerate_unsorted_coulomb_matrix(self.nuclear_charges, \
                 self.coordinates, self.natoms, size)
 
-    def generate_local_coulomb_matrix(self, calc="all",size=23):
-        self.local_coulomb_matrix = fgenerate_local_coulomb_matrix( \
+        else:
+            print "ERROR: Unknown sorting scheme requested"
+
+
+    def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
+
+        if (sort == "row-norm"):
+            self.local_coulomb_matrix = fgenerate_local_coulomb_matrix( \
                 self.nuclear_charges, self.coordinates, self.natoms, size)
 
-    def generate_atomic_coulomb_matrix(self, calc="all",size=23):
-        self.atomic_coulomb_matrix = fgenerate_atomic_coulomb_matrix( \
+        elif (sort == "distance"):
+            self.atomic_coulomb_matrix = fgenerate_atomic_coulomb_matrix( \
                 self.nuclear_charges, self.coordinates, self.natoms, size)
+
+        else:
+            print "ERROR: Unknown sorting scheme requested"
+
 
     def generate_arad_representation(self, size=23):
         arad_object = ARAD(maxMolSize=size,maxAts=size)
         self.arad_representation = arad_object.describe(np.array(self.coordinates), \
                 np.array(self.nuclear_charges))
-
-        assert (self.arad_representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
-        assert (self.arad_representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
-
-    def generate_periodic_arad_representation(self, size=23, unit_cell=None):
-
-        if unit_cell is None:
-            unit_cell = self.unit_cell
-
-        arad_object = ARAD(maxMolSize=size,maxAts=size)
-        self.arad_representation = arad_object.describe(np.array(self.coordinates), \
-                np.array(self.nuclear_charges), cell=unit_cell)
 
         assert (self.arad_representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
         assert (self.arad_representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
@@ -105,6 +104,11 @@ class Compound:
         f.close()
 
         self.natoms = int(lines[0])
+        self.atomtypes = []
+        self.nuclear_charges = []
+        self.coordinates = []
+
+        self.name = filename
 
         for line in lines[2:]:
             tokens = line.split()

@@ -101,8 +101,6 @@ class ARAD(object):
             sp = np.sum(cD[:,np.newaxis] * cD[np.newaxis,:], axis = 2)
             D1 = np.sqrt(np.sum(cD**2, axis = 1))
             D2 = D1[:,np.newaxis]*D1[np.newaxis,:]
-            angs2 = np.arccos((sp + 10**-12)/(D2 + 10**-12))
-            angs2 = np.nan_to_num(angs2)
             angs = self.getAngle(sp, D2)
 
             #Obtaining cos and sine terms

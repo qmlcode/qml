@@ -32,7 +32,7 @@ Provides
   4. math
   5. distance
 """
-from qml import *
+from compound import Compound
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
