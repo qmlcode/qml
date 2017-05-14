@@ -22,8 +22,8 @@
 
 import numpy as np
 
-from farad_kernels import fget_kernels_arad
-from farad_kernels import fget_symmetric_kernels_arad
+from .farad_kernels import fget_kernels_arad
+from .farad_kernels import fget_symmetric_kernels_arad
 
 PTP = {\
          1  :[1,1] ,2:  [1,8]#Row1

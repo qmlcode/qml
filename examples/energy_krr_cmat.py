@@ -28,7 +28,6 @@ import cPickle
 import numpy as np
 import qml
 from qml.kernels import laplacian_kernel
-from qml.kernels import gaussian_kernel
 from qml.math import cho_solve
 
 
@@ -98,16 +97,17 @@ if __name__ == "__main__":
     llambda = 10**(-10.0)
 
     # Generate training Kernel
+    print "Calculating training kernel ..."
     K = laplacian_kernel(X, X, sigma)
-    # K = gaussian_kernel(X, X, sigma)
 
     # Solve alpha
+    print "Solving alphas ..."
     K[np.diag_indices_from(K)] += llambda
     alpha = cho_solve(K,Y)
 
     # Calculate prediction kernel
+    print "Calculating prediction kernel ..."
     Ks = laplacian_kernel(X, Xs, sigma)
-    # Ks = gaussian_kernel(X, Xs, sigma)
     Yss = np.dot(Ks.transpose(), alpha)
 
     # Print final RMSD
