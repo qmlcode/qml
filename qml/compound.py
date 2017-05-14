@@ -89,8 +89,8 @@ class Compound:
 
 
     def generate_arad_representation(self, size=23):
-        arad_object = ARAD(maxMolSize=size,maxAts=size)
-        self.arad_representation = arad_object.describe(np.array(self.coordinates), \
+        arad = ARAD(maxMolSize=size,maxAts=size)
+        self.arad_representation = arad.describe(np.array(self.coordinates), \
                 np.array(self.nuclear_charges))
 
         assert (self.arad_representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
@@ -113,7 +113,7 @@ class Compound:
         for line in lines[2:]:
             tokens = line.split()
 
-            if len(tokens) < 4:
+            if len(tokens) != 4:
                 break
 
             self.atomtypes.append(tokens[0])

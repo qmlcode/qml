@@ -20,26 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 """
-QML main module
-===============
-
+FML kernels
+=====
 Provides
-  1. Compound-class
-  2. representations
-  3. kernels
-  4. math
-  5. distance
+  1. Gaussian_kernel
+  2. Laplacian_kernel
+  3. ARAD kernels
 """
-from compound import Compound
 
-__author__ = "Anders S. Christensen"
-__copyright__ = "Copyright 2016"
-__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
-__license__ = "MIT"
-__version__ = "0.9.1"
-__maintainer__ = "Anders S. Christensen"
-__email__ = "andersbiceps@gmail.com"
-__status__ = "Production"
+from .kernels import laplacian_kernel, gaussian_kernel
+from .arad_kernels import get_atomic_kernels_arad, get_atomic_symmetric_kernels_arad
 
+__all__ = ['laplacian_kernel', 'gaussian_kernel', 'get_atomic_kernels_arad', 'get_atomic_symmetric_kernels_arad']

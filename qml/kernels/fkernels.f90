@@ -25,7 +25,7 @@ subroutine fget_vector_kernels_laplacian(q1, q2, n1, n2, sigmas, &
 
     implicit none
 
-    ! ARAD descriptors for the training set, format (i,j_1,5,m_1)
+    ! Descriptors for the training set
     double precision, dimension(:,:,:), intent(in) :: q1
     double precision, dimension(:,:,:), intent(in) :: q2
 
