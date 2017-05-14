@@ -107,7 +107,7 @@ subroutine fp_distance_double(A, B, D, p)
 !$OMP PARALLEL DO PRIVATE(temp)
     do i = 1, nb
         do j = 1, na
-            temp(:) = A(:,j) - B(:,i)
+            temp(:) = abs(A(:,j) - B(:,i))
             D(j,i) = (sum(temp**p))**inv_p
         enddo
     enddo
@@ -144,7 +144,7 @@ subroutine fp_distance_integer(A, B, D, p)
 !$OMP PARALLEL DO PRIVATE(temp)
     do i = 1, nb
         do j = 1, na
-            temp(:) = A(:,j) - B(:,i)
+            temp(:) = abs(A(:,j) - B(:,i))
             D(j,i) = (sum(temp**p))**inv_p
         enddo
     enddo

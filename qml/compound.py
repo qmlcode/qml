@@ -60,13 +60,13 @@ class Compound:
         if xyz is not None:
             self.read_xyz(xyz)
 
-    def generate_coulomb_matrix(self, size=23, sort="row-norm"):
+    def generate_coulomb_matrix(self, size=23, sorting="row-norm"):
 
-        if (sort == "row-norm"):
+        if (sorting == "row-norm"):
             self.coulomb_matrix = fgenerate_coulomb_matrix(self.nuclear_charges, \
                 self.coordinates, self.natoms, size)
 
-        elif (sort == "unsorted"):
+        elif (sorting == "unsorted"):
             self.coulomb_matrix = fgenerate_unsorted_coulomb_matrix(self.nuclear_charges, \
                 self.coordinates, self.natoms, size)
 
@@ -76,11 +76,11 @@ class Compound:
 
     def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
 
-        if (sort == "row-norm"):
+        if (sorting == "row-norm"):
             self.local_coulomb_matrix = fgenerate_local_coulomb_matrix( \
                 self.nuclear_charges, self.coordinates, self.natoms, size)
 
-        elif (sort == "distance"):
+        elif (sorting == "distance"):
             self.atomic_coulomb_matrix = fgenerate_atomic_coulomb_matrix( \
                 self.nuclear_charges, self.coordinates, self.natoms, size)
 

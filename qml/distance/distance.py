@@ -44,15 +44,15 @@ def manhattan_distance(A, B):
     if len(A.shape) != 2 or len(B.shape) != 2:
         raise ValueError('expected matrices of dimension=2')
 
-    if B.shape[0] != A.shape[0]:
+    if B.shape[1] != A.shape[1]:
         raise ValueError('expected matrices containing vectors of same size')
 
-    na = A.shape[1]
-    nb = B.shape[1]
+    na = A.shape[0]
+    nb = B.shape[0]
 
     D = empty((na, nb), order='F')
 
-    fmanhattan_distance(A, B, D)
+    fmanhattan_distance(A.T, B.T, D)
 
     return D
 
@@ -73,15 +73,15 @@ def l2_distance(A, B):
     if len(A.shape) != 2 or len(B.shape) != 2:
         raise ValueError('expected matrices of dimension=2')
 
-    if B.shape[0] != A.shape[0]:
+    if B.shape[1] != A.shape[1]:
         raise ValueError('expected matrices containing vectors of same size')
 
-    na = A.shape[1]
-    nb = B.shape[1]
+    na = A.shape[0]
+    nb = B.shape[0]
 
     D = empty((na, nb), order='F')
 
-    fl2_distance(A, B, D)
+    fl2_distance(A.T, B.T, D)
 
     return D
 
@@ -103,11 +103,11 @@ def p_distance(A, B, p=2):
     if len(A.shape) != 2 or len(B.shape) != 2:
         raise ValueError('expected matrices of dimension=2')
 
-    if B.shape[0] != A.shape[0]:
+    if B.shape[1] != A.shape[1]:
         raise ValueError('expected matrices containing vectors of same size')
 
-    na = A.shape[1]
-    nb = B.shape[1]
+    na = A.shape[0]
+    nb = B.shape[0]
 
     D = empty((na, nb), order='F')
 
@@ -116,10 +116,10 @@ def p_distance(A, B, p=2):
         if (p == 2):
             fl2_distance(A, B, D)
         else:
-            fp_distance_integer(A, B, D, p)
+            fp_distance_integer(A.T, B.T, D, p)
 
     elif (type(p) == type(1.0)):
-        fp_distance_double(A, B, D, p)
+        fp_distance_double(A.T, B.T, D, p)
     else:
         raise ValueError('expected exponent of integer or float type')
 

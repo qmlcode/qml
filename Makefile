@@ -36,7 +36,6 @@ qml/kernels/farad_kernels.so: qml/kernels/farad_kernels.f90
 	mv farad_kernels*.so qml/kernels/farad_kernels.so
 
 clean:
-	rm -f qml/*.so
 	rm -f qml/*.pyc
 	rm -f qml/math/*.so
 	rm -f qml/math/*.pyc
