@@ -5,10 +5,10 @@ OBJECTS = \
 	qml/kernels/farad_kernels.so \
 	qml/kernels/fkernels.so
 
-# Flags for GCC compilers and MKL
-COMPILER_FLAGS = --opt='-O3 -fopenmp -m64 -march=native' --f90flags='-I${MKLROOT}/include'
+# Flags for GCC compilers and system BLAS/LAPACK
+COMPILER_FLAGS = --opt='-O3 -fopenmp -m64 -march=native' --f90flags=''
 LINKER_FLAGS = -lgomp -lpthread -lm -ldl
-MATH_LINKER_FLAGS = -L${MKLROOT}/lib/intel64 -lmkl_rt
+MATH_LINKER_FLAGS = -lblas -llapack
 
 # F2PY executable
 F2PY_EXEC = f2py

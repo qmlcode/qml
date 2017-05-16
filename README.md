@@ -94,42 +94,6 @@ Generate ~100K atomic coulomb matrices = 0.22s
  
 ## 3.1) Calculate kernels using the `Compound` class:
 
-Example 1: Using a coulomb matrix
-
-```python
-from qml.kernels import laplacian_kernel
-
-comps = ... # load a Python list of Compunds
-
-for comp in comps:
-    comp.generate_coulomb_matrix()
-
-training = comps[:1000]
-
-K = laplacian_kernel(training, training, sigma=100.0) 
-```
-
-Example 1: Using ARAD representation 
-
-```python
-from qml.kernels import arad_kernel
-
-comps = ... # load a Python list of Compunds
-
-for comp in comps:
-    comp.generate_coulomb_matrix()
-
-training = comps[:1000]
-
-K = arad_kernel(training, training, sigma=100.0)
-```
-
-Additionally for ARAD, when the two sets of `Compound` are identical, it is possible to calculate only the upper triangle, which reduces the computational load by a factor of two.
-
-```python
-from qml.kernels import arad_training_kernel
-K = arad_training_kernel(training, sigma=100.0) 
-```
 
 ## 3.2) Calculate kernels using the `qml.kernels` module directly
 
