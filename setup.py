@@ -1,0 +1,76 @@
+import sys
+from numpy.distutils.core import Extension, setup
+
+__author__ = "Anders S. Christensen"
+__copyright__ = "Copyright 2016"
+__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
+__license__ = "MIT"
+__version__ = "0.2.1"
+__maintainer__ = "Anders S. Christensen"
+__email__ = "andersbiceps@gmail.com"
+__status__ = "Beta"
+__description__ = "Quantum Machine Learning"
+__url__ = "https://github.com/qmlcode/qml"
+
+
+FORTRAN = "fortran"
+
+# GNU
+COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native"]
+LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl "]
+MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
+
+# Intel
+# COMPILER_FLAGS = ["-xHost", "-O3", "-axAVX", "-qopenmp"]
+# LINKER_FLAGS = ["-liomp5", " -lpthread", "-lm", "-ldl"]
+# MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+
+
+ext_frepresentations = Extension(name = 'frepresentations',
+                          sources = ['src/frepresentations.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN)
+
+ext_fcho_solve = Extension(name = 'fcho_solve',
+                          sources = ['src/fcho_solve.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
+                          language = FORTRAN)
+
+# use README.md as long description
+def readme():
+    with open('README.md') as f:
+        return f.read()
+
+def setup_pepytools():
+
+    setup(
+
+          name="qml",
+
+          # metadata
+          version=__version__,
+          author=__author__,
+          author_email=__email__,
+          platforms = 'Any',
+          description = __description__,
+          long_description = readme(),
+          keywords = 'Quantum Machine Learning',
+          url = __url__,
+
+          # set up package contents
+          package_dir={'qml': 'src'},
+          packages=['qml'],
+          ext_package = 'qml',
+          ext_modules = [ext_frepresentations, ext_fcho_solve],
+)
+
+if __name__ == '__main__':
+
+    print sys.argv
+    setup_pepytools()

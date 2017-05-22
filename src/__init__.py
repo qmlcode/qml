@@ -20,6 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .distance import manhattan_distance, l2_distance, p_distance
 
-__all__ = ['manhattan_distance', 'l2_distance', 'p_distance']
+"""
+QML main module
+===============
+
+Provides
+  1. Compound-class
+  2. representations
+  3. kernels
+  4. math
+  5. distance
+"""
+from compound import Compound
+
+__author__ = "Anders S. Christensen"
+__copyright__ = "Copyright 2016"
+__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
+__license__ = "MIT"
+__version__ = "0.2.1"
+__maintainer__ = "Anders S. Christensen"
+__email__ = "andersbiceps@gmail.com"
+__status__ = "Beta"
+

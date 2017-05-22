@@ -29,7 +29,7 @@ from representations import fgenerate_unsorted_coulomb_matrix
 from representations import fgenerate_local_coulomb_matrix
 from representations import fgenerate_atomic_coulomb_matrix
 
-from representations import ARAD
+from arad import ARAD
 
 class Compound:
 

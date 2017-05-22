@@ -45,3 +45,5 @@ clean:
 	rm -f qml/kernels/*.pyc
 	rm -f qml/representations/*.so
 	rm -f qml/representations/*.pyc
+	rm -rf build
+	rm -rf src/*.pyc
