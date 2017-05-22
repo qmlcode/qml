@@ -39,7 +39,7 @@ def generate_coulomb_matrix(coordinates, nuclear_charges, size=23, sorting="row-
             coordinates, len(nuclear_charges), size)
 
     else:
-        print "ERROR: Unknown sorting scheme requested"
+        print("ERROR: Unknown sorting scheme requested")
 
 
 def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
@@ -53,4 +53,4 @@ def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
             self.nuclear_charges, self.coordinates, self.natoms, size)
 
     else:
-        print "ERROR: Unknown sorting scheme requested"
+        print("ERROR: Unknown sorting scheme requested")

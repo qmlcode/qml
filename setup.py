@@ -16,8 +16,8 @@ __url__ = "https://github.com/qmlcode/qml"
 FORTRAN = "f90"
 
 # GNU (default)
-COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC", "-Wno-error=unknown-warning"]
-LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl "]
+COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC"]
+LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # Intel
@@ -27,8 +27,9 @@ if any(["intelem" in arg for arg in sys.argv]):
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
-ext_frepresentations = Extension(name = 'frepresentations',
-                          sources = ['src/frepresentations.f90'],
+
+ext_farad_kernels = Extension(name = 'farad_kernels',
+                          sources = ['src/farad_kernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -45,6 +46,33 @@ ext_fcho_solve = Extension(name = 'fcho_solve',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
+ext_fdistance = Extension(name = 'fdistance',
+                          sources = ['src/fdistance.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
+ext_fkernels = Extension(name = 'fkernels',
+                          sources = ['src/fkernels.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
+ext_frepresentations = Extension(name = 'frepresentations',
+                          sources = ['src/frepresentations.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
 # use README.md as long description
 def readme():
     with open('README.md') as f:
@@ -54,26 +82,31 @@ def setup_pepytools():
 
     setup(
 
-          name="qml",
+        name="qml",
 
-          # metadata
-          version=__version__,
-          author=__author__,
-          author_email=__email__,
-          platforms = 'Any',
-          description = __description__,
-          long_description = readme(),
-          keywords = 'Quantum Machine Learning',
-          url = __url__,
+        # metadata
+        version=__version__,
+        author=__author__,
+        author_email=__email__,
+        platforms = 'Any',
+        description = __description__,
+        long_description = readme(),
+        keywords = 'Quantum Machine Learning',
+        url = __url__,
 
-          # set up package contents
-          package_dir={'qml': 'src'},
-          packages=['qml'],
-          ext_package = 'qml',
-          ext_modules = [ext_frepresentations, ext_fcho_solve],
+        # set up package contents
+        package_dir={'qml': 'src'},
+        packages=['qml'],
+        ext_package = 'qml',
+        ext_modules = [
+              ext_farad_kernels,
+              ext_fcho_solve,
+              ext_fdistance,
+              ext_fkernels,
+              ext_frepresentations,
+        ],
 )
 
 if __name__ == '__main__':
 
-    print sys.argv
     setup_pepytools()

@@ -20,16 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import numpy as np
 
-from data import NUCLEAR_CHARGE
+from .data import NUCLEAR_CHARGE
 
-from representations import fgenerate_coulomb_matrix
-from representations import fgenerate_unsorted_coulomb_matrix
-from representations import fgenerate_local_coulomb_matrix
-from representations import fgenerate_atomic_coulomb_matrix
+from .representations import fgenerate_coulomb_matrix
+from .representations import fgenerate_unsorted_coulomb_matrix
+from .representations import fgenerate_local_coulomb_matrix
+from .representations import fgenerate_atomic_coulomb_matrix
 
-from arad import ARAD
+from .arad import ARAD
 
 class Compound:
 
@@ -71,7 +73,7 @@ class Compound:
                 self.coordinates, self.natoms, size)
 
         else:
-            print "ERROR: Unknown sorting scheme requested"
+            print("ERROR: Unknown sorting scheme requested")
 
 
     def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
@@ -85,7 +87,7 @@ class Compound:
                 self.nuclear_charges, self.coordinates, self.natoms, size)
 
         else:
-            print "ERROR: Unknown sorting scheme requested"
+            print("ERROR: Unknown sorting scheme requested")
 
 
     def generate_arad_representation(self, size=23):

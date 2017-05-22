@@ -22,8 +22,8 @@
 
 import numpy as np
 
-from fcho_solve import fcho_solve
-from fcho_solve import fcho_invert
+from .fcho_solve import fcho_solve
+from .fcho_solve import fcho_invert
 
 def cho_invert(A):
     """ Solves [A x = y] for x using a Cholesky decomposition
