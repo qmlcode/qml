@@ -20,6 +20,13 @@ COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC"]
 LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
+# For clang without OpenMP: (i.e. most Apple/mac system)
+if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
+    COMPILER_FLAGS = ["-O3", "-m64", "-march=native", "-fPIC"]
+    LINKER_FLAGS = []
+    MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
+
+
 # Intel
 if any(["intelem" in arg for arg in sys.argv]):
     COMPILER_FLAGS = ["-xHost", "-O3", "-axAVX", "-qopenmp"]
