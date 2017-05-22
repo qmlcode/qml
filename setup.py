@@ -16,7 +16,7 @@ __url__ = "https://github.com/qmlcode/qml"
 FORTRAN = "f90"
 
 # GNU (default)
-COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC", "-frecord-gcc-switches"]
+COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC", "-Wno-error=unknown-warning"]
 LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl "]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
