@@ -13,17 +13,18 @@ __description__ = "Quantum Machine Learning"
 __url__ = "https://github.com/qmlcode/qml"
 
 
-FORTRAN = "fortran"
+FORTRAN = "f90"
 
-# GNU
-COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native"]
+# GNU (default)
+COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC", "-frecord-gcc-switches"]
 LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl "]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # Intel
-# COMPILER_FLAGS = ["-xHost", "-O3", "-axAVX", "-qopenmp"]
-# LINKER_FLAGS = ["-liomp5", " -lpthread", "-lm", "-ldl"]
-# MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+if any(["intelem" in arg for arg in sys.argv]):
+    COMPILER_FLAGS = ["-xHost", "-O3", "-axAVX", "-qopenmp"]
+    LINKER_FLAGS = ["-liomp5", " -lpthread", "-lm", "-ldl"]
+    MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
 ext_frepresentations = Extension(name = 'frepresentations',
@@ -32,7 +33,8 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
                           extra_link_args = LINKER_FLAGS,
-                          language = FORTRAN)
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
 
 ext_fcho_solve = Extension(name = 'fcho_solve',
                           sources = ['src/fcho_solve.f90'],
@@ -40,7 +42,8 @@ ext_fcho_solve = Extension(name = 'fcho_solve',
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
                           extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
-                          language = FORTRAN)
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
 
 # use README.md as long description
 def readme():
