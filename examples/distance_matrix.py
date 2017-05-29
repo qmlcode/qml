@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-#
 # MIT License
 #
 # Copyright (c) 2017 Anders Steen Christensen
@@ -21,6 +19,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+from __future__ import print_function
 
 import sys
 import os
@@ -64,17 +64,17 @@ if __name__ == "__main__":
 
 
     D = manhattan_distance(X, Xs)
-    print "Manhattan Distances:"
-    print D
+    print("Manhattan Distances:")
+    print(D)
 
     D = l2_distance(X, Xs)
-    print "L2 Distances:"
-    print D
+    print("L2 Distances:")
+    print(D)
 
     D = p_distance(X, Xs, p=3)
-    print "p-norm = 3 Distances:"
-    print D
+    print("p-norm = 3 Distances:")
+    print(D)
 
     D = p_distance(X, Xs, p=2.5)
-    print "p-norm = 3 Distances:"
-    print D
+    print("p-norm = 3 Distances:")
+    print(D)

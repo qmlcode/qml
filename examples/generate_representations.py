@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-#
 # MIT License
 #
 # Copyright (c) 2017 Anders Steen Christensen
@@ -22,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import numpy as np
 import qml
 from qml.representations import generate_coulomb_matrix
@@ -34,10 +34,10 @@ if __name__ == "__main__":
 
     # Generate a representation using the Compound class
     mol.generate_coulomb_matrix(size=5, sorting="row-norm")
-    print mol.coulomb_matrix
+    print(mol.coulomb_matrix)
 
     # Generate a representation using the python interface
     cm2 = generate_coulomb_matrix(mol.coordinates,
                 mol.nuclear_charges, size=5, sorting="row-norm")
 
-    print cm2
+    print(cm2)

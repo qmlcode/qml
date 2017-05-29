@@ -23,9 +23,9 @@
 from numpy import empty
 import numpy as np
 
-from fdistance import fmanhattan_distance
-from fdistance import fl2_distance
-from fdistance import fp_distance_integer, fp_distance_double
+from .fdistance import fmanhattan_distance
+from .fdistance import fl2_distance
+from .fdistance import fp_distance_integer, fp_distance_double
 
 def manhattan_distance(A, B):
     """ Calculates the Manhattan distances between two
