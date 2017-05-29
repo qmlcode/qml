@@ -13,23 +13,33 @@ By default FML compiles with GCC's gfortran and your system's standard BLAS+LAPA
 
     sudo apt-get install libblas-dev liblapack-dev
 
+### 1.1) Installing via the `Makefile` (will be removed):
 Ok, on to the installation instructions:
 
-1.1) First you clone this repository: 
+First you clone this repository: 
 
     git clone https://github.com/qmlcode/qml.git
 
-1.2) Then you simply compile by typing make in the fml folder:
+Then you simply compile by typing make in the fml folder:
 
     make
 
 Note: If you access to the Intel compilers, you can replace the default `Makefile` with a different `Makefile.*` from the `makefiles/` folder. E.g. `Makefile.intel` will compile the F2PY interface with `ifort` and link to MKL. The default `Makefile` is identical to `Makefile.gnu`.
 
-1.3) To make everything accessible to your Python export the fml root-folder to your PYTHONPATH.
+To make everything accessible to your Python export the fml root-folder to your PYTHONPATH.
 
     export PYTHONPATH=/path/to/installation/qml:$PYTHONPATH
 
-1.4) TODO: create `setup.py` install script
+
+### 1.2) Installing via `pip`:
+
+    pip2 install git+https://github.com/andersx/qml@pip --user
+
+### 1.3) Installing via `setup.py` with Intel compiler:
+
+    python2 setup.py build --compiler=intelem --fcompiler=intelem
+    python2 setup.py install --prefix=/home/$USER/lib/qml
+
 
 ## 2) Representations of compounds:
 
