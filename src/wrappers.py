@@ -23,8 +23,8 @@
 import numpy as np
 from numpy import empty, asfortranarray, ascontiguousarray, zeros
 
-from fkernels import fget_vector_kernels_gaussian
-from fkernels import fget_vector_kernels_laplacian
+from .fkernels import fget_vector_kernels_gaussian
+from .fkernels import fget_vector_kernels_laplacian
 
 from .arad_kernels import get_atomic_kernels_arad
 
