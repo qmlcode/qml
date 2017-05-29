@@ -17,7 +17,7 @@ FORTRAN = "f90"
 
 # GNU (default)
 COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC"]
-LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
+LINKER_FLAGS = ["-lgomp"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
