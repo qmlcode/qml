@@ -23,25 +23,27 @@
 import numpy as np
 
 from .fcho_solve import fcho_solve
-from .fcho_solve import fcho_invert
+# from .fcho_solve import fcho_invert
 
-def cho_invert(A):
-    """ Solves [A x = y] for x using a Cholesky decomposition
-        via calls to LAPACK dpotrf and dpotri in the F2PY module.
 
-        Arguments:
-        ==============
-        A -- the A-matrix (symmetric and positive definite).
-
-        Returns:
-        ==============
-        A -- the inverted A-matrix
-    """
-
-    A = np.asfortranarray(A)
-    fcho_invert(A)
-
-    return A
+# Disabled due to bug.
+# def cho_invert(A):
+#     """ Solves [A x = y] for x using a Cholesky decomposition
+#         via calls to LAPACK dpotrf and dpotri in the F2PY module.
+# 
+#         Arguments:
+#         ==============
+#         A -- the A-matrix (symmetric and positive definite).
+# 
+#         Returns:
+#         ==============
+#         A -- the inverted A-matrix
+#     """
+# 
+#     B = np.asfortranarray(A)
+#     fcho_invert(B)
+# 
+#     return B
 
 
 def cho_solve(A, y):

@@ -34,6 +34,10 @@ if any(["intelem" in arg for arg in sys.argv]):
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
+# UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
+# LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+# MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+
 
 ext_farad_kernels = Extension(name = 'farad_kernels',
                           sources = ['src/farad_kernels.f90'],

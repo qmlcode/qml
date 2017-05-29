@@ -22,59 +22,28 @@
 
 from __future__ import print_function
 
-import sys
-import os
-
 import numpy as np
 
-import qml
-from qml.distance import *
+import scipy
+import scipy.linalg
 
+import qml
+import qml.math
 
 if __name__ == "__main__":
 
-    # Generate a list of qml.Compound() objects
-    mols = []
-
-    for xyz_file in sorted(os.listdir("qm7/")):
-
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
-
-            # This is a Molecular Coulomb matrix sorted by row norm
-        mol.generate_coulomb_matrix(size=23, sorting="unsorted")
-
-        mols.append(mol)
-
-
-    # Shuffle molecules
     np.random.seed(666)
-    np.random.shuffle(mols)
-
-    # Make training and test sets
-    n_test  = 5
-    n_train = 10
-
-    training = mols[:n_train]
-    test  = mols[-n_test:]
-
-    # List of representations
-    X  = np.array([mol.coulomb_matrix for mol in training])
-    Xs = np.array([mol.coulomb_matrix for mol in test])
+    
+    A = np.array([[ 2.0, -1.0,  0.0],
+                  [-1.0,  2.0, -1.0],
+                  [ 0.0, -1.0,  2.0]])
 
 
-    D = manhattan_distance(X, Xs)
-    print("Manhattan Distances:")
-    print(D)
+    y = np.array([1.0, 1.0, 1.0])
 
-    D = l2_distance(X, Xs)
-    print("L2 Distances:")
-    print(D)
 
-    D = p_distance(X, Xs, p=3)
-    print("p-norm = 3 Distances:")
-    print(D)
 
-    D = p_distance(X, Xs, p=2.5)
-    print("p-norm = 3 Distances:")
-    print(D)
+    x_fml   = qml.math.cho_solve(A,y)
+    x_scipy = scipy.linalg.cho_solve(scipy.linalg.cho_factor(A),y)
+
+    print(x_fml - x_scipy)
