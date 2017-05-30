@@ -98,7 +98,7 @@ def setup_pepytools():
         install_requires=[
             "numpy", 
             "scipy"
-        ]
+        ],
 
         # metadata
         version=__version__,
