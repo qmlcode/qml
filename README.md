@@ -1,44 +1,57 @@
-# QML: Quantum Machine Learning
+# QML: A Python Toolking for Quantum Machine Learning
 
-A toolkit for representation learning of molecules and solids.
+A Python2/3 toolkit for representation learning of molecules and solids. 
 
 Current author list:
 * Anders S. Christensen (University of Basel)
 * Felix Faber (University of Basel)
+* Bing Huang (University of Basel)
 * O. Anatole von Lilienfeld (University of Basel)
 
 ## 1) Installation
 
-By default FML compiles with GCC's gfortran and your system's standard BLAS+LAPACK libraries (-lblas -llapack). I recommend you switch to MKL for the math libraries, but the difference between ifort and gfortran shouldn't be to significant. BLAS and LAPACK implementations are the only libraries required for FML. Additionally you need a functional Python 2.x interpreter and NumPy (with F2PY) installed. Most Linux systems can install BLAS and LAPACK like this:
+Installing prerequisite modules (for most Linux systems):
 
-    sudo apt-get install libblas-dev liblapack-dev
+```bash
+sudo apt-get install python-pip gfortran libblas-dev liblapack-dev
 
-### 1.1) Installing via the `Makefile` (will be removed):
-Ok, on to the installation instructions:
-
-First you clone this repository: 
-
-    git clone https://github.com/qmlcode/qml.git
-
-Then you simply compile by typing make in the fml folder:
-
-    make
-
-Note: If you access to the Intel compilers, you can replace the default `Makefile` with a different `Makefile.*` from the `makefiles/` folder. E.g. `Makefile.intel` will compile the F2PY interface with `ifort` and link to MKL. The default `Makefile` is identical to `Makefile.gnu`.
-
-To make everything accessible to your Python export the fml root-folder to your PYTHONPATH.
-
-    export PYTHONPATH=/path/to/installation/qml:$PYTHONPATH
+```
+These should already be installed on most systems. Alternatively the Intel compilers and MKL math-libraries are supported as well (see section 1.3).
 
 
-### 1.2) Installing via `pip`:
+### 1.1) Installing via `pip`:
 
-    pip2 install git+https://github.com/andersx/qml@pip --user
+The easiest way to install is using the official, built-in Python package manager, `pip`:
 
-### 1.3) Installing via `setup.py` with Intel compiler:
+```bash
+pip install git+https://github.com/qmlcode/qml --user --upgrade
+```
 
-    python2 setup.py build --compiler=intelem --fcompiler=intelem
-    python2 setup.py install --prefix=/home/$USER/lib/qml
+Additionally you can use `pip2 install ...` or `pip3 install ...` to get the Python2 or Python3 versions explicitly. QML supports both flavors.
+
+To uninstall simply use `pip` again. 
+
+```bash
+pip uninstall qml
+```
+
+### 1.2) Installing via `setup.py` with Intel compiler:
+
+If you have Intel compilers installed, you can compile QML with ifort/MKL using the following options:
+
+```bash
+pip install git+https://github.com/qmlcode/qml.git --user --upgrade --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
+```
+
+### 1.3) Note on Apple/Mac support:
+
+Install QML requires a Fortran compiler. On Darwin you can install it using `brew`:
+
+```bash
+brew install gcc
+```
+
+Note: the Clang Fortran compiler in brew does currently not support OpenMP, so this disables parallelism in QML.
 
 
 ## 2) Representations of compounds:
