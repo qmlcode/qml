@@ -104,6 +104,8 @@ Generate ~100K atomic coulomb matrices = 0.22s
  
 ## 3.1) Calculate kernels using the `Compound` class:
 
+... to be updated
+
 
 ## 3.2) Calculate kernels using the `qml.kernels` module directly
 
@@ -111,7 +113,9 @@ Generate ~100K atomic coulomb matrices = 0.22s
 ```python
 from qml.kernels import laplacian_kernel
 ```
-
+... to be updated
 ## 3.3) Benchmarks for QM7:
+... to be updated
 
 ## 4.1) 
+... to be updated
