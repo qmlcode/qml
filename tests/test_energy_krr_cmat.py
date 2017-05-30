@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-#
 # MIT License
 #
 # Copyright (c) 2017 Anders Steen Christensen
@@ -22,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import time
-import cPickle
 import numpy as np
 import qml
 from qml.kernels import laplacian_kernel
@@ -97,19 +96,19 @@ if __name__ == "__main__":
     llambda = 10**(-10.0)
 
     # Generate training Kernel
-    print "Calculating training kernel ..."
+    print("Calculating training kernel ...")
     K = laplacian_kernel(X, X, sigma)
 
     # Solve alpha
-    print "Solving alphas ..."
+    print("Solving alphas ...")
     K[np.diag_indices_from(K)] += llambda
     alpha = cho_solve(K,Y)
 
     # Calculate prediction kernel
-    print "Calculating prediction kernel ..."
+    print("Calculating prediction kernel ...")
     Ks = laplacian_kernel(X, Xs, sigma)
     Yss = np.dot(Ks.transpose(), alpha)
 
     # Print final RMSD
     rmsd = np.sqrt(np.mean(np.square(Ys - Yss)))
-    print "RMSD = %6.2f kcal/mol" % rmsd
+    print("RMSD = %6.2f kcal/mol" % rmsd)

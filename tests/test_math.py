@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-#
 # MIT License
 #
 # Copyright (c) 2017 Anders Steen Christensen
@@ -22,22 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-import qml
-from qml.representations import generate_coulomb_matrix
+from __future__ import print_function
 
+import numpy as np
+
+import scipy
+import scipy.linalg
+
+import qml
+import qml.math
 
 if __name__ == "__main__":
 
-    # Generate a compound
-    mol = qml.Compound(xyz="qm7/0001.xyz")
+    np.random.seed(666)
+    
+    A = np.array([[ 2.0, -1.0,  0.0],
+                  [-1.0,  2.0, -1.0],
+                  [ 0.0, -1.0,  2.0]])
 
-    # Generate a representation using the Compound class
-    mol.generate_coulomb_matrix(size=5, sorting="row-norm")
-    print mol.coulomb_matrix
 
-    # Generate a representation using the python interface
-    cm2 = generate_coulomb_matrix(mol.coordinates,
-                mol.nuclear_charges, size=5, sorting="row-norm")
+    y = np.array([1.0, 1.0, 1.0])
 
-    print cm2
+
+
+    x_fml   = qml.math.cho_solve(A,y)
+    x_scipy = scipy.linalg.cho_solve(scipy.linalg.cho_factor(A),y)
+
+    print(x_fml - x_scipy)

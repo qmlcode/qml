@@ -32,14 +32,14 @@ Provides
   4. math
   5. distance
 """
-from compound import Compound
+from .compound import Compound
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
 __credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
 __license__ = "MIT"
-__version__ = "0.9.1"
+__version__ = "0.2.1"
 __maintainer__ = "Anders S. Christensen"
 __email__ = "andersbiceps@gmail.com"
-__status__ = "Production"
+__status__ = "Beta"
 

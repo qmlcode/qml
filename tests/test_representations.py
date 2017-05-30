@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen
+# Copyright (c) 2017 Anders Steen Christensen
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .distance import manhattan_distance, l2_distance, p_distance
+from __future__ import print_function
 
-__all__ = ['manhattan_distance', 'l2_distance', 'p_distance']
+import numpy as np
+import qml
+from qml.representations import generate_coulomb_matrix
+
+
+if __name__ == "__main__":
+
+    # Generate a compound
+    mol = qml.Compound(xyz="qm7/0001.xyz")
+
+    # Generate a representation using the Compound class
+    mol.generate_coulomb_matrix(size=5, sorting="row-norm")
+    print(mol.coulomb_matrix)
+
+    # Generate a representation using the python interface
+    cm2 = generate_coulomb_matrix(mol.coordinates,
+                mol.nuclear_charges, size=5, sorting="row-norm")
+
+    print(cm2)
