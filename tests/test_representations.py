@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import numpy as np
 import qml
-from qml.representations import generate_coulomb_matrix
+from qml.representations import *
 
 
 if __name__ == "__main__":
@@ -39,5 +39,23 @@ if __name__ == "__main__":
     # Generate a representation using the python interface
     cm2 = generate_coulomb_matrix(mol.coordinates,
                 mol.nuclear_charges, size=5, sorting="row-norm")
-
     print(cm2)
+
+    # Generate an atomic coulomb matrix, sorted by distance
+    mol.generate_atomic_coulomb_matrix(size=5, sorting="distance")
+    print(mol.atomic_coulomb_matrix)
+
+    bob = generate_bob(mol.coordinates,
+            mol.nuclear_charges, mol.atomtypes, asize={"C": 2, "H": 5, "O": 10}, size=5)
+    print(bob)
+
+    mol.generate_bob(asize={"C": 2, "H": 5, "O": 10}, size=5)
+    print(mol.bob)
+
+    # Generate a representation using the python interface
+    cm3 = generate_eigenvalue_coulomb_matrix(mol.coordinates,
+                mol.nuclear_charges, size=5)
+    print(cm3)
+
+    mol.generate_eigenvalue_coulomb_matrix(size=5)
+    print(mol.eigenvalue_coulomb_matrix)

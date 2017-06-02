@@ -30,10 +30,12 @@ from .representations import fgenerate_coulomb_matrix
 from .representations import fgenerate_unsorted_coulomb_matrix
 from .representations import fgenerate_local_coulomb_matrix
 from .representations import fgenerate_atomic_coulomb_matrix
+from .representations import generate_bob
+from .representations import generate_eigenvalue_coulomb_matrix
 
 from .arad import ARAD
 
-class Compound:
+class Compound(object):
 
     def __init__(self, xyz=None):
 
@@ -58,6 +60,8 @@ class Compound:
         self.atomic_coulomb_matrix = None
         self.arad_representation = None
         self.aras_representation = None
+        self.bob = None
+        self.eigenvalue_coulomb_matrix = None
 
         if xyz is not None:
             self.read_xyz(xyz)
@@ -75,6 +79,9 @@ class Compound:
         else:
             print("ERROR: Unknown sorting scheme requested")
 
+    def generate_eigenvalue_coulomb_matrix(self, size=23):
+        self.eigenvalue_coulomb_matrix = generate_eigenvalue_coulomb_matrix( \
+                self.coordinates, self.nuclear_charges, size=size)
 
     def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
 
@@ -88,6 +95,11 @@ class Compound:
 
         else:
             print("ERROR: Unknown sorting scheme requested")
+
+    def generate_bob(self, size=23, asize={"O":3, "C":7, "N":3, "H":16, "S":1}):
+
+        self.bob = generate_bob(self.coordinates, self.nuclear_charges, self.atomtypes,
+                size=size, asize=asize)
 
 
     def generate_arad_representation(self, size=23):
