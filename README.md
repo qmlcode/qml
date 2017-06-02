@@ -2,14 +2,14 @@
 
 QML is a Python2/3-compatible toolkit for representation learning of properties of molecules and solids. QML is not a high-level framework where you can do `model.train()`, but supplies the building blocks to carry out efficient and accurate machine learning on chemical compounds. As such, the goal is to provide usable and efficient implementations of concepts such as representations and kernels, which can then be implemented in other machine learning codes.
 
-Current list of contributors:
+####Current list of contributors:
 * Anders S. Christensen (University of Basel)
 * Felix Faber (University of Basel)
 * Bing Huang (University of Basel)
 * Lars A. Bratholm (University of Copenhagen)
 * O. Anatole von Lilienfeld (University of Basel)
 
-## 1) Citating QML:
+## 1) Citing QML:
 
 Until the preprint is available from arXiv, please cite this GitHub repository as:
 
@@ -23,7 +23,7 @@ Installing prerequisite modules (for most Linux systems):
 sudo apt-get install python-pip gfortran libblas-dev liblapack-dev git
 
 ```
-These should already be installed on most systems. Alternatively,the Intel compilers and MKL math-libraries are supported as well (see section 1.3).
+These should already be installed on most systems. The Intel compilers and MKL math-libraries are supported as well (see section 1.3).
 
 
 ### 2.1) Installing via `pip`:
@@ -31,16 +31,16 @@ These should already be installed on most systems. Alternatively,the Intel compi
 The easiest way to install the stable version from the Python Package Index (PyPI) is using the official, built-in Python package manager, `pip`:
 
 ```bash
-pip qml --user --upgrade
+pip qml --user -U
 ```
 
-Alternatively, you can get the most recent development version directly from GitHub:
+Alternatively, you can install the most recent stable development snapshot directly from GitHub:
 
 ```bash
-pip install git+https://github.com/qmlcode/qml --user --upgrade
+pip install git+https://github.com/qmlcode/qml --user -U
 ```
 
-Additionally you can use `pip2 install ...` or `pip3 install ...` to get the Python2 or Python3 versions explicitly. QML supports both flavors.
+Use `pip2 install ...` or `pip3 install ...` to get the Python2 or Python3 versions explicitly. QML supports both flavors.
 
 To uninstall simply use `pip` again. 
 
@@ -50,7 +50,7 @@ pip uninstall qml
 
 ### 2.2) Installing via `setup.py` with Intel compiler:
 
-If you have Intel compilers installed, you can compile QML with ifort/MKL using the following options:
+If you have Intel compilers installed (2016 and newer), you can compile QML with Ifort/MKL using the following options:
 
 ```bash
 pip install git+https://github.com/qmlcode/qml.git --user --upgrade --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
@@ -58,13 +58,13 @@ pip install git+https://github.com/qmlcode/qml.git --user --upgrade --global-opt
 
 ### 2.3) Note on Apple/Mac support:
 
-Install QML requires a Fortran compiler. On Darwin you can install it using `brew`:
+Installing QML requires a Fortran compiler. On Darwin you can install it using `brew`:
 
 ```bash
 brew install gcc
 ```
 
-Note: the Clang Fortran compiler in brew does currently not support OpenMP, so this disables parallelism in QML.
+Note the Clang Fortran compiler from brew unfortunately does not support OpenMP. Therefore parallelism via OpenMP is disabled as default for Darwin systems.
 
 ## 3) Get help:
 
