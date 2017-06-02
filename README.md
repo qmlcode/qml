@@ -31,7 +31,7 @@ These should already be installed on most systems. The Intel compilers and MKL m
 The easiest way to install the stable version from the Python Package Index (PyPI) is using the official, built-in Python package manager, `pip`:
 
 ```bash
-pip qml --user -U
+pip install qml --user -U
 ```
 
 Alternatively, you can install the most recent stable development snapshot directly from GitHub:
