@@ -14,6 +14,8 @@ install:
  - sudo pip install numpy -U
  - sudo pip install scipy -U
 
+ - export CXXFLAGS="-march=native"
+
  - sudo python setup.py build --fcompiler=gnu95
  - sudo python setup.py install
 
