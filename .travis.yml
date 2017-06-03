@@ -10,7 +10,7 @@ before_install:
   - sudo apt-get update -qq
 
 install:
- - sudo apt-get install -qq build-essential gfortran libblas-dev liblapack-dev python-pip
+ - sudo apt-get install -qq build-essential gfortran binutils libblas-dev liblapack-dev python-pip
  - sudo pip install numpy -U
  - sudo pip install scipy -U
 
