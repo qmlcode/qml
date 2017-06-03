@@ -14,7 +14,7 @@ install:
  - sudo pip install numpy -U
  - sudo pip install scipy -U
 
- - sudo python setup.py install
+ - sudo python setup.py install --fcompiler=gnu95
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
