@@ -1,0 +1,19 @@
+language: python
+
+sudo: required
+dist: precise
+
+python:
+  - "2.7"
+
+before_install:
+  - sudo apt-get update -qq
+
+install:
+ - sudo apt-get install -qq build-essential gfortran libblas-dev liblapack-dev
+ - sudo python setup.py install -U
+
+before_script:
+  - cd ${TRAVIS_BUILD_DIR}
+
+script: nosetests
