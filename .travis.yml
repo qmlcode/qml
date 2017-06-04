@@ -16,11 +16,11 @@ install:
 
  - echo ${TRAVIS_PYTHON_VERSION}
  - |
-   if [ ${TRAVIS_PYTHON_VERSION} == "3.4"]; then
+   if [ ${TRAVIS_PYTHON_VERSION} = "3.4" ]; then
        sudo pip3 install numpy -U
        python3 setup.py build
        python3 setup.py install
-   elif [ ${TRAVIS_PYTHON_VERSION} == "2.7"]; then
+   elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo pip2 install numpy -U
        python2 setup.py build
        python2 setup.py install
