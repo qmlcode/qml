@@ -25,5 +25,9 @@ before_script:
  - cd ${TRAVIS_BUILD_DIR}
  - pwd
  - find
+ - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
+ - echo ${PYTHONPATH}
+ - echo ${TRAVIS_PYTHON_VERSION}
 
-script: nosetests
+script: 
+ - python tests/test_kernels.py
