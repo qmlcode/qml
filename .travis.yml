@@ -16,7 +16,7 @@ install:
  - sudo python setup.py build
  - sudo python setup.py install
 
- - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
+ - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
  - echo ${PYTHONPATH}
  - echo ${TRAVIS_PYTHON_VERSION}
 
