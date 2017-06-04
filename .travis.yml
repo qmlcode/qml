@@ -16,7 +16,7 @@ install:
 
  - echo ${TRAVIS_PYTHON_VERSION}
  - |
-   if [ ${TRAVIS_PYTHON_VERSION} = "3.4" ]; then
+   if [ ${TRAVIS_PYTHON_VERSION} = "3.5" ]; then
        sudo pip3 install numpy -U
        python3 setup.py build
        python3 setup.py install
