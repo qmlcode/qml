@@ -11,17 +11,19 @@ before_install:
   - sudo apt-get update -qq
 
 install:
- - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev python3-pip
+ - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
  - echo ${TRAVIS_PYTHON_VERSION}
  - |
    if [ ${TRAVIS_PYTHON_VERSION} = "3.5" ]; then
-       sudo pip3 install numpy -U
+       sudo apt-get install python3-numpy
+       export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
        python3 setup.py build
        python3 setup.py install
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
-       sudo pip2 install numpy -U
+       sudo apt-get install python-numpy
+       export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
        python2 setup.py build
        python2 setup.py install
    fi
@@ -30,6 +32,7 @@ install:
 before_script:
  - cd ${TRAVIS_BUILD_DIR}
  - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
+ - export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
 
 script:
  - nosetests -v tests/*.py
