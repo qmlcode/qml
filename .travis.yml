@@ -14,6 +14,9 @@ install:
  - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
+ - sudo pip2 install numpy -U
+ - sudo pip3 install numpy -U
+
  - sudo python setup.py build
  - sudo python setup.py install
 
