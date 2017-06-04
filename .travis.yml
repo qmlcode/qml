@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get update -qq
 
 install:
- - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev
+    - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev python3-pip
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
  - sudo pip2 install numpy -U
