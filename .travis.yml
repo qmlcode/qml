@@ -5,6 +5,8 @@ dist: trusty
 
 python:
   - "2.7"
+  - "3.4"
+  - "3.5"
 
 before_install:
   - sudo apt-get update -qq
@@ -18,10 +20,6 @@ install:
 
  - sudo python setup.py build
  - sudo python setup.py install
-
- - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
- - echo ${PYTHONPATH}
- - echo ${TRAVIS_PYTHON_VERSION}
 
 before_script:
  - cd ${TRAVIS_BUILD_DIR}
