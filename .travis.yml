@@ -17,8 +17,8 @@ install:
  - sudo pip2 install numpy -U
  - sudo pip3 install numpy -U
 
- - sudo python setup.py build
- - sudo python setup.py install
+ - sudo python${TRAVIS_PYTHON_VERSION} setup.py build
+ - sudo python${TRAVIS_PYTHON_VERSION} setup.py install
 
 before_script:
  - cd ${TRAVIS_BUILD_DIR}
