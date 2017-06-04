@@ -10,7 +10,7 @@ before_install:
   - sudo apt-get update -qq
 
 install:
- - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev python-numpy python-scipy
+ - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
  - sudo pip install numpy -U
@@ -24,22 +24,8 @@ install:
  - echo ${TRAVIS_PYTHON_VERSION}
 
 before_script:
- - echo ${TRAVIS_BUILD_DIR}
  - cd ${TRAVIS_BUILD_DIR}
- - pwd
- - find
  - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
- - echo ${PYTHONPATH}
- - echo ${TRAVIS_PYTHON_VERSION}
- - cd tests
 
-script: 
- - python test_arad.py
- - python test_compound.py
- - python test_distance.py
- - python test_energy_krr_cmat.py
- - python test_kernels.py
- - python test_math.py
- - python test_representations.py
- - python test_wrappers.py
-
+script:
+ - nosetests -v tests/*.py

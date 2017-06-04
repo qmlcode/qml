@@ -24,26 +24,18 @@ from __future__ import print_function
 
 import numpy as np
 
-import scipy
-import scipy.linalg
-
 import qml
 import qml.math
 
-if __name__ == "__main__":
+def test_cholesky():
 
-    np.random.seed(666)
-    
     A = np.array([[ 2.0, -1.0,  0.0],
                   [-1.0,  2.0, -1.0],
                   [ 0.0, -1.0,  2.0]])
 
-
     y = np.array([1.0, 1.0, 1.0])
 
+    x_qml   = qml.math.cho_solve(A,y)
+    x_scipy = np.linalg.solve(A, y)
 
-
-    x_fml   = qml.math.cho_solve(A,y)
-    x_scipy = scipy.linalg.cho_solve(scipy.linalg.cho_factor(A),y)
-
-    print(x_fml - x_scipy)
+    assert np.allclose(x_qml, x_scipy)
