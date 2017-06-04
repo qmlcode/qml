@@ -96,11 +96,6 @@ def setup_pepytools():
 
         name="qml",
 
-        install_requires=[
-            "numpy", 
-            "scipy"
-        ],
-
         # metadata
         version=__version__,
         author=__author__,

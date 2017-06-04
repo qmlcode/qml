@@ -28,64 +28,20 @@ import qml
 from qml.kernels import laplacian_kernel
 from qml.kernels import gaussian_kernel
 
-def get_energies(filename):
-    """ Returns a dictionary with heats of formation for each xyz-file.
-    """
+def test_kernels():
 
-    f = open(filename, "r")
-    lines = f.readlines()
-    f.close()
+    import sys
+    import numpy as np
+    import qml
+    from qml.kernels import laplacian_kernel
+    from qml.kernels import gaussian_kernel
 
-    energies = dict()
+    n_train = 25
+    n_test = 20
 
-    for line in lines:
-        tokens = line.split()
-
-        xyz_name = tokens[0]
-        hof = float(tokens[1])
-
-        energies[xyz_name] = hof
-
-    return energies
-
-
-if __name__ == "__main__":
-
-    # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("hof_qm7.txt")
-
-    # Generate a list of qml.Compound() objects
-    mols = []
-
-    for xyz_file in sorted(data.keys()):
-
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
-
-        # Associate a property (heat of formation) with the object
-        mol.properties = data[xyz_file]
-
-        # This is a Molecular Coulomb matrix sorted by row norm
-        mol.generate_coulomb_matrix(size=23, sorting="row-norm")
-
-        mols.append(mol)
-
-
-    # Shuffle molecules
-    np.random.seed(666)
-    np.random.shuffle(mols)
-
-    # Make training and test sets
-    n_test  = 4
-    n_train = 5
-
-    training = mols[:n_train]
-    test  = mols[-n_test:]
-
-    # List of representations
-    X  = np.array([mol.coulomb_matrix for mol in training])
-    Xs = np.array([mol.coulomb_matrix for mol in test])
-
+    # List of dummy representations
+    X = np.random.rand(n_train, 1000)
+    Xs = np.random.rand(n_test, 1000)
 
     sigma = 100.0
 
@@ -96,15 +52,20 @@ if __name__ == "__main__":
     for i in range(n_train):
         for j in range(n_test):
             Gtest[i,j] = np.exp( np.sum(np.square(X[i] - Xs[j])) / (-2.0 * sigma**2))
-     
+
             Ltest[i,j] = np.exp( np.sum(np.abs(X[i] - Xs[j])) / (-1.0 * sigma))
 
     G = gaussian_kernel(X, Xs, sigma)
     L = laplacian_kernel(X, Xs, sigma)
 
-    Lrms = np.sqrt(np.sum(np.square(L - Ltest)))
-    Grms = np.sqrt(np.sum(np.square(G - Gtest)))
+    # Compare two implementations:
+    assert np.allclose(G, Gtest), "Error in Gaussian kernel"
+    assert np.allclose(L, Ltest), "Error in Laplacian kernel"
 
-    print("Laplacian error:", Lrms)
-    print("Gaussian error:", Grms)
+    Gsymm = gaussian_kernel(X, X, sigma)
+    Lsymm = laplacian_kernel(X, X, sigma)
+
+    # Check for symmetry:
+    assert np.allclose(Gsymm, Gsymm.T), "Error in Gaussian kernel"
+    assert np.allclose(Lsymm, Lsymm.T), "Error in Laplacian kernel"
 

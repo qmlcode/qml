@@ -32,6 +32,8 @@ Provides
   4. math
   5. distance
 """
+from __future__ import absolute_import
+
 from .compound import Compound
 
 __author__ = "Anders S. Christensen"
