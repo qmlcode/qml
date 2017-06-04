@@ -14,11 +14,17 @@ install:
  - sudo apt-get install -qq build-essential gcc gfortran libblas-dev liblapack-dev python3-pip
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
- - sudo pip2 install numpy -U
- - sudo pip3 install numpy -U
+ - |
+   if [ ${TRAVIS_PYTHON_VERSION} == "3.4"]; then
+       sudo pip3 install numpy -U
+       python3 setup.py build
+       python3 setup.py install
+   elif [ ${TRAVIS_PYTHON_VERSION} == "2.7"]; then
+       sudo pip2 install numpy -U
+       python2 setup.py build
+       python2 setup.py install
+   fi
 
- - sudo python${TRAVIS_PYTHON_VERSION} setup.py build
- - sudo python${TRAVIS_PYTHON_VERSION} setup.py install
 
 before_script:
  - cd ${TRAVIS_BUILD_DIR}
