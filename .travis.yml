@@ -21,6 +21,9 @@ install:
  - echo ${TRAVIS_PYTHON_VERSION}
 
 before_script:
-  - cd ${TRAVIS_BUILD_DIR}
+ - echo ${TRAVIS_BUILD_DIR}
+ - cd ${TRAVIS_BUILD_DIR}
+ - pwd
+ - find
 
 script: nosetests
