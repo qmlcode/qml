@@ -27,6 +27,7 @@ from .fkernels import fget_vector_kernels_gaussian
 from .fkernels import fget_vector_kernels_laplacian
 
 from .arad_kernels import get_atomic_kernels_arad
+from .arad_kernels import get_atomic_symmetric_kernels_arad
 
 
 def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
@@ -100,13 +101,13 @@ def get_atomic_kernels_gaussian(mols1, mols2, sigmas):
 def arad_kernels(mols1, mols2, sigmas,
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
 
-    amax = mol1[0].arad_descriptor.shape[1]
+    amax = mols1[0].arad_representation.shape[0]
 
     nm1 = len(mols1)
     nm2 = len(mols2)
 
-    X1 = np.array([mol.arad_descriptor for mol in mols1]).reshape((nm1,amax,5,amax))
-    X2 = np.array([mol.arad_descriptor for mol in mols2]).reshape((nm2,amax,5,amax))
+    X1 = np.array([mol.arad_representation for mol in mols1]).reshape((nm1,amax,5,amax))
+    X2 = np.array([mol.arad_representation for mol in mols2]).reshape((nm2,amax,5,amax))
 
     Z1 = [mol.nuclear_charges for mol in mols1]
     Z2 = [mol.nuclear_charges for mol in mols2]
@@ -120,15 +121,15 @@ def arad_kernels(mols1, mols2, sigmas,
 def arad_symmetric_kernels(mols1, sigmas,
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
 
-    amax = mol1[0].arad_descriptor.shape[1]
+    amax = mols1[0].arad_representation.shape[0]
 
     nm1 = len(mols1)
 
-    X1 = np.array([mol.arad_descriptor for mol in mols1]).reshape((nm1,amax,5,amax))
+    X1 = np.array([mol.arad_representation for mol in mols1]).reshape((nm1,amax,5,amax))
 
     Z1 = [mol.nuclear_charges for mol in mols1]
 
-    K = get_symmetric_atomic_kernels_arad(X1, Z1, sigmas, \
+    K = get_atomic_symmetric_kernels_arad(X1, Z1, sigmas, \
         width=width, cut_distance=cut_distance, r_width=r_width, c_width=c_width)
 
     return K
