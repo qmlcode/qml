@@ -41,7 +41,7 @@ if any(["intelem" in arg for arg in sys.argv]):
 
 
 ext_farad_kernels = Extension(name = 'farad_kernels',
-                          sources = ['src/farad_kernels.f90'],
+                          sources = ['qml/farad_kernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -50,7 +50,7 @@ ext_farad_kernels = Extension(name = 'farad_kernels',
                           f2py_options=['--quiet'])
 
 ext_fcho_solve = Extension(name = 'fcho_solve',
-                          sources = ['src/fcho_solve.f90'],
+                          sources = ['qml/fcho_solve.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -59,7 +59,7 @@ ext_fcho_solve = Extension(name = 'fcho_solve',
                           f2py_options=['--quiet'])
 
 ext_fdistance = Extension(name = 'fdistance',
-                          sources = ['src/fdistance.f90'],
+                          sources = ['qml/fdistance.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -68,7 +68,7 @@ ext_fdistance = Extension(name = 'fdistance',
                           f2py_options=['--quiet'])
 
 ext_fkernels = Extension(name = 'fkernels',
-                          sources = ['src/fkernels.f90'],
+                          sources = ['qml/fkernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -77,7 +77,7 @@ ext_fkernels = Extension(name = 'fkernels',
                           f2py_options=['--quiet'])
 
 ext_frepresentations = Extension(name = 'frepresentations',
-                          sources = ['src/frepresentations.f90'],
+                          sources = ['qml/frepresentations.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -108,7 +108,7 @@ def setup_pepytools():
         url = __url__,
 
         # set up package contents
-        package_dir={'qml': 'src'},
+        package_dir={'qml': 'qml'},
         packages=['qml'],
         ext_package = 'qml',
         ext_modules = [
