@@ -23,13 +23,13 @@ install:
        export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
        # python3 setup.py build
        # python3 setup.py install
-       pip3 install . --user
+       pip3 install .
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
        export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
        # python2 setup.py build
        # python2 setup.py install
-       pip2 install . --user
+       pip2 install .
    else
        echo "ERROR: Unknown Python version."
    fi
