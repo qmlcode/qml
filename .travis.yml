@@ -38,7 +38,7 @@ before_script:
  - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
  - export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
  - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
- - export PYTHONPATH=/home/travis/virtualenv/python{TRAVIS_PYTHON_VERSION}.*/lib/python{TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
+ - export PYTHONPATH=/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}.*/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
  - echo ${PYTHONPATH}
  - echo ${TRAVIS_PYTHON_VERSION}
 
