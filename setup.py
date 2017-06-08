@@ -5,7 +5,7 @@ __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
 __credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
 __license__ = "MIT"
-__version__ = "0.2.3"
+__version__ = "0.2.12"
 __maintainer__ = "Anders S. Christensen"
 __email__ = "andersbiceps@gmail.com"
 __status__ = "Beta"
@@ -95,6 +95,7 @@ def setup_pepytools():
     setup(
 
         name="qml",
+        packages=['qml'],
 
         # metadata
         version=__version__,
@@ -103,14 +104,12 @@ def setup_pepytools():
         platforms = 'Any',
         description = __description__,
         long_description = readme(),
-        keywords = 'Quantum Machine Learning',
-        download_url = "https://github.com/qmlcode/qml/archive/0.2.3.tar.gz",
+        keywords = ['Machine Learning', 'Quantum Chemistry'],
+        classifiers = [],
         url = __url__,
 
         # set up package contents
-        package_dir={'qml': 'qml'},
-        packages=['qml'],
-        ext_package = 'qml',
+        # ext_package = 'qml',
         ext_modules = [
               ext_farad_kernels,
               ext_fcho_solve,
