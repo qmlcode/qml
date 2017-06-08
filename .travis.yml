@@ -41,7 +41,6 @@ before_script:
  - export PYTHONPATH=/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}.*/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
  - echo ${PYTHONPATH}
  - echo ${TRAVIS_PYTHON_VERSION}
- - python -m site --user-site
  - python -m site
 
 script:
