@@ -23,6 +23,8 @@ Current list of contributors:
 -  Felix Faber (University of Basel)
 -  Bing Huang (University of Basel)
 -  Lars A. Bratholm (University of Copenhagen)
+-  Alexandre Tkatchenko (University of Luxembourg)
+-  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
 -  O. Anatole von Lilienfeld (University of Basel)
 
 1) Citing QML:
@@ -33,7 +35,7 @@ repository as:
 
 ::
 
-    AS Christensen, F Faber, B Huang, LA Bratholm, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, F Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
 2) Installation
