@@ -34,14 +34,7 @@ install:
 
 
 before_script:
- - cd ${TRAVIS_BUILD_DIR}
- - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
- - export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
- - export PYTHONPATH=/usr/local/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
- - export PYTHONPATH=/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}.*/lib/python${TRAVIS_PYTHON_VERSION}/site-packages:${PYTHONPATH}
- - echo ${PYTHONPATH}
- - echo ${TRAVIS_PYTHON_VERSION}
- - python -m site
+ - cd ${TRAVIS_BUILD_DIR}/tests/
 
 script:
- - nosetests -v tests/*.py
+ - nosetests -v
