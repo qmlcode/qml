@@ -5,6 +5,9 @@ dist: trusty
 
 python:
   - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"
 
 before_install:
   - sudo apt-get update -qq
@@ -13,17 +16,12 @@ install:
  - sudo apt-get install -qq gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
 
- - echo ${TRAVIS_PYTHON_VERSION}
  - |
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
        sudo apt-get install python3-numpy
-       export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
-       # python3 setup.py build
        python3 setup.py install
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
-       export PYTHONPATH=/usr/lib/python${TRAVIS_PYTHON_VERSION}/dist-packages:${PYTHONPATH}
-       # python2 setup.py build
        python2 setup.py install
    else
        echo "ERROR: Unknown Python version."
@@ -31,7 +29,6 @@ install:
 
 
 before_script:
- - ls -lrth /home/travis/virtualenv/python2.7.12/lib/python2.7/site-packages/qml
  - cd ${TRAVIS_BUILD_DIR}/tests/
 
 script:
