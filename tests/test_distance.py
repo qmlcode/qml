@@ -59,8 +59,8 @@ if __name__ == "__main__":
     test  = mols[-n_test:]
 
     # List of representations
-    X  = np.array([mol.coulomb_matrix for mol in training])
-    Xs = np.array([mol.coulomb_matrix for mol in test])
+    X  = np.asarray([mol.representation for mol in training])
+    Xs = np.asarray([mol.representation for mol in test])
 
 
     D = manhattan_distance(X, Xs)
@@ -75,6 +75,6 @@ if __name__ == "__main__":
     print("p-norm = 3 Distances:")
     print(D)
 
-    D = p_distance(X, Xs, p=3.0)
-    print("p-norm = 3.0 Distances:")
+    D = p_distance(X, Xs, p=3.5)
+    print("p-norm = 3.5 Distances:")
     print(D)

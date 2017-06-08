@@ -84,8 +84,8 @@ if __name__ == "__main__":
     test  = mols[-n_test:]
 
     # List of representations
-    X  = np.array([mol.coulomb_matrix for mol in training])
-    Xs = np.array([mol.coulomb_matrix for mol in test])
+    X  = np.array([mol.representation for mol in training])
+    Xs = np.array([mol.representation for mol in test])
 
     # List of properties
     Y = np.array([mol.properties for mol in training])

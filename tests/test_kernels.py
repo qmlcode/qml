@@ -28,13 +28,34 @@ import qml
 from qml.kernels import laplacian_kernel
 from qml.kernels import gaussian_kernel
 
-def test_kernels():
+def test_laplacian_kernel(n_train, n_test, X, Xs):
 
-    import sys
-    import numpy as np
-    import qml
-    from qml.kernels import laplacian_kernel
-    from qml.kernels import gaussian_kernel
+    n_train = 25
+    n_test = 20
+
+    # List of dummy representations
+    X = np.random.rand(n_train, 1000)
+    Xs = np.random.rand(n_test, 1000)
+
+    sigma = 100.0
+
+    Ltest = np.zeros((n_train, n_test))
+
+    for i in range(n_train):
+        for j in range(n_test):
+            Ltest[i,j] = np.exp( np.sum(np.abs(X[i] - Xs[j])) / (-1.0 * sigma))
+
+    L = laplacian_kernel(X, Xs, sigma)
+
+    # Compare two implementations:
+    assert np.allclose(L, Ltest), "Error in Laplacian kernel"
+
+    Lsymm = laplacian_kernel(X, X, sigma)
+
+    # Check for symmetry:
+    assert np.allclose(Lsymm, Lsymm.T), "Error in Laplacian kernel"
+
+def test_gaussian_kernel(n_train, n_test, X, Xs):
 
     n_train = 25
     n_test = 20
@@ -46,26 +67,26 @@ def test_kernels():
     sigma = 100.0
 
     Gtest = np.zeros((n_train, n_test))
-    Ltest = np.zeros((n_train, n_test))
-
 
     for i in range(n_train):
         for j in range(n_test):
             Gtest[i,j] = np.exp( np.sum(np.square(X[i] - Xs[j])) / (-2.0 * sigma**2))
 
-            Ltest[i,j] = np.exp( np.sum(np.abs(X[i] - Xs[j])) / (-1.0 * sigma))
-
     G = gaussian_kernel(X, Xs, sigma)
-    L = laplacian_kernel(X, Xs, sigma)
 
     # Compare two implementations:
     assert np.allclose(G, Gtest), "Error in Gaussian kernel"
-    assert np.allclose(L, Ltest), "Error in Laplacian kernel"
 
     Gsymm = gaussian_kernel(X, X, sigma)
-    Lsymm = laplacian_kernel(X, X, sigma)
 
     # Check for symmetry:
     assert np.allclose(Gsymm, Gsymm.T), "Error in Gaussian kernel"
-    assert np.allclose(Lsymm, Lsymm.T), "Error in Laplacian kernel"
+
+def test_kernels():
+
+    test_laplacian_kernel()
+    test_gaussian_kernel()
+
+if __name__ == "__main__":
+    test_kernels()
 

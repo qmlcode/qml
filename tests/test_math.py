@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import print_function
-
 import numpy as np
 
 import qml
@@ -39,3 +37,6 @@ def test_cholesky():
     x_scipy = np.linalg.solve(A, y)
 
     assert np.allclose(x_qml, x_scipy)
+
+if __name__ == "__main__":
+    test_cholesky()

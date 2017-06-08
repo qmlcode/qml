@@ -26,10 +26,8 @@ import numpy as np
 
 from .data import NUCLEAR_CHARGE
 
-from .representations import fgenerate_coulomb_matrix
-from .representations import fgenerate_unsorted_coulomb_matrix
-from .representations import fgenerate_local_coulomb_matrix
-from .representations import fgenerate_atomic_coulomb_matrix
+from .representations import generate_coulomb_matrix
+from .representations import generate_atomic_coulomb_matrix
 from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
 
@@ -37,79 +35,60 @@ from .arad import ARAD
 
 class Compound(object):
 
-    def __init__(self, xyz=None):
+    def __init__(self, xyz = None):
+
+        empty_array = np.asarray([], dtype = float)
 
         self.molid = float("nan")
         self.name = None
 
         # Information about the compound
         self.natoms = float("nan")
-        self.atomtypes = None
-        self.nuclear_charges = None
-        self.coordinates = None
-        self.active_atoms = None
-        self.unit_cell = None
+        self.atomtypes = empty_array
+        self.nuclear_charges = empty_array
+        self.coordinates = empty_array
+        self.active_atoms = empty_array
+        self.unit_cell = empty_array
 
         # Container for misc properties
         self.energy = float("nan")
-        self.properties = []
-        self.properties2 = []
+        self.properties = empty_array
+        self.properties2 = empty_array
 
         # Representations:
-        self.coulomb_matrix = None
-        self.atomic_coulomb_matrix = None
-        self.arad_representation = None
-        self.aras_representation = None
-        self.bob = None
-        self.eigenvalue_coulomb_matrix = None
+        self.representation = empty_array
 
         if xyz is not None:
             self.read_xyz(xyz)
 
-    def generate_coulomb_matrix(self, size=23, sorting="row-norm"):
+    def generate_coulomb_matrix(self, size = 23, sorting = "row-norm"):
 
-        if (sorting == "row-norm"):
-            self.coulomb_matrix = fgenerate_coulomb_matrix(self.nuclear_charges, \
-                self.coordinates, self.natoms, size)
+        self.representation = generate_coulomb_matrix(self.nuclear_charges, 
+            self.coordinates, size = size, sorting = sorting)
 
-        elif (sorting == "unsorted"):
-            self.coulomb_matrix = fgenerate_unsorted_coulomb_matrix(self.nuclear_charges, \
-                self.coordinates, self.natoms, size)
+    def generate_eigenvalue_coulomb_matrix(self, size = 23):
 
-        else:
-            print("ERROR: Unknown sorting scheme requested")
+        self.representation = generate_eigenvalue_coulomb_matrix( 
+                self.nuclear_charges, self.coordinates, size = size)
 
-    def generate_eigenvalue_coulomb_matrix(self, size=23):
-        self.eigenvalue_coulomb_matrix = generate_eigenvalue_coulomb_matrix( \
-                self.coordinates, self.nuclear_charges, size=size)
+    def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm"):
 
-    def generate_atomic_coulomb_matrix(self,size=23, sorting ="row-norm"):
+        self.representation = generate_atomic_coulomb_matrix(
+            self.nuclear_charges, self.coordinates, size = size, )
 
-        if (sorting == "row-norm"):
-            self.local_coulomb_matrix = fgenerate_local_coulomb_matrix( \
-                self.nuclear_charges, self.coordinates, self.natoms, size)
+    def generate_bob(self, size = 23, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
 
-        elif (sorting == "distance"):
-            self.atomic_coulomb_matrix = fgenerate_atomic_coulomb_matrix( \
-                self.nuclear_charges, self.coordinates, self.natoms, size)
+        self.representation = generate_bob(self.nuclear_charges, self.coordinates, self.atomtypes,
+                size = size, asize = asize)
 
-        else:
-            print("ERROR: Unknown sorting scheme requested")
+    def generate_arad_representation(self, size = 23):
 
-    def generate_bob(self, size=23, asize={"O":3, "C":7, "N":3, "H":16, "S":1}):
+        arad = ARAD(maxMolSize = size, maxAts = size)
+        self.representation = arad.describe(self.coordinates,
+                self.nuclear_charges)
 
-        self.bob = generate_bob(self.coordinates, self.nuclear_charges, self.atomtypes,
-                size=size, asize=asize)
-
-
-    def generate_arad_representation(self, size=23):
-        arad = ARAD(maxMolSize=size,maxAts=size)
-        self.arad_representation = arad.describe(np.array(self.coordinates), \
-                np.array(self.nuclear_charges))
-
-        assert (self.arad_representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
-        assert (self.arad_representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
-
+        assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
+        assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
 
     def read_xyz(self, filename):
 
@@ -118,25 +97,19 @@ class Compound(object):
         f.close()
 
         self.natoms = int(lines[0])
-        self.atomtypes = []
-        self.nuclear_charges = []
-        self.coordinates = []
+        self.atomtypes = np.empty(size = self.natoms, dtype='S3')
+        self.nuclear_charges = np.empty(size = self.natoms, dtype=int)
+        self.coordinates = np.empty(size = (self.natoms, 3), dtype=float)
 
         self.name = filename
 
-        for line in lines[2:]:
+        for i, line in enumerate(lines[2:]):
             tokens = line.split()
 
-            if len(tokens) != 4:
+            if len(tokens) < 4:
                 break
 
-            self.atomtypes.append(tokens[0])
-            self.nuclear_charges.append(NUCLEAR_CHARGE[tokens[0]])
+            self.atomtypes[i] = tokens[0]
+            self.nuclear_charges[i] = NUCLEAR_CHARGE[tokens[0]]
 
-            x = float(tokens[1])
-            y = float(tokens[2])
-            z = float(tokens[3])
-
-            self.coordinates.append(np.array([x, y, z]))
-
-        self.coordinates = np.array(self.coordinates)
+            self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)

@@ -20,11 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from numpy import empty
 import numpy as np
 
-from .fdistance import fmanhattan_distance
-from .fdistance import fl2_distance
+from .fdistance import fmanhattan_distance, fl2_distance
 from .fdistance import fp_distance_integer, fp_distance_double
 
 def manhattan_distance(A, B):
@@ -50,7 +48,7 @@ def manhattan_distance(A, B):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
     fmanhattan_distance(A.T, B.T, D)
 
@@ -79,13 +77,13 @@ def l2_distance(A, B):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
     fl2_distance(A.T, B.T, D)
 
     return D
 
-def p_distance(A, B, p=2):
+def p_distance(A, B, p = 2):
     """ Calculates the p-norms between two
         Numpy arrays of representations.
     
@@ -109,7 +107,7 @@ def p_distance(A, B, p=2):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
 
     if (type(p) == type(1)):
@@ -119,7 +117,15 @@ def p_distance(A, B, p=2):
             fp_distance_integer(A.T, B.T, D, p)
 
     elif (type(p) == type(1.0)):
-        fp_distance_double(A.T, B.T, D, p)
+        if p.is_integer():
+            p = int(p)
+            if (p == 2):
+                fl2_distance(A, B, D)
+            else:
+                fp_distance_integer(A.T, B.T, D, p)
+
+        else:
+            fp_distance_double(A.T, B.T, D, p)
     else:
         raise ValueError('expected exponent of integer or float type')
 

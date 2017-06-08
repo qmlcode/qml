@@ -21,12 +21,9 @@
 # SOFTWARE.
 
 import numpy as np
-from numpy import empty, asfortranarray, ascontiguousarray, zeros
 
 from .fkernels import fgaussian_kernel
 from .fkernels import flaplacian_kernel
-from .fkernels import fget_vector_kernels_gaussian
-from .fkernels import fget_vector_kernels_laplacian
 
 
 def laplacian_kernel(A, B, sigma):
@@ -54,7 +51,7 @@ def laplacian_kernel(A, B, sigma):
     na = A.shape[0]
     nb = B.shape[0]
 
-    K = empty((na, nb), order='F')
+    K = np.empty((na, nb), order='F')
 
     # Note: Transposed for Fortran
     flaplacian_kernel(A.T, na, B.T, nb, K, sigma)
@@ -87,7 +84,7 @@ def gaussian_kernel(A, B, sigma):
     na = A.shape[0]
     nb = B.shape[0]
 
-    K = empty((na, nb), order='F')
+    K = np.empty((na, nb), order='F')
 
     # Note: Transposed for Fortran
     fgaussian_kernel(A.T, na, B.T, nb, K, sigma)

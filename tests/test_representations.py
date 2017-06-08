@@ -26,36 +26,60 @@ import numpy as np
 import qml
 from qml.representations import *
 
+def test_coulomb_matrix(mol):
 
-if __name__ == "__main__":
+    # Generate coulomb matrix representation, sorted by row-norm, using the Compound class
+    mol.generate_coulomb_matrix(size=5, sorting="row-norm")
+
+    # Generate coulomb matrix representation, sorted by row-norm,  using the python interface
+    cm = generate_coulomb_matrix(mol.nuclear_charges,
+                mol.coordinates, size=5, sorting="row-norm")
+
+    assert np.allclose(mol.representation, cm), "Error in coulomb matrix representation"
+
+def test_atomic_coulomb_matrix(mol):
+
+    # Generate atomic coulomb matrix representation, sorted by distance, using the Compound class
+    mol.generate_atomic_coulomb_matrix(size=5, sorting="distance")
+
+    # Generate atomic coulomb matrix representation, sorted by distance, using the python interface
+    acm = generate_atomic_coulomb_matrix(size=5, sorting="distance")
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+def test_eigenvalue_coulomb_matrix(mol):
+
+    # Generate coulomb matrix eigenvalue representation using the Compound class
+    mol.generate_eigenvalue_coulomb_matrix(size=5)
+
+    # Generate coulomb matrix eigenvalue representation using the python interface
+    ecm = generate_eigenvalue_coulomb_matrix(mol.nuclear_charges,
+                mol.coordinates, size=5)
+
+    assert np.allclose(mol.representation, ecm), "Error in coulomb matrix eigenvalue representation"
+
+def test_bob(mol):
+
+    # Generate bag of bonds representation using the Compound class
+    mol.generate_bob(asize={"C": 2, "H": 5, "O": 10}, size=5)
+
+    # Generate bag of bonds representation using the python interface
+    bob = generate_bob(mol.nuclear_charges,
+            mol.coordinates, mol.atomtypes, asize={"C": 2, "H": 5, "O": 10}, size=5)
+
+    assert np.allclose(mol.representation, bob), "Error in bag of bonds representation"
+
+def test_representations():
 
     # Generate a compound
     mol = qml.Compound(xyz="qm7/0001.xyz")
 
-    # Generate a representation using the Compound class
-    mol.generate_coulomb_matrix(size=5, sorting="row-norm")
-    print(mol.coulomb_matrix)
+    test_coulomb_matrix(mol)
+    test_atomic_coulomb_matrix(mol)
+    test_eigenvalue_coulomb_matrix(mol)
+    test_bob(mol)
 
-    # Generate a representation using the python interface
-    cm2 = generate_coulomb_matrix(mol.coordinates,
-                mol.nuclear_charges, size=5, sorting="row-norm")
-    print(cm2)
+if __name__ == "__main__":
 
-    # Generate an atomic coulomb matrix, sorted by distance
-    mol.generate_atomic_coulomb_matrix(size=5, sorting="distance")
-    print(mol.atomic_coulomb_matrix)
+    test_representations()
 
-    bob = generate_bob(mol.coordinates,
-            mol.nuclear_charges, mol.atomtypes, asize={"C": 2, "H": 5, "O": 10}, size=5)
-    print(bob)
-
-    mol.generate_bob(asize={"C": 2, "H": 5, "O": 10}, size=5)
-    print(mol.bob)
-
-    # Generate a representation using the python interface
-    cm3 = generate_eigenvalue_coulomb_matrix(mol.coordinates,
-                mol.nuclear_charges, size=5)
-    print(cm3)
-
-    mol.generate_eigenvalue_coulomb_matrix(size=5)
-    print(mol.eigenvalue_coulomb_matrix)
