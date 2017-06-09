@@ -7,6 +7,8 @@ deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GH_TOKEN # Set in travis-ci.org dashboard
+  local_dir: docs/build/html
+  repo: qmlcode/qmlcode.github.io
   on:
     branch: documentation
 
@@ -33,20 +35,6 @@ before_script:
 
 script:
  - nosetests -v
-
-after_success: 
- - |
-   cd ${TRAVIS_BUILD_DIR}/docs/build/html
-   pwd
-   git init
-   git checkout -b gh-pages
-   git add .
-   git -c user.name='travis' -c user.email='travis' commit -m init
-
-   # Make sure to make the output quiet, or else the API token will leak!
-   # This works because the API key can replace your password.
-   git push -f -q https://${GH_TOKEN}@github.com/qmlcode/qmlcode.github.io.git gh-pages 
-   cd "$TRAVIS_BUILD_DIR"
 
 notifications:
   email: false
