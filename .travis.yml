@@ -12,6 +12,7 @@ deploy:
   github_token: $GH_TOKEN # Set in travis-ci.org dashboard
   on:
     branch: documentation
+    condition: ${TRAVIS_PYTHON_VERSION} = "3.6"
 
 python:
   - "2.7"
