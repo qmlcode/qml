@@ -20,7 +20,7 @@ Current list of contributors:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  Anders S. Christensen (University of Basel)
--  Felix Faber (University of Basel)
+-  Felix A. Faber (University of Basel)
 -  Bing Huang (University of Basel)
 -  Lars A. Bratholm (University of Copenhagen)
 -  Alexandre Tkatchenko (University of Luxembourg)
