@@ -38,8 +38,8 @@ script:
 
 after_success: 
  - |
-   cd ${TRAVIS_BUILD_DIR}/docs/
-
+   cd ${TRAVIS_BUILD_DIR}/docs/html
+   pwd
    git init
    git checkout -b gh-pages
    git add .
@@ -47,5 +47,8 @@ after_success:
 
    # Make sure to make the output quiet, or else the API token will leak!
    # This works because the API key can replace your password.
-   git push -f -q https://andersx:$GH_TOKEN@github.com/qmlcode/qmlcode.github.io gh-pages 
+   git push -f -q https://${GH_TOKEN}@github.com/qmlcode/qmlcode.github.io.git gh-pages 
    cd "$TRAVIS_BUILD_DIR"
+
+notifications:
+  email: false
