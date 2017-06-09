@@ -23,6 +23,7 @@ install:
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
        python2 setup.py install
+
    else
        echo "ERROR: Unknown Python version."
    fi

@@ -109,6 +109,7 @@ def setup_pepytools():
         url = __url__,
 
         # set up package contents
+
         ext_package = 'qml',
         ext_modules = [
               ext_farad_kernels,
