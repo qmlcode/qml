@@ -7,8 +7,6 @@ deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GH_TOKEN # Set in travis-ci.org dashboard
-  local_dir: docs/build/html
-  repo: qmlcode/qmlcode.github.io
   on:
     branch: documentation
 
@@ -36,5 +34,9 @@ before_script:
 script:
  - nosetests -v
 
+after_success: 
+ - cd ${TRAVIS_BUILD_DIR}/docs/build/html
+ - pwd
+ - ls
 notifications:
   email: false
