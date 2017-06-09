@@ -6,9 +6,6 @@ dist: trusty
 deploy:
   provider: pages
   skip_cleanup: true
-deploy:
-  provider: pages
-  skip_cleanup: true
   github_token: $GH_TOKEN # Set in travis-ci.org dashboard
   on:
     branch: documentation
