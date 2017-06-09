@@ -30,25 +30,22 @@ from .fkernels import fget_vector_kernels_laplacian
 
 
 def laplacian_kernel(A, B, sigma):
-    """ Calculates the Laplacian kernel matrix K, where K_ij:
+    """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
-            K_ij = exp(-1 * sigma**(-1) * || A_i - B_j ||_1)
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_1}{\sigma} \\big)`
 
-        Where A_i and B_j are descriptor vectors.
-
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of descriptors.
-        B -- np.array of np.array of descriptors.
-        sigma -- The value of sigma in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Laplacian kernel matrix.
+        :return: The Laplacian kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     na = A.shape[0]
@@ -63,25 +60,22 @@ def laplacian_kernel(A, B, sigma):
 
 
 def gaussian_kernel(A, B, sigma):
-    """ Calculates the Gaussian kernel matrix K, where K_ij:
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-            K_ij = exp(-0.5 * sigma**(-2) * || A_i - B_j ||_2)
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
 
-        Where A_i and B_j are descriptor vectors.
-
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of descriptors.
-        B -- np.array of np.array of descriptors.
-        sigma -- The value of sigma in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Gaussian kernel matrix.
+        :return: The Gaussian kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     na = A.shape[0]

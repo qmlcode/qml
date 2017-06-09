@@ -32,6 +32,14 @@ from .frepresentations import fgenerate_atomic_coulomb_matrix
 
 
 def vector_to_matrix(v):
+    """ Converts a representation from 1D vector to 2D square matrix.
+
+    :param v: 1D input representation.
+    :type v: numpy array 
+    :return: Square matrix representation.
+    :rtype: numpy array 
+    """
+
     if not (np.sqrt(8*v.shape[0]+1) == int(np.sqrt(8*v.shape[0]+1))):
         print("ERROR: Can not make a square matrix.")
         exit(1)
@@ -54,6 +62,21 @@ def vector_to_matrix(v):
 
 
 def generate_coulomb_matrix(coordinates, nuclear_charges, size=23, sorting="row-norm"):
+    """ Generates a sorted molecular coulomb, sort either by ``"row-norm"`` or ``"unsorted"``.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is the upper triangle put into the form of a 1D-vector.
+
+    :param coordinates: Input coordinates.
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param sorting: Matrix sorting scheme, "row-norm" or "unsorted".
+    :type sorting: string
+    :return: 1D Coulomb matrix representation
+    :rtype: numpy array
+    """
 
     if (sorting == "row-norm"):
         return fgenerate_coulomb_matrix(nuclear_charges, \
@@ -68,6 +91,21 @@ def generate_coulomb_matrix(coordinates, nuclear_charges, size=23, sorting="row-
 
 
 def generate_atomic_coulomb_matrix(coordinates, nuclear_charges, size=23, sorting ="row-norm"):
+    """ Generates a list of sorted Coulomb matrices, sorted either by ``"row-norm"`` or ``"distance"``, the latter refers to sorting by distance to each query atom.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is the upper triangle put into the form of a 1D-vector.
+
+    :param coordinates: Input coordinates.
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param sorting: Matrix sorting scheme, "row-norm" or "distance".
+    :type sorting: string
+    :return: List of 1D Coulomb matrix representations.
+    :rtype: numpy array
+    """
 
     if (sorting == "row-norm"):
         return fgenerate_local_coulomb_matrix(nuclear_charges,\
@@ -82,6 +120,21 @@ def generate_atomic_coulomb_matrix(coordinates, nuclear_charges, size=23, sortin
 
 
 def generate_bob(coordinates, nuclear_charges, atomtypes, size=23, asize={"O":3, "C":7, "N":3, "H":16, "S":1}):
+    """ Generates a bag-of-bonds (BOB) representation of the molecule. ``size=`` denotes the max number of atoms in the molecule (thus relates to the size of the resulting matrix.)
+    ``asize=`` is the maximum number of atoms of each type (necessary to generate bags of minimal sizes).
+    The resulting matrix is the BOB representation put into the form of a 1D-vector.
+
+    :param coordinates: Input coordinates.
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param asize: Max number of each element type.
+    :type asize: dict
+    :return: 1D BOB representation.
+    :rtype: numpy array
+    """
 
     natoms = len(nuclear_charges)
 
@@ -118,6 +171,19 @@ def generate_bob(coordinates, nuclear_charges, atomtypes, size=23, asize={"O":3,
 
 
 def generate_eigenvalue_coulomb_matrix(coordinates, nuclear_charges, size=23):
+    """ Generates the eigenvalue-Coulomb matrix representation.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is in the form of a 1D-vector.
+
+    :param coordinates: Input coordinates.
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :return: 1D representation.
+    :rtype: numpy array
+    """
     coulomb_matrix = fgenerate_coulomb_matrix(nuclear_charges, \
              coordinates, len(nuclear_charges), size)
     descriptor = np.linalg.eigh(vector_to_matrix(coulomb_matrix))[0]

@@ -27,7 +27,7 @@ def get_energies(filename):
 def test_arad_wrapper():
 
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("tests/hof_qm7.txt")
+    data = get_energies("hof_qm7.txt")
 
     # Generate a list of qml.Compound() objects
     mols = []
@@ -35,7 +35,7 @@ def test_arad_wrapper():
     for xyz_file in sorted(data.keys())[:50]:
 
         # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="tests/qm7/" + xyz_file)
+        mol = qml.Compound(xyz="qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
