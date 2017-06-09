@@ -36,7 +36,7 @@ script:
 
 after_success: 
  - |
-   cd ${TRAVIS_BUILD_DIR}/docs/html
+   cd ${TRAVIS_BUILD_DIR}/docs/build/html
    pwd
    git init
    git checkout -b gh-pages
