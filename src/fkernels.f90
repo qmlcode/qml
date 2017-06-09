@@ -225,3 +225,101 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 end subroutine flaplacian_kernel
 
 
+subroutine fmatern_kernel_l2(a, na, b, nb, k, sigma, order)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+
+    integer, intent(in) :: na, nb
+
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, intent(in) :: sigma
+    integer, intent(in) :: order
+
+    double precision, allocatable, dimension(:) :: temp
+
+    double precision :: inv_sigma, inv_sigma2, d, d2
+    integer :: i, j
+
+    allocate(temp(size(a, dim=1)))
+
+    if (order == 0) then
+        inv_sigma = - 1.0d0 / sigma
+
+        !$OMP PARALLEL DO PRIVATE(temp)
+            do i = 1, nb
+                do j = 1, na
+                    temp(:) = a(:,j) - b(:,i)
+                    k(j,i) = exp(inv_sigma * sqrt(sum(temp*temp)))
+                enddo
+            enddo
+        !$OMP END PARALLEL DO
+    else if (order == 1) then
+        inv_sigma = - sqrt(3.0d0) / sigma
+
+        !$OMP PARALLEL DO PRIVATE(temp, d)
+            do i = 1, nb
+                do j = 1, na
+                    temp(:) = a(:,j) - b(:,i)
+                    d = sqrt(sum(temp*temp))
+                    k(j,i) = exp(inv_sigma * d) * (1.0d0 - inv_sigma * d)
+                enddo
+            enddo
+        !$OMP END PARALLEL DO
+    else
+        inv_sigma = - sqrt(5.0d0) / sigma
+        inv_sigma2 = 5.0d0 / (3.0d0 * sigma)
+
+        !$OMP PARALLEL DO PRIVATE(temp, d, d2)
+            do i = 1, nb
+                do j = 1, na
+                    temp(:) = a(:,j) - b(:,i)
+                    d2 = sum(temp*temp)
+                    d = sqrt(d2)
+                    k(j,i) = exp(inv_sigma * d) * (1.0d0 - inv_sigma * d + inv_sigma2 * d2)
+                enddo
+            enddo
+        !$OMP END PARALLEL DO
+    end if
+
+    deallocate(temp)
+
+end subroutine fmatern_kernel_l2
+
+
+subroutine fsargan_kernel(a, na, b, nb, k, sigma, gammas, ng)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+    double precision, dimension(:), intent(in) :: gammas
+
+    integer, intent(in) :: na, nb, ng
+
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(ng) :: prefactor
+    double precision :: inv_sigma
+    double precision :: d
+
+    integer :: i, j, m, n
+
+    inv_sigma = -1.0d0 / sigma
+
+!$OMP PARALLEL DO PRIVATE(d, prefactor)
+    do i = 1, nb
+        do j = 1, na
+            d = sum(abs(a(:,j) - b(:,i)))
+            do m = 1, ng
+                prefactor(m) = gammas(m) * (- inv_sigma * d) ** m
+            enddo
+            k(j,i) = exp(inv_sigma * d) * (1 + sum(prefactor(:)))
+        enddo
+    enddo
+!$OMP END PARALLEL DO
+
+end subroutine fsargan_kernel

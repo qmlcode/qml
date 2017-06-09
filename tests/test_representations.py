@@ -29,57 +29,52 @@ from qml.representations import *
 def test_coulomb_matrix(mol):
 
     # Generate coulomb matrix representation, sorted by row-norm, using the Compound class
-    mol.generate_coulomb_matrix(size=5, sorting="row-norm")
+    mol.generate_coulomb_matrix(size = 5, sorting = "row-norm")
 
     # Generate coulomb matrix representation, sorted by row-norm,  using the python interface
     cm = generate_coulomb_matrix(mol.nuclear_charges,
-                mol.coordinates, size=5, sorting="row-norm")
+                mol.coordinates, size = 5, sorting = "row-norm")
 
     assert np.allclose(mol.representation, cm), "Error in coulomb matrix representation"
 
 def test_atomic_coulomb_matrix(mol):
 
     # Generate atomic coulomb matrix representation, sorted by distance, using the Compound class
-    mol.generate_atomic_coulomb_matrix(size=5, sorting="distance")
+    mol.generate_atomic_coulomb_matrix(size = 5, sorting = "distance")
 
     # Generate atomic coulomb matrix representation, sorted by distance, using the python interface
-    acm = generate_atomic_coulomb_matrix(size=5, sorting="distance")
+    acm = generate_atomic_coulomb_matrix(size = 5, sorting = "distance")
 
     assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
 
 def test_eigenvalue_coulomb_matrix(mol):
 
     # Generate coulomb matrix eigenvalue representation using the Compound class
-    mol.generate_eigenvalue_coulomb_matrix(size=5)
+    mol.generate_eigenvalue_coulomb_matrix(size = 5)
 
     # Generate coulomb matrix eigenvalue representation using the python interface
     ecm = generate_eigenvalue_coulomb_matrix(mol.nuclear_charges,
-                mol.coordinates, size=5)
+                mol.coordinates, size = 5)
 
     assert np.allclose(mol.representation, ecm), "Error in coulomb matrix eigenvalue representation"
 
 def test_bob(mol):
 
     # Generate bag of bonds representation using the Compound class
-    mol.generate_bob(asize={"C": 2, "H": 5, "O": 10}, size=5)
+    mol.generate_bob(asize = {"C": 2, "H": 5, "O": 10}, size = 5)
 
     # Generate bag of bonds representation using the python interface
     bob = generate_bob(mol.nuclear_charges,
-            mol.coordinates, mol.atomtypes, asize={"C": 2, "H": 5, "O": 10}, size=5)
+            mol.coordinates, mol.atomtypes, asize = {"C": 2, "H": 5, "O": 10}, size = 5)
 
     assert np.allclose(mol.representation, bob), "Error in bag of bonds representation"
 
 def test_representations():
 
     # Generate a compound
-    mol = qml.Compound(xyz="qm7/0001.xyz")
+    mol = qml.Compound(xyz = "qm7/0001.xyz")
 
     test_coulomb_matrix(mol)
     test_atomic_coulomb_matrix(mol)
     test_eigenvalue_coulomb_matrix(mol)
     test_bob(mol)
-
-if __name__ == "__main__":
-
-    test_representations()
-
