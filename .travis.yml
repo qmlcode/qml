@@ -37,10 +37,5 @@ before_script:
 script:
  - nosetests -v
 
-after_success: 
- - cd ${TRAVIS_BUILD_DIR}/docs/build/html
- - pwd
- - ls
-
 notifications:
   email: false
