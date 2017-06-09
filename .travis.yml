@@ -19,15 +19,13 @@ before_install:
 install:
  - sudo apt-get install -qq gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
-
  - sudo apt-get install python-numpy
  - pip2 install sphinx
  - pip2 install sphinx-rtd-theme
  - python2 setup.py build
  - python2 setup.py install
-
-   cd ${TRAVIS_BUILD_DIR}/docs
-   make html
+ - cd ${TRAVIS_BUILD_DIR}/docs
+ - make html
 
 
 before_script:
