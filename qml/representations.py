@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from __future__ import print_function
+from __future__ import division
 
 import numpy as np
 
@@ -44,7 +45,7 @@ def vector_to_matrix(v):
         exit(1)
 
     n = v.shape[0]
-    l = (-1 + int(np.sqrt(8*n+1)))/2
+    l = (-1 + int(np.sqrt(8*n+1)))//2
     M = np.empty((l,l))
 
     index = 0
@@ -153,10 +154,11 @@ def generate_bob(coordinates, nuclear_charges, atomtypes, size=23, asize={"O":3,
             if atom1 > atom2:
                 continue
             if atom1 == atom2:
-                size = size1*(size1-1)/2
+                size = size1*(size1-1)//2
                 feature_vector = np.zeros(size)
                 sub_matrix = coulomb_matrix[np.ix_(pos1,pos1)]
-                feature_vector[:pos1.size*(pos1.size-1)/2] = sub_matrix[np.triu_indices(pos1.size, 1)]
+                feature_vector[:pos1.size*(pos1.size-1)//2] = sub_matrix[np.triu_indices(pos1.size, 1)]
+
                 feature_vector.sort()
                 descriptor.append(feature_vector[:])
             else:
