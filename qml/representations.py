@@ -158,7 +158,6 @@ def generate_bob(coordinates, nuclear_charges, atomtypes, size=23, asize={"O":3,
                 feature_vector = np.zeros(size)
                 sub_matrix = coulomb_matrix[np.ix_(pos1,pos1)]
                 feature_vector[:pos1.size*(pos1.size-1)//2] = sub_matrix[np.triu_indices(pos1.size, 1)]
-
                 feature_vector.sort()
                 descriptor.append(feature_vector[:])
             else:
