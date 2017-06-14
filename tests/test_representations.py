@@ -245,10 +245,10 @@ def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"
 
     atoms = sorted(asize, key=asize.get)
     nmax = [asize[key] for key in atoms]
-    print(atoms,nmax)
 
     descriptor = []
     positions = dict([(element, np.where(atomtypes == element)[0]) for element in atoms])
+    print(atomtypes)
     for i, (element1, size1) in enumerate(zip(atoms,nmax)):
         pos1 = positions[element1]
         feature_vector = np.zeros(size1)

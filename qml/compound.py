@@ -100,7 +100,7 @@ class Compound(object):
         f.close()
     
         self.natoms = int(lines[0])
-        self.atomtypes = np.empty(self.natoms, dtype='S3')
+        self.atomtypes = np.empty(self.natoms, dtype=str)
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
     
