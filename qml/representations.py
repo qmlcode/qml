@@ -77,4 +77,4 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
             n += 2 * value * v
     n /= 2
 
-    return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, asize.values(), n)
+    return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, list(asize.values()), n)
