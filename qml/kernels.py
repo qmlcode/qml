@@ -31,25 +31,22 @@ from .fkernels import fmatern_kernel_l2
 
 
 def laplacian_kernel(A, B, sigma):
-    """ Calculates the Laplacian kernel matrix K, where K_ij:
+    """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
-            K_ij = exp(-1 * sigma**(-1) * || A_i - B_j ||_1)
+            .. math:: K_{ij} = \exp \left( -\frac{\|A_i - B_j\|_1}{\sigma} \right)
 
-        Where A_i and B_j are representation vectors.
-
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of representations.
-        B -- np.array of np.array of representations.
-        sigma -- The value of sigma in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Laplacian kernel matrix.
+        :return: The Laplacian kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     na = A.shape[0]
@@ -62,28 +59,23 @@ def laplacian_kernel(A, B, sigma):
 
     return K
 
-
 def gaussian_kernel(A, B, sigma):
-    """ Calculates the Gaussian kernel matrix K, where K_ij:
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-            K_ij = exp(-0.5 * sigma**(-2) * || A_i - B_j ||_2)
+            .. math:: K_{ij} = \exp \left( -\frac{\|A_i - B_j\|_2^2}{2\sigma^2} \right)
 
-        Where A_i and B_j are representation vectors.
-
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of representations.
-        B -- np.array of np.array of representations.
-        sigma -- The value of sigma in the kernel matrix.
-        gammas -- The values of gammas in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Gaussian kernel matrix.
+        :return: The Gaussian kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     na = A.shape[0]
@@ -97,26 +89,25 @@ def gaussian_kernel(A, B, sigma):
     return K
 
 def sargan_kernel(A, B, sigma, gammas):
-    """ Calculates the Sargan kernel matrix K, where K_ij:
+    """ Calculates the Sargan kernel matrix K, where :math:`K_{ij}`:
 
-            K_ij = exp(-1 * sigma**(-1) * || A_i - B_j ||_1)
-                * (1 + sum_k(gamma[k] * sigma**(-k) * || A_i - B_j ||_1^k ))
+            .. math:: K_{ij} = \exp \left( -\frac{\| A_i - B_j \|_1)}{\sigma} \right)
+                 (1 + \sum_k \gamma_k * sigma^{-k} \| A_i - B_j <|_1^k )
 
-        Where A_i and B_j are descriptor vectors.
-
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
+        :param gammas: 1D array of parameters in the kernel matrix
+        :type gammas: numpy array
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of descriptors.
-        B -- np.array of np.array of descriptors.
-        sigma -- The value of sigma in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Sargan kernel matrix.
+        :return: The Sargan kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     ng = len(gammas)
@@ -135,33 +126,32 @@ def sargan_kernel(A, B, sigma, gammas):
     return K
 
 def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
-    """ Calculates the Matern kernel matrix K, where K_ij:
+    """ Calculates the Matern kernel matrix K, where :math:`K_{ij}`:
 
             for order = 0:
-                K_ij = exp(- sigma**(-1) * d)
+                .. math:: K_{ij} = \exp\left(- \frac{d}{\sigma} \right)
             for order = 1:
-                K_ij = exp(- sqrt(3) * sigma**(-1) * d) * (1 + sqrt(3) * sigma**(-1) * d)
+                .. math:: K_{ij} = \exp\left(- \frac{\sqrt{3} d}{\sigma} \right) \left(1 + \frac{\sqrt{3} d}{\sigma \right)
             for order = 2:
-                K_ij = exp(- sqrt(5) * sigma**(-1) * d) * (1 + sqrt(5) * sigma**(-1) * d + (5/3) * sigma**(-2) * d**2 / 3)
+                .. math:: K_{ij} = \exp\left( - \frac{\sqrt{5} d}{d} \right) \left( 1 + \frac{\sqrt{5} d}{sigma} + \frac{5 d^2}{3\sigma^2})
 
-
-        Where A_i and B_j are representation vectors, and d is a distance measure.
+        Where :math:`A_i` and :math:`B_j` are representation vectors, and d is a distance measure.
 
         K is calculated using an OpenMP parallel Fortran routine.
 
-        NOTE: A and B need not be input as Fortran contiguous arrays.
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
+        :param order: The order of the polynomial (0, 1, 2)
+        :type order: integer
+        :param metric: The distance metric ('l1', 'l2')
+        :type metric: string
 
-        Arguments:
-        ==============
-        A -- np.array of np.array of descriptors.
-        B -- np.array of np.array of descriptors.
-        sigma -- The value of sigma in the kernel matrix.
-        order -- The order of the polynomial
-        metric -- The distance metric (l1, l2)
-
-        Returns:
-        ==============
-        K -- The Matern kernel matrix.
+        :return: The Matern kernel matrix - shape (N, M)
+        :rtype: numpy array
     """
 
     if metric == "l1":

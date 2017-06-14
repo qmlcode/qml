@@ -26,17 +26,21 @@ from .fdistance import fmanhattan_distance, fl2_distance
 from .fdistance import fp_distance_integer, fp_distance_double
 
 def manhattan_distance(A, B):
-    """ Calculates the Manhattan distances between two
+    """ Calculates the Manhattan distances, D,  between two
         Numpy arrays of representations.
     
-        Arguments:
-        ==============
-        A -- np.array of np.array of representations.
-        B -- np.array of np.array of representations.
+            :math:`D_{ij} = \\|A_i - B_j\\|_1`
 
-        Returns:
-        ==============
-        D -- The distance matrix.
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        D is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+
+        :return: The Manhattan-distance matrix.
+        :rtype: numpy array
     """
 
     if len(A.shape) != 2 or len(B.shape) != 2:
@@ -55,17 +59,21 @@ def manhattan_distance(A, B):
     return D
 
 def l2_distance(A, B):
-    """ Calculates the L2-distances between two
+    """ Calculates the L2 distances, D, between two
         Numpy arrays of representations.
-    
-        Arguments:
-        ==============
-        A -- np.array of np.array of representations.
-        B -- np.array of np.array of representations.
 
-        Returns:
-        ==============
-        D -- The distance matrix.
+            :math:`D_{ij} = \\|A_i - B_j\\|_1`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        D is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+    
+        :return: The L2-distance matrix.
+        :rtype: numpy array
     """
 
     if len(A.shape) != 2 or len(B.shape) != 2:
@@ -84,18 +92,25 @@ def l2_distance(A, B):
     return D
 
 def p_distance(A, B, p = 2):
-    """ Calculates the p-norms between two
+    """ Calculates the p-norm distances between two
         Numpy arrays of representations.
+        The value of the keyword argument ``p =`` sets the norm order. 
+        E.g. ``p = 1.0`` and ``p = 2.0`` with yield the Manhattan and L2 distances, respectively.
     
-        Arguments:
-        ==============
-        A -- np.array of np.array of representations.
-        B -- np.array of np.array of representations.
-        p -- the norm order (as integer or float)
+            .. math:: D_{ij} = \|A_i - B_j\|_p
 
-        Returns:
-        ==============
-        D -- The distance matrix.
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        D is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param p: The norm order
+        :type p: float
+
+        :return: The distance matrix.
+        :rtype: numpy array
     """
 
     if len(A.shape) != 2 or len(B.shape) != 2:
