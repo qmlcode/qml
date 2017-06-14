@@ -240,14 +240,17 @@ def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"
 
     coulomb_matrix = vector_to_matrix(coulomb_matrix)
 
+    atoms = sorted(asize, key=asize.get)
+    nmax = [asize[key] for key in atoms]
+
     descriptor = []
-    positions = dict([(element, np.where(atomtypes == element)[0]) for element in asize.keys()])
-    for i, (element1, size1) in enumerate(asize.items()):
+    positions = dict([(element, np.where(atomtypes == element)[0]) for element in atoms])
+    for i, (element1, size1) in enumerate(zip(atoms,nmax)):
         pos1 = positions[element1]
         feature_vector = np.zeros(size1)
         feature_vector[:pos1.size] = np.diag(coulomb_matrix)[pos1]
         descriptor.append(feature_vector)
-        for j, (element2, size2) in enumerate(asize.items()):
+        for j, (element2, size2) in enumerate(zip(atoms,nmax)):
             if i > j:
                 continue
             if i == j:
@@ -281,8 +284,8 @@ def vector_to_matrix(vec):
 
 
 if __name__ == "__main__":
-    #test_coulomb_matrix()
-    #test_atomic_coulomb_matrix()
-    #test_eigenvalue_coulomb_matrix()
+    test_coulomb_matrix()
+    test_atomic_coulomb_matrix()
+    test_eigenvalue_coulomb_matrix()
     test_bob()
 
