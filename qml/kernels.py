@@ -29,11 +29,10 @@ from .fkernels import flaplacian_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
 
-
 def laplacian_kernel(A, B, sigma):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
-            .. math:: K_{ij} = \exp \left( -\frac{\|A_i - B_j\|_1}{\sigma} \right)
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_1}{\sigma} \\big)`
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
@@ -62,7 +61,7 @@ def laplacian_kernel(A, B, sigma):
 def gaussian_kernel(A, B, sigma):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-            .. math:: K_{ij} = \exp \left( -\frac{\|A_i - B_j\|_2^2}{2\sigma^2} \right)
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
@@ -91,8 +90,8 @@ def gaussian_kernel(A, B, sigma):
 def sargan_kernel(A, B, sigma, gammas):
     """ Calculates the Sargan kernel matrix K, where :math:`K_{ij}`:
 
-            .. math:: K_{ij} = \exp \left( -\frac{\| A_i - B_j \|_1)}{\sigma} \right)
-                 (1 + \sum_k \gamma_k * sigma^{-k} \| A_i - B_j <|_1^k )
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\| A_i - B_j \\|_1)}{\sigma} \\big)
+                    \big(1 + \\sum_{k} \\frac{\gamma_{k} \\| A_i - B_j \\|_1^k}{\sigma^k} \\big)
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
@@ -129,11 +128,11 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
     """ Calculates the Matern kernel matrix K, where :math:`K_{ij}`:
 
             for order = 0:
-                .. math:: K_{ij} = \exp\left(- \frac{d}{\sigma} \right)
+                :math:`K_{ij} = \\exp\\big( -\\frac{d}{\sigma} \\big)
             for order = 1:
-                .. math:: K_{ij} = \exp\left(- \frac{\sqrt{3} d}{\sigma} \right) \left(1 + \frac{\sqrt{3} d}{\sigma \right)
+                :math:`K_{ij} = \\exp\\big( -\\frac{\\sqrt{3} d}{\sigma} \\big) \\big(1 + \\frac{\\sqrt{3} d}{\sigma \\big)
             for order = 2:
-                .. math:: K_{ij} = \exp\left( - \frac{\sqrt{5} d}{d} \right) \left( 1 + \frac{\sqrt{5} d}{sigma} + \frac{5 d^2}{3\sigma^2})
+                :math:`K_{ij} = \\exp\\big( -\\frac{\\sqrt{5} d}{d} \\big) \\big( 1 + \\frac{\\sqrt{5} d}{\sigma} + \\frac{5 d^2}{3\sigma^2} \\big)
 
         Where :math:`A_i` and :math:`B_j` are representation vectors, and d is a distance measure.
 
