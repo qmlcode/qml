@@ -68,13 +68,15 @@ def generate_eigenvalue_coulomb_matrix(nuclear_charges, coordinates, size = 23):
 def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
 
     n = 0
-    ids = np.zeros(len(asize), dtype=int)
-    for i, (key, value) in enumerate(asize.items()):
+    atoms = sorted(asize, key=asize.get)
+    nmax = [asize[key] for key in atoms]
+    ids = np.zeros(len(nmax), dtype=int)
+    for i, (key, value) in enumerate(zip(atoms,nmax)):
         n += value * (1+value)
         ids[i] = NUCLEAR_CHARGE[key]
         for j in range(i):
-            v = list(asize.values())[j]
+            v = nmax[j]
             n += 2 * value * v
     n /= 2
 
-    return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, list(asize.values()), n)
+    return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, nmax, n)
