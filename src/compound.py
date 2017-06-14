@@ -23,6 +23,7 @@
 from __future__ import print_function
 
 import numpy as np
+import collections
 
 from .data import NUCLEAR_CHARGE
 
@@ -44,7 +45,9 @@ class Compound(object):
 
         # Information about the compound
         self.natoms = float("nan")
+        self.natypes = {}
         self.atomtypes = empty_array
+        self.atomtype_indices = collections.defaultdict(list)
         self.nuclear_charges = empty_array
         self.coordinates = empty_array
         self.active_atoms = empty_array
@@ -68,18 +71,18 @@ class Compound(object):
 
     def generate_eigenvalue_coulomb_matrix(self, size = 23):
 
-        self.representation = generate_eigenvalue_coulomb_matrix( 
+        self.representation = generate_eigenvalue_coulomb_matrix(
                 self.nuclear_charges, self.coordinates, size = size)
 
     def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm"):
 
         self.representation = generate_atomic_coulomb_matrix(
-            self.nuclear_charges, self.coordinates, size = size, )
+            self.nuclear_charges, self.coordinates, size = size, sorting = sorting)
 
-    def generate_bob(self, size = 23, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
+    def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
 
-        self.representation = generate_bob(self.nuclear_charges, self.coordinates, self.atomtypes,
-                size = size, asize = asize)
+        self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
+                self.atomtypes, asize = asize)
 
     def generate_arad_representation(self, size = 23):
 
@@ -91,25 +94,28 @@ class Compound(object):
         assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
 
     def read_xyz(self, filename):
-
+    
         f = open(filename, "r")
         lines = f.readlines()
         f.close()
-
+    
         self.natoms = int(lines[0])
-        self.atomtypes = np.empty(size = self.natoms, dtype='S3')
-        self.nuclear_charges = np.empty(size = self.natoms, dtype=int)
-        self.coordinates = np.empty(size = (self.natoms, 3), dtype=float)
-
+        self.atomtypes = np.empty(self.natoms, dtype='S3')
+        self.nuclear_charges = np.empty(self.natoms, dtype=int)
+        self.coordinates = np.empty((self.natoms, 3), dtype=float)
+    
         self.name = filename
-
+    
         for i, line in enumerate(lines[2:]):
             tokens = line.split()
-
+    
             if len(tokens) < 4:
                 break
-
+    
             self.atomtypes[i] = tokens[0]
+            self.atomtype_indices[tokens[0]].append(i)
             self.nuclear_charges[i] = NUCLEAR_CHARGE[tokens[0]]
-
+    
             self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)
+    
+        self.natypes = dict([(key, len(value)) for key,value in self.atomtype_indices.items()])

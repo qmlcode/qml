@@ -119,11 +119,11 @@ def arad_kernels(mols1, mols2, sigmas,
 def arad_symmetric_kernels(mols1, sigmas,
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
 
-    amax = mols1[0].arad_representation.shape[0]
+    amax = mols1[0].representation.shape[0]
 
     nm1 = len(mols1)
 
-    X1 = np.array([mol.arad_representation for mol in mols1]).reshape((nm1,amax,5,amax))
+    X1 = np.array([mol.representation for mol in mols1]).reshape((nm1,amax,5,amax))
 
     Z1 = [mol.nuclear_charges for mol in mols1]
 

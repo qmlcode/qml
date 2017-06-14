@@ -27,6 +27,7 @@ import numpy as np
 from .fkernels import fgaussian_kernel
 from .fkernels import flaplacian_kernel
 from .fkernels import fsargan_kernel
+from .fkernels import fmatern_kernel_l2
 
 
 def laplacian_kernel(A, B, sigma):
@@ -131,6 +132,8 @@ def sargan_kernel(A, B, sigma, gammas):
     # Note: Transposed for Fortran
     fsargan_kernel(A.T, na, B.T, nb, K, sigma, gammas, ng)
 
+    return K
+
 def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
     """ Calculates the Matern kernel matrix K, where K_ij:
 
@@ -162,12 +165,14 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
     """
 
     if metric == "l1":
-        if order == 1:
+        if order == 0:
             gammas = []
         elif order == 1:
             gammas = [1]
+            sigma /= np.sqrt(3)
         elif order == 2:
             gammas = [1,1/3.0]
+            sigma /= np.sqrt(5)
         else:
             print("Order:%d not implemented in Matern Kernel" % order)
             raise SystemExit
@@ -187,4 +192,6 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
 
     # Note: Transposed for Fortran
     fmatern_kernel_l2(A.T, na, B.T, nb, K, sigma, order)
+
+    return K
 

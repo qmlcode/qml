@@ -81,7 +81,7 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 

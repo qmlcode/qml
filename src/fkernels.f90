@@ -270,7 +270,7 @@ subroutine fmatern_kernel_l2(a, na, b, nb, k, sigma, order)
         !$OMP END PARALLEL DO
     else
         inv_sigma = - sqrt(5.0d0) / sigma
-        inv_sigma2 = 5.0d0 / (3.0d0 * sigma)
+        inv_sigma2 = 5.0d0 / (3.0d0 * sigma * sigma)
 
         !$OMP PARALLEL DO PRIVATE(temp, d, d2)
             do i = 1, nb
@@ -302,24 +302,31 @@ subroutine fsargan_kernel(a, na, b, nb, k, sigma, gammas, ng)
     double precision, dimension(:,:), intent(inout) :: k
     double precision, intent(in) :: sigma
 
-    double precision, dimension(ng) :: prefactor
+    double precision, allocatable, dimension(:) :: prefactor
     double precision :: inv_sigma
     double precision :: d
 
-    integer :: i, j, m, n
+    integer :: i, j, m
 
     inv_sigma = -1.0d0 / sigma
 
-!$OMP PARALLEL DO PRIVATE(d, prefactor)
-    do i = 1, nb
-        do j = 1, na
-            d = sum(abs(a(:,j) - b(:,i)))
-            do m = 1, ng
-                prefactor(m) = gammas(m) * (- inv_sigma * d) ** m
+    ! Allocate temporary
+    allocate(prefactor(ng))
+
+
+    !$OMP PARALLEL DO PRIVATE(d, prefactor)
+        do i = 1, nb
+            do j = 1, na
+                d = sum(abs(a(:,j) - b(:,i)))
+                do m = 1, ng
+                    prefactor(m) = gammas(m) * (- inv_sigma * d) ** m
+                enddo
+                k(j,i) = exp(inv_sigma * d) * (1 + sum(prefactor(:)))
             enddo
-            k(j,i) = exp(inv_sigma * d) * (1 + sum(prefactor(:)))
         enddo
-    enddo
-!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
+
+    ! Clean up
+    deallocate(prefactor)
 
 end subroutine fsargan_kernel

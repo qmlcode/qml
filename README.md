@@ -35,6 +35,12 @@ The easiest way to install the stable version from the Python Package Index (PyP
 pip install qml --user -U
 ```
 
+To use the Intel compiler, together with the MKL math library:
+
+```bash
+pip install qml --user -U  --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
+```
+
 Alternatively, you can install the most recent stable development snapshot directly from GitHub:
 
 ```bash

@@ -27,7 +27,7 @@ subroutine fcho_solve(A,y,x)
     double precision, dimension(:,:), intent(in) :: A
     double precision, dimension(:), intent(in) :: y
     double precision, dimension(:), intent(inout) :: x
-    
+
     integer :: info, na
 
     na = size(A, dim=1)

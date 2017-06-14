@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import numpy as np
 
 from .farad_kernels import fget_kernels_arad
@@ -85,17 +87,17 @@ def get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas, \
     assert X1.shape[0] == nm1,  "ERROR: Check ARAD decriptor sizes! code = 4"
     assert X2.shape[0] == nm2,  "ERROR: Check ARAD decriptor sizes! code = 5"
 
-    N1 = np.empty(size = nm1, dtype = np.int32)
+    N1 = np.empty(nm1, dtype = np.int32)
     Z1_arad = np.zeros((nm1, amax, 2))
     for i in range(nm1):
         N1[i] = len(Z1[i])
-        Z1_arad[i,:N1[i]] = np.asarray([PTP[int(q)] for q in Z1], dtype = np.int32)
+        Z1_arad[i,:N1[i]] = np.asarray([PTP[q] for q in Z1[i]], dtype = np.int32)
 
-    N2 = np.empty(size = nm2, dtype = np.int32)
+    N2 = np.empty(nm2, dtype = np.int32)
     Z2_arad = np.zeros((nm2, amax, 2))
     for i in range(nm2):
         N2[i] = len(Z2[i])
-        Z2_arad[i,:N2[i]] = np.asarray([PTP[int(q)] for q in Z2], dtype = np.int32)
+        Z2_arad[i,:N2[i]] = np.asarray([PTP[q] for q in Z2[i]], dtype = np.int32)
 
 
     sigmas = np.array(sigmas)
@@ -131,11 +133,11 @@ def get_atomic_symmetric_kernels_arad(X1, Z1, sigmas, \
 
     assert X1.shape[0] == nm1,  "ERROR: Check ARAD decriptor sizes! code = 4"
 
-    N1 = np.empty(size = nm1, dtype = np.int32)
+    N1 = np.empty(nm1, dtype = np.int32)
     Z1_arad = np.zeros((nm1, amax, 2))
     for i in range(nm1):
         N1[i] = len(Z1[i])
-        Z1_arad[i,:N1[i]] = np.asarray([PTP[int(q)] for q in Z1], dtype = np.int32)
+        Z1_arad[i,:N1[i]] = np.asarray([PTP[q] for q in Z1[i]], dtype = np.int32)
 
     sigmas = np.array(sigmas)
     nsigmas = sigmas.size

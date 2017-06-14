@@ -27,11 +27,11 @@ import qml.math
 
 def test_cholesky():
 
-    A = np.array([[ 2.0, -1.0,  0.0],
+    A = np.asarray([[ 2.0, -1.0,  0.0],
                   [-1.0,  2.0, -1.0],
                   [ 0.0, -1.0,  2.0]])
 
-    y = np.array([1.0, 1.0, 1.0])
+    y = np.asarray([1.0, 1.0, 1.0])
 
     x_qml   = qml.math.cho_solve(A,y)
     x_scipy = np.linalg.solve(A, y)

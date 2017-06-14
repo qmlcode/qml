@@ -25,7 +25,7 @@ from __future__ import print_function
 import sys
 import numpy as np
 import qml
-from qml.kernels import laplacian_kernel, gaussian_kernel,
+from qml.kernels import laplacian_kernel, gaussian_kernel, \
     matern_kernel, sargan_kernel
 
 def test_laplacian_kernel():
@@ -82,10 +82,10 @@ def test_gaussian_kernel():
     # Check for symmetry:
     assert np.allclose(Ksymm, Ksymm.T), "Error in Gaussian kernel"
 
-
 def test_matern_kernel():
     for metric in ("l1", "l2"):
         for order in (0, 1, 2):
+            print(metric,order)
             matern(metric, order)
 
 def matern(metric, order):
@@ -107,16 +107,16 @@ def matern(metric, order):
             if metric == "l1":
                 d = np.sum(abs(X[i] - Xs[j]))
             else:
-                d = np.sum((X[i] - Xs[j])**2)
+                d = np.sqrt(np.sum((X[i] - Xs[j])**2))
 
             if order == 0:
                 Ktest[i,j] = np.exp( - d / sigma)
             elif order == 1:
-                Ktest[i,j] = np.exp( - np.sqrt(3) * d / sigma)
-                    * (1 + sqrt(3) * d / sigma)
+                Ktest[i,j] = np.exp( - np.sqrt(3) * d / sigma) \
+                    * (1 + np.sqrt(3) * d / sigma)
             else:
-                Ktest[i,j] = np.exp( - np.sqrt(5) * d / sigma)
-                    * (1 + sqrt(5) * d / sigma + 5.0/3 * d / sigma)
+                Ktest[i,j] = np.exp( - np.sqrt(5) * d / sigma) \
+                    * (1 + np.sqrt(5) * d / sigma + 5.0/3 * d**2 / sigma**2)
 
     K = matern_kernel(X, Xs, sigma, metric = metric, order = order)
 
@@ -154,9 +154,13 @@ def sargan(ngamma):
             factor = 1
             for k, gamma in enumerate(gammas):
                 factor += gamma / sigma**(k+1) * d ** (k+1)
-            Ktest[i,j] = np.exp( - d / sigma) * factor1
+            Ktest[i,j] = np.exp( - d / sigma) * factor
+    print (gammas)
 
     K = sargan_kernel(X, Xs, sigma, gammas)
+
+    print (K[1])
+    print(Ktest[1])
 
     # Compare two implementations:
     assert np.allclose(K, Ktest), "Error in Sargan kernel"
@@ -165,3 +169,9 @@ def sargan(ngamma):
 
     # Check for symmetry:
     assert np.allclose(Ksymm, Ksymm.T), "Error in Sargan kernel"
+
+if __name__ == "__main__":
+    test_laplacian_kernel()
+    test_gaussian_kernel()
+    test_matern_kernel()
+    test_sargan_kernel()
