@@ -231,6 +231,9 @@ def test_bob():
     # Compare with python implementation
     bob = bob_reference(mol.nuclear_charges, mol.coordinates, mol.atomtypes, size = (mol.natoms), asize = asize)
 
+    print(bob)
+    print(mol.representation)
+
     assert np.allclose(mol.representation, bob), "Error in bag of bonds representation"
 
 def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
@@ -242,6 +245,7 @@ def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"
 
     atoms = sorted(asize, key=asize.get)
     nmax = [asize[key] for key in atoms]
+    print(atoms,nmax)
 
     descriptor = []
     positions = dict([(element, np.where(atomtypes == element)[0]) for element in atoms])

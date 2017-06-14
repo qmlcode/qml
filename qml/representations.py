@@ -70,6 +70,7 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
     n = 0
     atoms = sorted(asize, key=asize.get)
     nmax = [asize[key] for key in atoms]
+    print(atoms,nmax)
     ids = np.zeros(len(nmax), dtype=int)
     for i, (key, value) in enumerate(zip(atoms,nmax)):
         n += value * (1+value)
