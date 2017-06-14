@@ -62,7 +62,7 @@ def l2_distance(A, B):
     """ Calculates the L2 distances, D, between two
         Numpy arrays of representations.
 
-            :math:`D_{ij} = \\|A_i - B_j\\|_1`
+            :math:`D_{ij} = \\|A_i - B_j\\|_2`
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         D is calculated using an OpenMP parallel Fortran routine.
