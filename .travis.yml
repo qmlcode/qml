@@ -11,7 +11,7 @@ deploy:
   target_branch: master
   github_token: ${GH_TOKEN} # Set in travis-ci.org dashboard
   on:
-    branch: documentation
+    branch: master
     condition: ${TRAVIS_PYTHON_VERSION} = "2.7"
 
 python:
