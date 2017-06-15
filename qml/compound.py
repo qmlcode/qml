@@ -99,6 +99,28 @@ class Compound(object):
             self.coordinates, size = size, sorting = sorting)
 
     def generate_eigenvalue_coulomb_matrix(self, size = 23):
+        """ Creates an eigenvalue Coulomb Matrix representation of a molecule.
+            A matrix :math:`M` is constructed with elements
+
+            .. math::
+
+                M_{ij} =
+                  \\begin{cases}
+                     \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
+                     \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
+                  \\end{cases},
+
+            where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
+            :math:`\\bf R` is the coordinate in euclidean space.
+            The molecular representation of the molecule is then the sorted eigenvalues of M.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param size: The size of the largest molecule supported by the representation
+            :type size: integer
+
+            :return: 1D representation - shape (size, )
+            :rtype: numpy array
+        """
 
         self.representation = generate_eigenvalue_coulomb_matrix(
                 self.nuclear_charges, self.coordinates, size = size)
