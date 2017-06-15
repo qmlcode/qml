@@ -131,6 +131,32 @@ class Compound(object):
             self.nuclear_charges, self.coordinates, size = size, sorting = sorting)
 
     def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
+        """ Creates a Bag of Bonds (BOB) representation of a molecule.
+            The representation expands on the coulomb matrix representation.
+            For each element a bag (vector) is constructed for self interactions
+            (e.g. ('C', 'H', 'O')).
+            For each element pair a bag is constructed for interatomic interactions
+            (e.g. ('CC', 'CH', 'CO', 'HH', 'HO', 'OO')), sorted by value.
+            The self interaction of element :math:`I` is given by
+
+                :math:`\\tfrac{1}{2} Z_{I}^{2.4}`,
+
+            with :math:`Z_{i}` being the nuclear charge of element :math:`i`
+            The interaction between atom :math:`i` of element :math:`I` and 
+            atom :math:`j` of element :math:`J` is given by
+
+                :math:`\\frac{Z_{I}Z_{J}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}`
+
+            with :math:`R_{i}` being the euclidean coordinate of atom :math:`i`.
+            The sorted bags are concatenated to an 1D vector representation.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param asize: The maximum number of atoms of each element type supported by the representation
+            :type size: dictionary
+
+            :return: 1D representation
+            :rtype: numpy array
+        """
 
         self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
                 self.atomtypes, asize = asize)
