@@ -40,6 +40,15 @@ if any(["intelem" in arg for arg in sys.argv]):
 # MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
+ext_ffchl_kernels = Extension(name = 'ffchl_kernels',
+                          sources = ['qml/ffchl_kernels.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
 ext_farad_kernels = Extension(name = 'farad_kernels',
                           sources = ['qml/farad_kernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
@@ -112,6 +121,7 @@ def setup_pepytools():
 
         ext_package = 'qml',
         ext_modules = [
+              ext_ffchl_kernels,
               ext_farad_kernels,
               ext_fcho_solve,
               ext_fdistance,
