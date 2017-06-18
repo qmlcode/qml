@@ -260,7 +260,7 @@ pure function atomic_distl2(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, 
     do i = 1, n1
         mask1(int(x1(2,i))) = .false.
     enddo
-        
+
     do i = 1, n2
         mask2(int(x2(2,i))) = .false.
     enddo
@@ -270,7 +270,7 @@ pure function atomic_distl2(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, 
 
     do m = 1, order
         s(m) = g1 * exp(-(t_width * m)**2 / 2.0d0)
-    enddo 
+    enddo
 
     inv_width = -1.0d0 / (4.0d0 * d_width**2)
 
@@ -293,7 +293,7 @@ pure function atomic_distl2(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, 
                 d = exp(r2 * inv_width ) * pd(int(x1(2,m_1)), int(x2(2,m_2)))
 
                 angular = a0 * a0
-                
+
                 do m = 1, order
 
                     temp = 0.0d0
@@ -322,7 +322,7 @@ pure function atomic_distl2(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, 
             end if
         end do
     end do
-    
+
     aadist = aadist * pd(int(x1(2,1)), int(x2(2,1)))
 
     deallocate(mask1)
@@ -383,9 +383,6 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     integer :: i, j, k, ni, nj
     integer :: a, b, m, n
 
-    ! Pre-computed constants
-    double precision :: inv_cut
-
     ! Temporary variables necessary for parallelization
     double precision :: l2dist
     double precision, allocatable, dimension(:,:) :: atomic_distance
@@ -410,6 +407,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     integer :: p
     integer :: pmax1
     integer :: pmax2
+    integer :: nneighi
     double precision :: theta
 
     double precision :: ksi3
@@ -434,7 +432,6 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         pmax2 = max(pmax2, int(maxval(x2(a,1,2,:n2(a)))))
     enddo
 
-    inv_cut = pi / (2.0d0 * cut_distance)
     inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxval(nneigh1)))
@@ -443,21 +440,29 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     ksi1 = 0.0d0
     ksi2 = 0.0d0
 
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi)
     do a = 1, nm1
-        do i = 1, n1(a)
-            do j = 2, nneigh1(a, i) !ni
+        ni = n1(a)
+        do i = 1, ni
+            nneighi = nneigh1(a, i)
+            do j = 2, nneighi
                 ksi1(a, i, j) = 1.0d0 / x1(a, i, 1, j)**6
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL do
 
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi)
     do a = 1, nm2
-        do i = 1, n2(a)
-            do j = 2, nneigh2(a, i) !ni
+        ni = n2(a)
+        do i = 1, ni
+            nneighi = nneigh2(a, i)
+            do j = 2, nneighi
                 ksi2(a, i, j) = 1.0d0 / x2(a, i, 1, j)**6
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL do
 
 
     allocate(cosp1(nm1, maxval(n1), pmax1, order, maxval(nneigh1)))
@@ -466,13 +471,15 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
         do i = 1, ni
+            nneighi = nneigh1(a, i)
 
-            do j = 2, nneigh1(a, i) !ni
-                do k = 2, nneigh1(a, i) !ni
+            do j = 2, nneighi
+                do k = 2, nneighi
 
                     if (j /= k) then
 
@@ -486,10 +493,10 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
                         do m = 1, order
 
                             cosp1(a, i, p, m, j) = cosp1(a, i, p, m, j) + &
-                            & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
 
                             sinp1(a, i, p, m, j) = sinp1(a, i, p, m, j) + &
-                            & (sin(m * theta) - sin((theta + pi) * m))*ksi3
+                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
                         enddo
                     endif
@@ -498,6 +505,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL do
 
     allocate(cosp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
     allocate(sinp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
@@ -505,13 +513,15 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp2 = 0.0d0
     sinp2 = 0.0d0
 
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp2,sinp2)
     do a = 1, nm2
         ni = n2(a)
 
         do i = 1, ni
+            nneighi = nneigh2(a, i)
 
-            do j = 2, nneigh2(a, i) !ni
-                do k = 2, nneigh2(a, i) !ni
+            do j = 2, nneighi
+                do k = 2, nneighi
 
                     if (j /= k) then
 
@@ -525,10 +535,10 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
                         do m = 1, order
 
                             cosp2(a, i, p, m, j) = cosp2(a, i, p, m, j) + &
-                            & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
 
                             sinp2(a, i, p, m, j) = sinp2(a, i, p, m, j) + &
-                            & (sin(m * theta) - sin((theta + pi) * m))*ksi3
+                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
                         enddo
                     endif
@@ -537,6 +547,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL do
 
     allocate(selfl21(nm1, maxval(n1)))
     allocate(selfl22(nm2, maxval(n2)))
@@ -595,7 +606,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
 
                     l2dist = selfl21(a,i) + selfl22(b,j) - 2.0d0 * l2dist
                     atomic_distance(i,j) = l2dist
-                    
+
                 enddo
             enddo
 
@@ -666,9 +677,6 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
     integer :: i, j, k, ni, nj
     integer :: a, b, m, n
 
-    ! Pre-computed constants
-    double precision :: inv_cut
-
     ! Temporary variables necessary for parallelization
     double precision :: l2dist
     double precision, allocatable, dimension(:,:) :: atomic_distance
@@ -688,6 +696,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
     ! counter for periodic distance
     integer :: p
     integer :: pmax1
+    integer :: nneighi
     double precision :: theta
 
     double precision :: ang_norm2
@@ -709,52 +718,54 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
         pmax1 = max(pmax1, int(maxval(x1(a,1,2,:n1(a)))))
     enddo
 
-    inv_cut = pi / (2.0d0 * cut_distance)
     inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxval(nneigh1)))
 
     ksi1 = 0.0d0
 
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi)
     do a = 1, nm1
         ni = n1(a)
         do i = 1, ni
-            do j = 2, nneigh1(a, i) !ni
+            nneighi = nneigh1(a, i)
+            do j = 2, nneighi
                 ksi1(a, i, j) = 1.0d0 / x1(a,i,1,j)**6
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL DO
 
     allocate(cosp1(nm1, maxval(n1), pmax1, order, maxval(nneigh1)))
     allocate(sinp1(nm1, maxval(n1), pmax1, order, maxval(nneigh1)))
 
     cosp1 = 0.0d0
     sinp1 = 0.0d0
-    
+
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
         do i = 1, ni
+            nneighi = nneigh1(a, i)
 
-            do j = 2, nneigh1(a, i) !ni
-                do k = 2, nneigh1(a, i) !ni
+            do j = 2, nneighi
+                do k = 2, nneighi
 
                     if (j /= k) then
 
                         ksi3 = calc_ksi3(X1(a,i,:,:), j, k)
-
                         p =  int(x1(a,i,2,k))
-
                         theta = calc_angle(x1(a, i, 3:5, j), &
                             &  x1(a, i, 3:5, 1), x1(a, i, 3:5, k))
 
                         do m = 1, order
 
                             cosp1(a, i, p, m, j) = cosp1(a, i, p, m, j) + &
-                            & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
 
                             sinp1(a, i, p, m, j) = sinp1(a, i, p, m, j) + &
-                            & (sin(m * theta) - sin((theta + pi) * m))*ksi3
+                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
                         enddo
                     endif
@@ -763,6 +774,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
             enddo
         enddo
     enddo
+    !$OMP END PARALLEL DO
 
     allocate(selfl21(nm1, maxval(n1)))
 
@@ -805,7 +817,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
 
                     l2dist = selfl21(a,i) + selfl21(b,j) - 2.0d0 * l2dist
                     atomic_distance(i,j) = l2dist
-                    
+
                 enddo
             enddo
 

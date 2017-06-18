@@ -28,13 +28,13 @@ from .ffchl_kernels import fget_symmetric_kernels_fchl
 
 PTP = {\
          1  :[1,1] ,2:  [1,8]#Row1
-       
+
         ,3  :[2,1] ,4:  [2,2]#Row2\
         ,5  :[2,3] ,6:  [2,4] ,7  :[2,5] ,8  :[2,6] ,9  :[2,7] ,10 :[2,8]\
-       
+
         ,11 :[3,1] ,12: [3,2]#Row3\
         ,13 :[3,3] ,14: [3,4] ,15 :[3,5] ,16 :[3,6] ,17 :[3,7] ,18 :[3,8]\
-       
+
         ,19 :[4,1] ,20: [4,2]#Row4\
         ,31 :[4,3] ,32: [4,4] ,33 :[4,5] ,34 :[4,6] ,35 :[4,7] ,36 :[4,8]\
         ,21 :[4,9] ,22: [4,10],23 :[4,11],24 :[4,12],25 :[4,13],26 :[4,14],27 :[4,15],28 :[4,16],29 :[4,17],30 :[4,18]\
@@ -89,8 +89,30 @@ def gen_pd(emax=100, r_width=0.001, c_width=0.001):
             pd[i,j] = periodic_distance(i+1, j+1, r_width, c_width)
 
     return pd
+
+
 def generate_fchl_representation(coordinates, nuclear_charges, 
-        size=23, neighbors=23, cut = 5.0, debug=False, cell=None):
+        size=23, neighbors=23, cut_distance = 5.0, cell=None):
+    """ Generates a representation for the FCHL kernel module.
+
+    :param coordinates: Input coordinates.
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param neighbors: Max number of atoms within the cut-off around an atom. (For periodic systems)
+    :type neighbors: integer
+    :param cell: Unit cell vectors. The presence of this keyword argument will generate a periodic representation.
+    :type cell: numpy array
+    :param cut_distance: Spatial cut-off distance.
+    :type cut_distance: float
+    :return: FCHL representation, shape = (size,5,neighbors).
+    :rtype: numpy array
+    """
+
+    if cell is None:
+        neighbors=size
 
     L = len(coordinates)
     coords = np.asarray(coordinates)
@@ -99,7 +121,7 @@ def generate_fchl_representation(coordinates, nuclear_charges,
 
     if cell is not None:
         coords = np.dot(coords,cell)
-        nExtend = (np.floor(cut/np.linalg.norm(cell,2,axis = 0)) + 1).astype(int)
+        nExtend = (np.floor(cut_distance/np.linalg.norm(cell,2,axis = 0)) + 1).astype(int)
 
         for i in range(-nExtend[0],nExtend[0] + 1):
             for j in range(-nExtend[1],nExtend[1] + 1):
@@ -126,7 +148,7 @@ def generate_fchl_representation(coordinates, nuclear_charges,
         ocExt = np.asarray([ocExt[l] for l in args])
         cD = cD[args]
 
-        args = np.where(D1 < cut)[0]
+        args = np.where(D1 < cut_distance)[0]
         D1 = D1[args]
         ocExt = np.asarray([ocExt[l] for l in args])
         cD = cD[args]
@@ -136,133 +158,144 @@ def generate_fchl_representation(coordinates, nuclear_charges,
     return M
 
 
-def get_atomic_kernels_fchl(X1, X2, Z1, Z2, sigmas, \
+def get_atomic_kernels_fchl(A, B, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1):
-    """ Calculates the Gaussian kernel matrix K for atomic ARAS
-        descriptors for a list of different sigmas.
+        r_width=1.5, order=1, c_width=1.5, scale_distance=1.0, scale_angular=0.1):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-        K is calculated using an OpenMP parallel Fortran routine.
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
 
-        Arguments:
-        ==============
-        X1 -- np.array of ARAS descriptors for molecules in set 1.
-        X2 -- np.array of ARAS descriptors for molecules in set 2.
-        Z1 -- List of lists of nuclear charges for molecules in set 1.
-        Z2 -- List of lists of nuclear charges for molecules in set 2.
-        sigmas -- List of sigma for which to calculate the Kernel matrices.
+        Where :math:`A_{i}` and :math:`B_{j}` are FCHL representation vectors.
+        K is calculated analytically using an OpenMP parallel Fortran routine. 
+        Note, that this kernel will ONLY work with FCHL representations as input.
 
-        Returns:
-        ==============
-        K -- The kernel matrices for each sigma (3D-array, Ns x N1 x N2)
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param B: Array of FCHL representation - shape=(M, maxsize, 5, maxneighbors).
+        :type B: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+        :param t_width: Gaussian width for the angular (theta) terms.
+        :type t_width: float
+        :param d_width: Gaussian width for the distance terms.
+        :type d_width: float
+        :param cut_distance: Cut-off radius.
+        :type cut_distance: float
+        :param r_width: Gaussian width along rows in the periodic table.
+        :type r_width: float
+        :param c_width: Gaussian width along columns in the periodic table.
+        :type c_width: float
+        :param order: Fourier-expansion truncation order.
+        :type order: integer
+        :param scale_distance: Weight for distance-dependent terms.
+        :type scale_distance: float
+        :param scale_angular: Weight for angle-dependent terms.
+        :type scale_angular: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
+        :rtype: numpy array
     """
 
-    # print X1.shape
-    # print X2.shape
+    atoms_max = A.shape[1]
+    neighbors_max = A.shape[3]
 
-    atoms_max = X1.shape[1]
-    neighbors_max = X1.shape[3]
+    assert B.shape[1] == atoms_max, "ERROR: Check FCHL representation sizes! code = 2"
+    assert B.shape[3] == neighbors_max, "ERROR: Check FCHL representation sizes! code = 3"
 
-    assert X1.shape[1] == atoms_max, "ERROR: Check ARAS decriptor sizes! code = 1"
-    assert X2.shape[1] == atoms_max, "ERROR: Check ARAS decriptor sizes! code = 2"
-    assert X2.shape[3] == neighbors_max, "ERROR: Check ARAS decriptor sizes! code = 3"
+    nm1 = A.shape[0]
+    nm2 = B.shape[0]
 
-    nm1 = len(Z1)
-    nm2 = len(Z2)
+    N1 = np.zeros((nm1),dtype=np.int32)
+    N2 = np.zeros((nm2),dtype=np.int32)
 
-    assert X1.shape[0] == nm1,  "ERROR: Check ARAS decriptor sizes! code = 4"
-    assert X2.shape[0] == nm2,  "ERROR: Check ARAS decriptor sizes! code = 5"
+    for a in range(nm1):
+        N1[a] = len(np.where(A[a,:,1,0] > 0.0001)[0])
 
-    N1 = []
-    for Z in Z1:
-        N1.append(len(Z))
-
-    N2 = []
-    for Z in Z2:
-        N2.append(len(Z))
-
-    N1 = np.array(N1,dtype=np.int32)
-    N2 = np.array(N2,dtype=np.int32)
+    for a in range(nm2):
+        N2[a] = len(np.where(B[a,:,1,0] > 0.0001)[0])
 
     neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
     neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
 
-    for a, representation in enumerate(X1):
+    for a, representation in enumerate(A):
         ni = N1[a]
         for i, x in enumerate(representation[:ni]):
-            # print x[0][:30]
             neighbors1[a,i] = len(np.where(x[0]< cut_distance)[0])
 
-    # print "Neighbors1"
-    # print neighbors1
-    for a, representation in enumerate(X2):
+    for a, representation in enumerate(B):
         ni = N2[a]
         for i, x in enumerate(representation[:ni]):
-            # print x[0][:30]
             neighbors2[a,i] = len(np.where(x[0]< cut_distance)[0])
 
     nsigmas = len(sigmas)
-   
+
     # 103 is max element in the PTP dictionary
     pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
 
     sigmas = np.array(sigmas)
 
-
-    # print "Neighbors2"
-    # print neighbors2
-
-    return fget_kernels_fchl(X1, X2, N1, N2, neighbors1, neighbors2, sigmas, \
+    return fget_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
                 nm1, nm2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
 
-    
-def get_atomic_symmetric_kernels_fchl(X1, Z1, sigmas, \
+
+def get_atomic_symmetric_kernels_fchl(A, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1):
-    """ Calculates the Gaussian kernel matrix K for atomic ARAS
-        descriptors for a list of different sigmas.
+        r_width=1.5, order=1, c_width=1.5, scale_distance=1.0, scale_angular=0.1):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-        K is calculated using an OpenMP parallel Fortran routine.
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
 
-        Arguments:
-        ==============
-        X1 -- np.array of ARAS descriptors for molecules in set 1.
-        X2 -- np.array of ARAS descriptors for molecules in set 2.
-        Z1 -- List of lists of nuclear charges for molecules in set 1.
-        Z2 -- List of lists of nuclear charges for molecules in set 2.
-        sigmas -- List of sigma for which to calculate the Kernel matrices.
+        Where :math:`A_{i}` and :math:`A_{j}` are FCHL representation vectors.
+        K is calculated analytically using an OpenMP parallel Fortran routine. 
+        Note, that this kernel will ONLY work with FCHL representations as input.
 
-        Returns:
-        ==============
-        K -- The kernel matrices for each sigma (3D-array, Ns x N1 x N2)
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+        :param t_width: Gaussian width for the angular (theta) terms.
+        :type t_width: float
+        :param d_width: Gaussian width for the distance terms.
+        :type d_width: float
+        :param cut_distance: Cut-off radius.
+        :type cut_distance: float
+        :param r_width: Gaussian width along rows in the periodic table.
+        :type r_width: float
+        :param c_width: Gaussian width along columns in the periodic table.
+        :type c_width: float
+        :param order: Fourier-expansion truncation order.
+        :type order: integer
+        :param scale_distance: Weight for distance-dependent terms.
+        :type scale_distance: float
+        :param scale_angular: Weight for angle-dependent terms.
+        :type scale_angular: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, N),
+        :rtype: numpy array
     """
 
-    atoms_max = X1.shape[1]
-    neighbors_max = X1.shape[3]
+    atoms_max = A.shape[1]
+    neighbors_max = A.shape[3]
 
-    nm1 = len(Z1)
+    nm1 = A.shape[0]
+    N1 = np.zeros((nm1),dtype=np.int32)
 
-    assert X1.shape[0] == nm1,  "ERROR: Check ARAS decriptor sizes! code = 4"
-
-    N1 = []
-    for Z in Z1:
-        N1.append(len(Z))
-
-    N1 = np.array(N1,dtype=np.int32)
+    for a in range(nm1):
+        N1[a] = len(np.where(A[a,:,1,0] > 0.0001)[0])
 
     neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
 
-    for a, representation in enumerate(X1):
+    for a, representation in enumerate(A):
         ni = N1[a]
         for i, x in enumerate(representation[:ni]):
             neighbors1[a,i] = len(np.where(x[0]< cut_distance)[0])
 
     nsigmas = len(sigmas)
-   
+
     # 103 is max element in the PTP dictionary
     pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
 
     sigmas = np.array(sigmas)
 
-    return fget_symmetric_kernels_fchl(X1, N1, neighbors1, sigmas, \
+    return fget_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
                 nm1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
