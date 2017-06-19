@@ -30,7 +30,7 @@ if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
 
 # Intel
 if any(["intelem" in arg for arg in sys.argv]):
-    COMPILER_FLAGS = ["-xHost", "-O3", "-axAVX", "-qopenmp"]
+    COMPILER_FLAGS = ["-fast", "-axCORE-AVX2", "-unroll-aggressive", "-qopenmp"]
     LINKER_FLAGS = ["-liomp5", " -lpthread", "-lm", "-ldl"]
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
@@ -81,7 +81,7 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 

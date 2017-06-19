@@ -1,5 +1,7 @@
 import qml
 import numpy as np
+import os
+import sys
 
 from qml.wrappers import arad_kernels, arad_symmetric_kernels
 
@@ -23,11 +25,12 @@ def get_energies(filename):
 
     return energies
 
-
 def test_arad_wrapper():
 
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("hof_qm7.txt")
+    data = get_energies("%s/hof_qm7.txt" % test_dir)
 
     # Generate a list of qml.Compound() objects
     mols = []
@@ -35,7 +38,7 @@ def test_arad_wrapper():
     for xyz_file in sorted(data.keys())[:50]:
 
         # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
+        mol = qml.Compound(xyz="%s/qm7/" % test_dir + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
