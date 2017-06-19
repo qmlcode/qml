@@ -27,23 +27,17 @@ Current list of contributors:
 -  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
 -  O. Anatole von Lilienfeld (University of Basel)
 
-1) Citing QML:
+Citing QML:
 --------------
 
-Until the preprint is available from arXiv, please cite this GitHub
-repository as:
+Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, F Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, FA Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
-2) Installation
----------------
-
-Please go to the QML github repository at https://github.com/qmlcode/qml/ 
-
-
+For citation of the individual procedures of QML, please see: `citation`
 
 .. toctree::
    :maxdepth: 2
@@ -51,6 +45,7 @@ Please go to the QML github repository at https://github.com/qmlcode/qml/
    :name: index
 
    installation
+   citation
    examples
 
 
@@ -61,7 +56,7 @@ Please go to the QML github repository at https://github.com/qmlcode/qml/
 
    qml
 
-3) License:
+License:
 -----------
 
 QML is freely available under the terms of the MIT license.

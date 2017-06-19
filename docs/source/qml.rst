@@ -37,13 +37,12 @@ qml\.math module
     :undoc-members:
     :show-inheritance:
 
-qml\.compound module
+qml\.Compound class
 --------------------
 
-.. automodule:: qml.compound
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autoclass:: qml.Compound
+   :members:
+   :undoc-members:
 
 qml\.arad module
 ----------------
