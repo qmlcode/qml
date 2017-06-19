@@ -46,6 +46,7 @@ For citation of the individual procedures of QML, please see: `citation`
 
    installation
    citation
+   tutorial
    examples
 
 

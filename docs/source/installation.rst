@@ -56,7 +56,7 @@ QML with Ifort/MKL using the following options:
 Note on Apple/Mac support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Installing QML requires a Fortran compiler. On Darwin you can install it
+Installing QML requires a Fortran compiler. On MacOS you can install it
 using ``brew``:
 
 .. code:: bash
@@ -68,8 +68,8 @@ using ``brew``:
     brew install gcc
 
 Note the Clang Fortran compiler from brew unfortunately does not support
-OpenMP. Therefore parallelism via OpenMP is disabled as default for
-Darwin systems.
+OpenMP.
+Therefore parallelism via OpenMP is disabled as default for MacOS systems.
 
 Additionally, we found that some users have multiple version of the ``as`` assembler - this might happen if you have GCC from e.g. brew and macports at the same time. Look for the following error:
 
