@@ -404,13 +404,14 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
     ! counter for periodic distance
-    integer :: p
+    integer :: pj, pk
     integer :: pmax1
     integer :: pmax2
     integer :: nneighi
     double precision :: theta
 
     double precision :: ksi3
+    double precision :: cos_m, sin_m
     double precision :: ang_norm2
 
     ang_norm2 = 0.0d0
@@ -471,7 +472,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp1,sinp1)
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, sin_m, cos_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -479,28 +480,27 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             nneighi = nneigh1(a, i)
 
             do j = 2, nneighi
-                do k = 2, nneighi
+                do k = j+1, nneighi
 
-                    if (j /= k) then
+                    ksi3 = calc_ksi3(X1(a,i,:,:), j, k)
+                    theta = calc_angle(x1(a, i, 3:5, j), &
+                        &  x1(a, i, 3:5, 1), x1(a, i, 3:5, k))
 
-                        ksi3 = calc_ksi3(X1(a,i,:,:), j, k)
+                    pj =  int(x1(a,i,2,k))
+                    pk =  int(x1(a,i,2,j))
 
-                        p =  int(x1(a,i,2,k))
+                    do m = 1, order
 
-                        theta = calc_angle(x1(a, i, 3:5, j), &
-                            &  x1(a, i, 3:5, 1), x1(a, i, 3:5, k))
+                        cos_m = (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        sin_m = (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
-                        do m = 1, order
+                        cosp1(a, i, pj, m, j) = cosp1(a, i, pj, m, j) + cos_m
+                        sinp1(a, i, pj, m, j) = sinp1(a, i, pj, m, j) + sin_m
 
-                            cosp1(a, i, p, m, j) = cosp1(a, i, p, m, j) + &
-                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        cosp1(a, i, pk, m, k) = cosp1(a, i, pk, m, k) + cos_m
+                        sinp1(a, i, pk, m, k) = sinp1(a, i, pk, m, k) + sin_m
 
-                            sinp1(a, i, p, m, j) = sinp1(a, i, p, m, j) + &
-                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
-
-                        enddo
-                    endif
-
+                    enddo
                 enddo
             enddo
         enddo
@@ -513,7 +513,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp2 = 0.0d0
     sinp2 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp2,sinp2)
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp2,sinp2)
     do a = 1, nm2
         ni = n2(a)
 
@@ -521,28 +521,27 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             nneighi = nneigh2(a, i)
 
             do j = 2, nneighi
-                do k = 2, nneighi
+                do k = j+1, nneighi
 
-                    if (j /= k) then
+                    ksi3 = calc_ksi3(X2(a,i,:,:), j, k)
+                    theta = calc_angle(x2(a, i, 3:5, j), &
+                        &  x2(a, i, 3:5, 1), x2(a, i, 3:5, k))
 
-                        ksi3 = calc_ksi3(X2(a,i,:,:), j, k)
+                    pj =  int(x2(a,i,2,k))
+                    pk =  int(x2(a,i,2,j))
 
-                        p =  int(x2(a,i,2,k))
+                    do m = 1, order
 
-                        theta = calc_angle(x2(a, i, 3:5, j), &
-                            &  x2(a, i, 3:5, 1), x2(a, i, 3:5, k))
+                        cos_m = (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        sin_m = (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
-                        do m = 1, order
+                        cosp2(a, i, pj, m, j) = cosp2(a, i, pj, m, j) + cos_m
+                        sinp2(a, i, pj, m, j) = sinp2(a, i, pj, m, j) + sin_m
 
-                            cosp2(a, i, p, m, j) = cosp2(a, i, p, m, j) + &
-                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        cosp2(a, i, pk, m, k) = cosp2(a, i, pk, m, k) + cos_m
+                        sinp2(a, i, pk, m, k) = sinp2(a, i, pk, m, k) + sin_m
 
-                            sinp2(a, i, p, m, j) = sinp2(a, i, p, m, j) + &
-                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
-
-                        enddo
-                    endif
-
+                    enddo
                 enddo
             enddo
         enddo
@@ -694,10 +693,11 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
     ! counter for periodic distance
-    integer :: p
+    integer :: pj, pk
     integer :: pmax1
     integer :: nneighi
     double precision :: theta
+    double precision :: sin_m, cos_m
 
     double precision :: ang_norm2
 
@@ -742,7 +742,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, p, theta) REDUCTION(+:cosp1,sinp1)
+    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -750,26 +750,27 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
             nneighi = nneigh1(a, i)
 
             do j = 2, nneighi
-                do k = 2, nneighi
+                do k = j+1, nneighi
 
-                    if (j /= k) then
+                    ksi3 = calc_ksi3(X1(a,i,:,:), j, k)
+                    theta = calc_angle(x1(a, i, 3:5, j), &
+                        &  x1(a, i, 3:5, 1), x1(a, i, 3:5, k))
 
-                        ksi3 = calc_ksi3(X1(a,i,:,:), j, k)
-                        p =  int(x1(a,i,2,k))
-                        theta = calc_angle(x1(a, i, 3:5, j), &
-                            &  x1(a, i, 3:5, 1), x1(a, i, 3:5, k))
+                    pj = int(x1(a,i,2,k))
+                    pk = int(x1(a,i,2,j))
 
-                        do m = 1, order
+                    do m = 1, order
 
-                            cosp1(a, i, p, m, j) = cosp1(a, i, p, m, j) + &
-                                & (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        cos_m = (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                        sin_m = (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
-                            sinp1(a, i, p, m, j) = sinp1(a, i, p, m, j) + &
-                                & (sin(m * theta) - sin((theta + pi) * m))*ksi3
+                        cosp1(a, i, pj, m, j) = cosp1(a, i, pj, m, j) + cos_m
+                        sinp1(a, i, pj, m, j) = sinp1(a, i, pj, m, j) + sin_m
 
-                        enddo
-                    endif
+                        cosp1(a, i, pk, m, k) = cosp1(a, i, pk, m, k) + cos_m
+                        sinp1(a, i, pk, m, k) = sinp1(a, i, pk, m, k) + sin_m
 
+                    enddo
                 enddo
             enddo
         enddo
