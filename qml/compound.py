@@ -127,6 +127,72 @@ class Compound(object):
 
     def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm", 
             central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
+    """ Creates a Coulomb Matrix representation of the local environment of a central atom.
+        For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
+
+        .. math::
+
+            M_{ij}(k) =
+              \\begin{cases}
+                 \\tfrac{1}{2} Z_{i}^{2.4} \\cdot f_{ik}^2 & \\text{if } i = j \\\\
+                 \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|} \\cdot f_{ik}f_{jk}f_{ij} & \\text{if } i \\neq j
+              \\end{cases},
+
+        where :math:`i`, :math:`j` and :math:`k` are atom indices, :math:`Z` is nuclear charge and
+        :math:`\\bf R` is the coordinate in euclidean space.
+
+        :math:`f_{ij}` is a function that masks long range effects:
+
+        .. math::
+
+            f_{ij} =
+              \\begin{cases}
+                 1 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                 \\tfrac{1}{2} \\big(1 + \\cos\\big(\\pi \\tfrac{\\|{\\bf R}_{i} - {\\bf R}_{j} \\|
+                    - r + \Delta r}{\Delta r} \\big)\\big)     
+                    & \\text{if } r - \Delta r < \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                 0 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| > r
+              \\end{cases},
+
+        where the parameters ``central_cutoff`` and ``central_decay`` corresponds to the variables
+        :math:`r` and :math:`\Delta r` respectively for interactions involving the central atom,
+        and ``interaction_cutoff`` and ``interaction_decay`` corresponds to the variables
+        :math:`r` and :math:`\Delta r` respectively for interactions not involving the central atom.
+
+        if ``sorting = 'row-norm'``, the atom indices are ordered such that
+
+            :math:`\\sum_j M_{1j}(k)^2 \\geq \\sum_j M_{2j}(k)^2 \\geq ... \\geq \\sum_j M_{nj}(k)^2`
+
+        if ``sorting = 'distance'``, the atom indices are ordered such that
+
+        .. math::
+
+            \\|{\\bf R}_{1} - {\\bf R}_{k}\\| \\leq \\|{\\bf R}_{2} - {\\bf R}_{k}\\|
+                \\leq ... \\leq \\|{\\bf R}_{n} - {\\bf R}_{k}\\|
+
+        The upper triangular of M, including the diagonal, is concatenated to a 1D
+        vector representation.
+        The representation is calculated using an OpenMP parallel Fortran routine.
+
+        :param size: The size of the largest molecule supported by the representation
+        :type size: integer
+        :param sorting: How the atom indices are sorted ('row-norm', 'distance')
+        :type sorting: string
+        :param central_cutoff: The distance from the central atom, where the coulomb interaction
+            element will be zero
+        :type central_cutoff: float
+        :param central_decay: The distance over which the the coulomb interaction decays from full to none
+        :type central_decay: float
+        :param interaction_cutoff: The distance between two non-central atom, where the coulomb interaction
+            element will be zero
+        :type interaction_cutoff: float
+        :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
+        :type interaction_decay: float
+
+
+        :return: nD representation - shape (:math:`N_{atoms}`, size(size+1)/2)
+        :rtype: numpy array
+    """
 
         self.representation = generate_atomic_coulomb_matrix(
             self.nuclear_charges, self.coordinates, size = size,
