@@ -31,6 +31,7 @@ from .representations import generate_coulomb_matrix
 from .representations import generate_atomic_coulomb_matrix
 from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
+from .representations import generate_slatm_representation
 
 from .arad import ARAD
 
@@ -92,6 +93,19 @@ class Compound(object):
 
         assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
         assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
+
+    def generate_slatm_representation(self, mbtypes,
+        local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8, 
+        alchemy=False, rpower=6, iprt=False):
+
+        slatm = generate_slatm_representation(self.coordinates, self.nuclear_charges,
+                mbtypes, local=local, sigmas=sigmas, dgrids=dgrids, rcut=rcut,
+                alchemy=alchemy, rpower=rpower, iprt=iprt)
+        if local: slatm = np.asarray(slatm)
+        self.representation = slatm
+        print(self.representation)
+        print(self.representation.shape)
+
 
     def read_xyz(self, filename):
     
