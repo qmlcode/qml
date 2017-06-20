@@ -105,11 +105,6 @@ def setup_pepytools():
         description = __description__,
         long_description = readme(),
         keywords = ['Machine Learning', 'Quantum Chemistry'],
-        install_requires=[
-            'numpy',
-            'scipy',
-            'ase'
-            ],
         classifiers = [],
         url = __url__,
 
