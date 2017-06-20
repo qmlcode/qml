@@ -125,10 +125,13 @@ class Compound(object):
         self.representation = generate_eigenvalue_coulomb_matrix(
                 self.nuclear_charges, self.coordinates, size = size)
 
-    def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm"):
+    def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm", 
+            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
 
         self.representation = generate_atomic_coulomb_matrix(
-            self.nuclear_charges, self.coordinates, size = size, sorting = sorting)
+            self.nuclear_charges, self.coordinates, size = size,
+            sorting = sorting, central_cutoff = central_cutoff, central_decay = central_decay,
+            interaction_cutoff = interaction_cutoff, interaction_decay = interaction_decay)
 
     def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
         """ Creates a Bag of Bonds (BOB) representation of a molecule.

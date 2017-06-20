@@ -33,7 +33,6 @@ test_dir = os.path.dirname(os.path.realpath(__file__))
 
 # Generate a compound
 mol = qml.Compound(xyz = "%s/qm7/0100.xyz" % test_dir)
-#mol = qml.Compound(xyz = "%s/qm7/0002.xyz" % test_dir)
 
 def test_coulomb_matrix():
 
@@ -123,7 +122,6 @@ def test_atomic_coulomb_matrix():
 
     assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
 
-
     # Generate atomic coulomb matrix representation, sorted by distance, with reference implementation
     acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, "distance")
 
@@ -136,10 +134,76 @@ def test_atomic_coulomb_matrix():
 
     assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
 
-def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distance"):
+    # Generate atomic coulomb matrix representation, sorted by distance, using the Compound class
+    mol.generate_atomic_coulomb_matrix(size = size, sorting = "distance",
+            central_cutoff = 4.0, central_decay = 0.5,
+            interaction_cutoff = 5.0, interaction_decay = 1.0)
 
-    cm_matrix, cm_feature_vector = unsorted_coulomb_matrix(nuclear_charges, coordinates, size)
+    acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "distance",
+            cent_cutoff = 4.0, cent_decay = 0.5,
+            int_cutoff = 5.0, int_decay = 1.0)
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+    # Generate atomic coulomb matrix representation, sorted by row-norm, using the Compound class
+    mol.generate_atomic_coulomb_matrix(size = size, sorting = "row-norm",
+            central_cutoff = 4.0, central_decay = 0.5,
+            interaction_cutoff = 5.0, interaction_decay = 1.0)
+
+    acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "row-norm",
+            cent_cutoff = 4.0, cent_decay = 0.5,
+            int_cutoff = 5.0, int_decay = 1.0)
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distance",
+        cent_cutoff = 1e6, cent_decay = -1, int_cutoff = 1e6, int_decay = -1):
+
+    if cent_cutoff < 0:
+        cent_cutoff = 1e6
+
+    if int_cutoff < 0 or int_cutoff > 2 * cent_cutoff:
+        int_cutoff = 2 * cent_cutoff
+
+    if cent_decay < 0:
+        cent_decay = 0
+    elif cent_decay > cent_cutoff:
+        cent_decay = cent_cutoff
+
+    if int_decay < 0:
+        int_decay = 0
+    elif int_decay > int_cutoff:
+        int_decay = int_cutoff
+
     natoms = nuclear_charges.size
+    sorted_cm = np.zeros((natoms, (size * (size + 1)) / 2))
+    cm_mat = np.zeros((natoms, size, size))
+
+    for k in range(natoms):
+        for i in range(natoms):
+            for j in range(i, natoms):
+                if i == j:
+                    dik = np.sqrt(np.sum((coordinates[i] - coordinates[k])**2))
+                    if dik < cent_cutoff:
+                        cm_mat[k,i,i] = 0.5 * nuclear_charges[i]**2.4
+                        if dik > cent_cutoff - cent_decay:
+                            cm_mat[k,i,i] *= (0.5 * (1 + np.cos(np.pi * (dik - cent_cutoff + cent_decay) / cent_decay)))**2
+                else:
+                    dij = np.sqrt(np.sum((coordinates[i] - coordinates[j])**2))
+                    if dij < int_cutoff:
+                        dik = np.sqrt(np.sum((coordinates[i] - coordinates[k])**2))
+                        djk = np.sqrt(np.sum((coordinates[j] - coordinates[k])**2))
+                        if dik < cent_cutoff and djk < cent_cutoff:
+                            cm_mat[k,i,j] = nuclear_charges[i] * nuclear_charges[j] / dij
+
+                            if dij > int_cutoff - int_decay:
+                                cm_mat[k,i,j] *= 0.5 * (1 + np.cos(np.pi * (dij - int_cutoff + int_decay) / int_decay))
+                            if dik > cent_cutoff - cent_decay:
+                                cm_mat[k,i,j] *= 0.5 * (1 + np.cos(np.pi * (dik - cent_cutoff + cent_decay) / cent_decay))
+                            if djk > cent_cutoff - cent_decay:
+                                cm_mat[k,i,j] *= 0.5 * (1 + np.cos(np.pi * (djk - cent_cutoff + cent_decay) / cent_decay))
+
+                    cm_mat[k,j,i] = cm_mat[k,i,j]
 
     if sorting == "row-norm":
         sorting = np.zeros((natoms, natoms))
@@ -150,43 +214,28 @@ def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distanc
                 if i == k:
                     continue
                 for j in range(natoms):
-                    # uncomment below, to ignore the central atom in the sorting
-                    #if j == k:
-                    #    continue
-                    if j < i:
-                        idx = (i * (i+1)) // 2 + j
-                    else:
-                        idx = (j * (j+1)) // 2 + i
-                    norms[i] += cm_feature_vector[idx]**2
+                    norms[i] += cm_mat[k,i,j]**2
 
             sorting[k] = np.argsort(norms)[::-1]
 
     else: # sort by distances
         sorting = np.zeros((natoms, natoms))
-        for i in range(natoms):
-            distances = np.sum((coordinates - coordinates[i].T)**2, axis = 1)
-            sorting[i] = np.argsort(distances)
+        for k in range(natoms):
+            distances = np.sum((coordinates - coordinates[k].T)**2, axis = 1)
+            sorting[k] = np.argsort(distances)
 
-    sorted_cm = np.zeros((natoms, cm_feature_vector.size))
 
     sortargs = np.arange(size)
 
     for k in range(natoms):
         sortargs[:natoms] = sorting[k]
+        idx = 0
         for i in range(size):
             si = sortargs[i]
             for j in range(i+1):
                 sj = sortargs[j]
-                if j < i:
-                    idx = (i*(i+1))//2 + j
-                else:
-                    idx = (j*(j+1))//2 + i
-                if sj < si:
-                    idy = (si*(si+1))//2 + sj
-                else:
-                    idy = (sj*(sj+1))//2 + si
-
-                sorted_cm[k, idx] = cm_feature_vector[idy]
+                sorted_cm[k, idx] = cm_mat[k, si, sj]
+                idx += 1
 
     return sorted_cm
 
@@ -231,9 +280,6 @@ def test_bob():
     # Compare with python implementation
     bob = bob_reference(mol.nuclear_charges, mol.coordinates, mol.atomtypes, size = (mol.natoms), asize = asize)
 
-    print(bob)
-    print(mol.representation)
-
     assert np.allclose(mol.representation, bob), "Error in bag of bonds representation"
 
 def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
@@ -248,7 +294,6 @@ def bob_reference(nuclear_charges, coordinates, atomtypes, size = 23, asize = {"
 
     descriptor = []
     positions = dict([(element, np.where(atomtypes == element)[0]) for element in atoms])
-    print(atomtypes)
     for i, (element1, size1) in enumerate(zip(atoms,nmax)):
         pos1 = positions[element1]
         feature_vector = np.zeros(size1)
@@ -285,7 +330,6 @@ def vector_to_matrix(vec):
             count += 1
 
     return mat
-
 
 if __name__ == "__main__":
     test_coulomb_matrix()

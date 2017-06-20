@@ -80,15 +80,18 @@ def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "
         print("ERROR: Unknown sorting scheme requested")
         raise SystemExit
 
-def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "distance"):
+def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "distance",
+            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
 
     if (sorting == "row-norm"):
         return fgenerate_local_coulomb_matrix(nuclear_charges,
-            coordinates, nuclear_charges.size, size)
+            coordinates, nuclear_charges.size, size,
+            central_cutoff, central_decay, interaction_cutoff, interaction_decay)
 
     elif (sorting == "distance"):
         return fgenerate_atomic_coulomb_matrix(nuclear_charges,
-            coordinates, nuclear_charges.size, size)
+            coordinates, nuclear_charges.size, size, 
+            central_cutoff, central_decay, interaction_cutoff, interaction_decay)
 
     else:
         print("ERROR: Unknown sorting scheme requested")
@@ -159,7 +162,6 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
     n = 0
     atoms = sorted(asize, key=asize.get)
     nmax = [asize[key] for key in atoms]
-    print(atoms,nmax)
     ids = np.zeros(len(nmax), dtype=int)
     for i, (key, value) in enumerate(zip(atoms,nmax)):
         n += value * (1+value)

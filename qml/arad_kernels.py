@@ -58,7 +58,7 @@ PTP = {
 def get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas, 
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
     """ Calculates the Gaussian kernel matrix K for atomic ARAD
-        descriptors for a list of different sigmas.
+        representation for a list of different sigmas.
 
         K is calculated using an OpenMP parallel Fortran routine.
 
