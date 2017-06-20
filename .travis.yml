@@ -28,7 +28,7 @@ install:
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
  - |
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
-       sudo apt-get install python3-numpy
+       sudo apt-get install python3-numpy python3-numpy
        python3 setup.py build
        python3 setup.py install
        pip3 install ase
@@ -37,10 +37,10 @@ install:
        cd ${TRAVIS_BUILD_DIR}/docs
        make html
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
-       sudo apt-get install python-numpy
+       sudo apt-get install python-numpy python-scipy
        python2 setup.py build
        python2 setup.py install
-       pip3 install ase
+       pip2 install ase
        pip2 install sphinx
        pip2 install sphinx-rtd-theme
        cd ${TRAVIS_BUILD_DIR}/docs
