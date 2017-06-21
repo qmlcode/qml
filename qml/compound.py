@@ -33,7 +33,7 @@ from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
 from .representations import generate_slatm_representation
 
-from .arad import ARAD
+from .arad import generate_arad_representation
 
 class Compound(object):
 
@@ -87,9 +87,8 @@ class Compound(object):
 
     def generate_arad_representation(self, size = 23):
 
-        arad = ARAD(maxMolSize = size, maxAts = size)
-        self.representation = arad.describe(self.coordinates,
-                self.nuclear_charges)
+        self.representation = generate_arad_representation(self.coordinates,
+                self.nuclear_charges, size=size)
 
         assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
         assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
