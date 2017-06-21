@@ -54,22 +54,99 @@ PTP = {
                ,104:[7,10],105:[7,11],106:[7,12],107:[7,13],108:[7,14],109:[7,15],110:[7,16],111:[7,17],112:[7,18]
         ,89 :[7,19],90: [7,20],91 :[7,21],92 :[7,22],93 :[7,23],94 :[7,24],95 :[7,25],96 :[7,26],97 :[7,27],98 :[7,28],99 :[7,29],100:[7,30],101:[7,31],101:[7,32],102:[7,14],103:[7,33]}
 
+def getAngle(sp, norms):
+    epsilon = 100.0 * np.finfo(float).eps
+    angles = np.zeros(sp.shape)
+    mask1 = np.logical_and(np.abs(sp - norms) > epsilon ,np.abs(norms) > epsilon)
+    angles[mask1] = np.arccos(sp[mask1]/norms[mask1])
+    return angles
 
-def get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas, 
+
+def generate_arad_representation(coordinates, nuclear_charges,
+        cell=None, size = 23, neighbors = 23, cut = 5., debug = False):
+
+    coords = coordinates
+    occupationList = nuclear_charges
+
+    L = coords.shape[0]
+    occupationList = np.asarray(occupationList)
+    M = np.zeros((maxMolSize, 5, maxAts))
+
+    if cell is not None:
+        coords = np.dot(coords, cell)
+        nExtend = (np.floor(cut/np.linalg.norm(cell, 2, axis = 0)) + 1).astype(int)
+        for i in range(-nExtend[0], nExtend[0] + 1):
+            for j in range(-nExtend[1], nExtend[1] + 1):
+                for k in range(-nExtend[2], nExtend[2] + 1):
+                    if i == -nExtend[0] and j  == -nExtend[1] and k  == -nExtend[2]:
+                        coordsExt = coords + i*cell[0,:] + j*cell[1,:] + k*cell[2,:]
+                        occupationListExt = occupationList.copy()
+                    else:
+                        occupationListExt = np.append(occupationListExt,occupationList)
+                        coordsExt = np.append(coordsExt, coords + i*cell[0,:] + j*cell[1,:] + k*cell[2,:], axis = 0)
+
+    else:
+        coordsExt = coords.copy()
+        occupationListExt = occupationList.copy()
+
+    M[:,0,:] = 1E+100
+
+    for i in range(L):
+        #Calculate Distance
+        cD = coordsExt[:] - coords[i]
+        ocExt = np.asarray([PTP[o] for o in occupationListExt])
+
+        #Obtaining angles
+        sp = np.sum(cD[:,np.newaxis] * cD[np.newaxis,:], axis = 2)
+        D1 = np.sqrt(np.sum(cD**2, axis = 1))
+        D2 = D1[:, np.newaxis] * D1[np.newaxis, :]
+        angs = getAngle(sp, D2)
+
+        #Obtaining cos and sine terms
+        cosAngs = np.cos(angs) * (1. - np.sin(np.pi * D1[np.newaxis,:]/(2. * cut)))
+        sinAngs = np.sin(angs) * (1. - np.sin(np.pi * D1[np.newaxis,:]/(2. * cut)))
+
+        args = np.argsort(D1)
+
+        D1 = D1[args]
+
+        ocExt = np.asarray([ocExt[l] for l in args])
+
+        sub_indices = np.ix_(args, args)
+        cosAngs = cosAngs[sub_indices]
+        sinAngs = sinAngs[sub_indices]
+
+        args = np.where(D1 < cut)[0]
+
+        D1 = D1[args]
+
+        ocExt = np.asarray([ocExt[l] for l in args])
+
+        sub_indices = np.ix_(args, args)
+        cosAngs = cosAngs[sub_indices]
+        sinAngs = sinAngs[sub_indices]
+
+        norm = np.sum(1.0 - np.sin(np.pi * D1[np.newaxis, :] / (2.0 * cut)))
+        M[i, 0, :len(D1)] = D1
+        M[i, 1, :len(D1)] = ocExt[:, 0]
+        M[i, 2, :len(D1)] = ocExt[:, 1]
+        M[i, 3, :len(D1)] = np.sum(cosAngs,axis = 1) / norm
+        M[i, 4, :len(D1)] = np.sum(sinAngs,axis = 1) / norm
+
+    return M
+
+
+def get_atomic_kernels_arad(A, B, sigmas, 
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
     """ Calculates the Gaussian kernel matrix K for atomic ARAD
         descriptors for a list of different sigmas.
 
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param X1: ARAD descriptors for molecules in set 1.
-        :type X1: numpy array
-        :param X2: Array of ARAD descriptors for molecules in set 2.
-        :type X2: numpy array
-        :param Z1: List of lists of nuclear charges for molecules in set 1.
-        :type Z1: list
-        :param Z2: List of lists of nuclear charges for molecules in set 2.
-        :type Z2: list
+        :param A: ARAD descriptors for molecules in set 1.
+        :type A: numpy array
+        :param B: Array of ARAD descriptors for molecules in set 2.
+        :type B: numpy array
         :param sigmas: List of sigmas for which to calculate the Kernel matrices.
         :type sigmas: list
 
@@ -77,17 +154,17 @@ def get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas,
         :rtype: numpy array
     """
 
-    amax = X1.shape[1]
+    amax = A.shape[1]
 
-    assert X1.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 1"
-    assert X2.shape[1] == amax, "ERROR: Check ARAD decriptor sizes! code = 2"
-    assert X2.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 3"
+    assert A.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 1"
+    assert B.shape[1] == amax, "ERROR: Check ARAD decriptor sizes! code = 2"
+    assert B.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 3"
 
-    nm1 = len(Z1)
-    nm2 = len(Z2)
+    nm1 = A.shape[0]
+    nm2 = B.shape[0]
 
-    assert X1.shape[0] == nm1,  "ERROR: Check ARAD decriptor sizes! code = 4"
-    assert X2.shape[0] == nm2,  "ERROR: Check ARAD decriptor sizes! code = 5"
+    assert A.shape[0] == nm1,  "ERROR: Check ARAD decriptor sizes! code = 4"
+    assert B.shape[0] == nm2,  "ERROR: Check ARAD decriptor sizes! code = 5"
 
     N1 = np.empty(nm1, dtype = np.int32)
     Z1_arad = np.zeros((nm1, amax, 2))
