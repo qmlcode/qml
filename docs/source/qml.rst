@@ -50,15 +50,6 @@ qml\.arad module
 
 .. automodule:: qml.arad
     :members:
-    :undoc-members:
-    :show-inheritance:
-
-qml\.arad\_kernels module
--------------------------
-
-.. automodule:: qml.arad_kernels
-    :members:
-    :undoc-members:
     :show-inheritance:
 
 qml\.data module
@@ -68,7 +59,6 @@ qml\.data module
     :members:
     :undoc-members:
     :show-inheritance:
-
 
 qml\.wrappers module
 --------------------
