@@ -10,7 +10,7 @@ Installing prerequisite modules (for most Linux systems):
 These should already be installed on most systems. The Intel compilers
 and MKL math-libraries are supported as well (see section 1.3).
 
-Installing via ``pip``:
+Installing via ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The easiest way to install the stable version from the Python Package
@@ -23,12 +23,8 @@ Index (PyPI) is using the official, built-in Python package manager,
 
 To use the Intel compiler, together with the MKL math library:
 
-.. code:: bash
 
-    pip install qml --user -U  --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
-
-Alternatively, you can install the most recent stable development
-snapshot directly from GitHub:
+In addition to the stable version available from the official PyPI repository, you can install the most recent stable development snapshot directly from GitHub:
 
 .. code:: bash
 
@@ -43,17 +39,24 @@ To uninstall simply use ``pip`` again.
 
     pip uninstall qml
 
-Installing via with Intel compilers:
+Installing via with Intel compilers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you have Intel compilers installed (2016 and newer), you can compile
-QML with Ifort/MKL using the following options:
+QML with Ifort/MKL from PyPI using the following options:
 
 .. code:: bash
 
-    pip install git+https://github.com/qmlcode/qml.git --user --upgrade --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
+    pip install qml --user -U  --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
 
-Note on Apple/Mac support:
+Or alternatively the `develop` branch from GitHub:
+
+.. code:: bash
+
+    pip install git+https://github.com/qmlcode/qml@develop --user -U --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem"
+
+
+Note on Apple/Mac support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Installing QML requires a Fortran compiler. On MacOS you can install it
@@ -82,3 +85,7 @@ If you experience this problems the setting the following path might fix the pro
 
     export PATH=/usr/bin:$PATH
 
+
+Report Bugs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please report any bugs by opening an issue on GitHub: https://github.com/qmlcode/qml/issues

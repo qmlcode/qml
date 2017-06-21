@@ -19,7 +19,7 @@ Until the preprint is available from arXiv, please cite this GitHub repository a
 
 ## 2) Get help:
 
-Documentation and installation instruction is found at: https://qmlcode.github.io
+Documentation and installation instruction is found at: http://www.qmlcode.org/
 
 
 ## 3) License:
