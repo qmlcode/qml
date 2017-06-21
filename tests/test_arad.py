@@ -6,7 +6,7 @@ import numpy as np
 import qml
 from qml.kernels import laplacian_kernel
 from qml.math import cho_solve
-from qml.arad_kernels import generate_arad_representation
+from qml.arad import generate_arad_representation
 
 from qml.arad import get_local_kernels_arad
 from qml.arad import get_local_symmetric_kernels_arad
