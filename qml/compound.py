@@ -36,6 +36,11 @@ from .representations import generate_slatm_representation
 from .arad import generate_arad_representation
 
 class Compound(object):
+    """ The ``Compound`` class is used to store data from  
+
+        :param xyz: Option to initialize the ``Compound`` with data from an XYZ file.
+        :type xyz: string
+    """
 
     def __init__(self, xyz = None):
 
@@ -66,27 +71,62 @@ class Compound(object):
             self.read_xyz(xyz)
 
     def generate_coulomb_matrix(self, size = 23, sorting = "row-norm"):
+        """ Generates a sorted molecular coulomb and stores it in the ``representation`` variable.
+    Sorting either by ``"row-norm"`` or ``"unsorted"``.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is the upper triangle put into the form of a 1D-vector.
 
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param sorting: Matrix sorting scheme, "row-norm" or "unsorted".
+    :type sorting: string
+    """
         self.representation = generate_coulomb_matrix(self.nuclear_charges, 
             self.coordinates, size = size, sorting = sorting)
 
     def generate_eigenvalue_coulomb_matrix(self, size = 23):
+        """ Generates the eigenvalue-Coulomb matrix representation and stores it in the ``representation`` variable.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is in the form of a 1D-vector.
 
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    """
         self.representation = generate_eigenvalue_coulomb_matrix(
                 self.nuclear_charges, self.coordinates, size = size)
 
     def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm"):
+        """ Generates a list of sorted Coulomb matrices and stores it in the ``representation`` variable.
+    Sorting either by ``"row-norm"`` or ``"distance"``, the latter refers to sorting by distance to each query atom.
+    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
+    The resulting matrix is the upper triangle put into the form of a 1D-vector.
 
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param sorting: Matrix sorting scheme, "row-norm" or "distance".
+    :type sorting: string
+    """
         self.representation = generate_atomic_coulomb_matrix(
             self.nuclear_charges, self.coordinates, size = size, sorting = sorting)
 
     def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
+        """ Generates a bag-of-bonds (BOB) representation of the molecule and stores it in the ``representation`` variable. 
+    ``asize=`` is the maximum number of atoms of each type (necessary to generate bags of minimal sizes).
+    The resulting matrix is the BOB representation put into the form of a 1D-vector.
 
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    :param asize: Max number of each element type.
+    :type asize: dict
+    """
         self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
                 self.atomtypes, asize = asize)
 
     def generate_arad_representation(self, size = 23):
-
+        """Generates the representation for the ARAD-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
+    :param size: Max number of atoms in representation.
+    :type size: integer
+    """
         self.representation = generate_arad_representation(self.coordinates,
                 self.nuclear_charges, size=size)
 
@@ -107,6 +147,11 @@ class Compound(object):
 
 
     def read_xyz(self, filename):
+        """(Re-)initializes the Compound-object with data from an xyz-file.
+
+    :param filename: Input xyz-filename.
+    :type filename: string
+    """
     
         f = open(filename, "r")
         lines = f.readlines()

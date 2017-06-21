@@ -37,7 +37,7 @@ qml\.math module
     :undoc-members:
     :show-inheritance:
 
-qml\.compound module
+qml\.Compound class
 --------------------
 
 .. automodule:: qml.compound
@@ -67,7 +67,6 @@ qml\.wrappers module
     :members:
     :undoc-members:
     :show-inheritance:
-
 
 .. Module contents
 .. ---------------
