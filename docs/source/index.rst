@@ -27,6 +27,20 @@ Current list of contributors:
 -  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
 -  O. Anatole von Lilienfeld (University of Basel)
 
+Code development
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The QML code is developed through our GitHub repository: 
+
+https://github.com/qmlcode/qml
+------------------------------
+
+Please add you code to QML by forking and making pull-requests to the "develop" branch.
+Every now and then develop branch is pushed to the "master" branch and automatically deployed to PyPI, where the latest stable version is hosted.
+
+See the "Installing QML" page for up-to-date installation instructions.
+
+
 Citing QML:
 --------------
 
