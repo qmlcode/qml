@@ -1,15 +1,12 @@
 QML Tutorial
 -----------------
 
-General
-~~~~~~~~~~
 This tutorial is a general introduction to kernel-ridge regression with QML.
 
 Theory
 ~~~~~~~~~~~
 
-
-Regression model of some property, :math:`y`, for some system, :math:`\widetilde{\mathbf{X}}`
+Regression model of some property, :math:`y`, for some system, :math:`\widetilde{\mathbf{X}}` - this could correspond to e.g. the atomization energy of a molecule:
 
     :math:`y\left(\widetilde{\mathbf{X}} \right) = \sum_i \alpha_i \  K\left( \widetilde{\mathbf{X}}, \mathbf{X}_i\right)`
 
@@ -29,7 +26,9 @@ Clone the following GIT repository to access the necessary scripts and QM7 datas
 
     git clone https://github.com/qmlcode/tutorial.git
 
-Exercise 2.1: Representations
+Additionally, the repository contains Python3 scripts with the solutions to each exercise.
+
+Exercise 1: Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In this exercise we use \qml~to generate the Coulomb matrix and Bag of bonds (BoB) representations. [#montavon]_
 In QML data can be parsed via the ``Compound`` class, which stores data and generates representations in Numpy's ndarray format.
@@ -65,7 +64,7 @@ Lastly, you can print the following properties which is read from the XYZ file:
     print(mol.name)
     print(mol.unit_cell)
 
-Exercise 2.2: Kernels
+Exercise 2: Kernels
 ~~~~~~~~~~~~~~~~~~~~~
 In this exercise we generate a Gaussian kernel matrix, :math:`\mathbf{K}`, using the representations, :math:`\mathbf{X}`, which are generated similarly to the example in the previous exercise:
 
@@ -106,7 +105,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
     print K
 
 
-Exercise 2.3: Regression
+Exercise 3: Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~
 With the kernel matrix and representations sorted out in the previous two exercise, we can now solve the :math:`\boldsymbol{\alpha}` regression coefficients:
 
@@ -142,7 +141,7 @@ Extend your code from the previous step with the code below:
     print(alpha)
 
 
-Exercise 2.4: Prediction
+Exercise 4: Prediction
 ~~~~~~~~~~~~~~~~~~~~~~~~
 With the :math:`\boldsymbol{\alpha}` regression coefficients from the previous step, we have (successfully) trained the machine, and we are now ready to do predictions for other compounds.
 This is done using the following equation:
@@ -166,7 +165,7 @@ In this step we further divide the dataset into a training and a test set. Try u
     # Calculate mean-absolute-error (MAE):
     print np.mean(np.abs(Y_predicted - Y_test))
 
-Exercise 2.5: Learning curves
+Exercise 5: Learning curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Repeat the prediction from Exercise 2.4 with training set sizes of 1000, 2000, and 4000 molecules.
 Note the MAE for every training size.
@@ -175,7 +174,7 @@ Generate a learning curve for the Gaussian and Laplacian kernels, as well using 
 Which combination gives the best learning curve? Note you will have to adjust the kernel width (sigma) underway.
 
 
-Exercise 2.6: Delta learning
+Exercise 6: Delta learning
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 A powerful technique in machine learning is the delta learning approach. Instead of predicting the PBE0/def2-TZVP atomization energies, we shall try to predict the difference between DFTB3 (a semi-empirical quantum method) and PBE0 atomization energies.
 Instead of importing the ``energy_pbe0`` data, you can import the ``energy_delta`` and use this instead
@@ -190,7 +189,7 @@ Instead of importing the ``energy_pbe0`` data, you can import the ``energy_delta
 Finally re-draw one of the learning curves from the previous exercise, and note how the prediction improves.
 
 
-3) References
+References
 ~~~~~~~~~~~~~
 
 .. [#rupp] Rupp et al, Phys Rev Letters, 2012.

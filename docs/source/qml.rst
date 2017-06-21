@@ -1,5 +1,5 @@
-qml package
-===========
+Python API documentation
+========================
 
 .. Submodules
 .. ----------
@@ -40,7 +40,7 @@ qml\.math module
 qml\.Compound class
 --------------------
 
-.. automodule:: qml.compound
+.. autoclass:: qml.Compound
     :members:
     :undoc-members:
     :show-inheritance:
@@ -52,13 +52,6 @@ qml\.arad module
     :members:
     :show-inheritance:
 
-qml\.data module
-----------------
-
-.. automodule:: qml.data
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 qml\.wrappers module
 --------------------
@@ -67,6 +60,15 @@ qml\.wrappers module
     :members:
     :undoc-members:
     :show-inheritance:
+
+ 
+.. qml\.data module
+.. ----------------
+.. 
+.. .. automodule:: qml.data
+..     :members:
+..     :undoc-members:
+..     :show-inheritance:
 
 .. Module contents
 .. ---------------
