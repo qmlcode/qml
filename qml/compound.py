@@ -31,8 +31,9 @@ from .representations import generate_coulomb_matrix
 from .representations import generate_atomic_coulomb_matrix
 from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
+from .representations import generate_slatm_representation
 
-from .arad import ARAD
+from .arad import generate_arad_representation
 
 class Compound(object):
     """ The ``Compound`` class is used to store data from  
@@ -123,16 +124,27 @@ class Compound(object):
 
     def generate_arad_representation(self, size = 23):
         """Generates the representation for the ARAD-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
-
     :param size: Max number of atoms in representation.
     :type size: integer
     """
-        arad = ARAD(maxMolSize = size, maxAts = size)
-        self.representation = arad.describe(self.coordinates,
-                self.nuclear_charges)
+        self.representation = generate_arad_representation(self.coordinates,
+                self.nuclear_charges, size=size)
 
         assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
         assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
+
+    def generate_slatm_representation(self, mbtypes,
+        local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8, 
+        alchemy=False, rpower=6, iprt=False):
+
+        slatm = generate_slatm_representation(self.coordinates, self.nuclear_charges,
+                mbtypes, local=local, sigmas=sigmas, dgrids=dgrids, rcut=rcut,
+                alchemy=alchemy, rpower=rpower, iprt=iprt)
+        if local: slatm = np.asarray(slatm)
+        self.representation = slatm
+        print(self.representation)
+        print(self.representation.shape)
+
 
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.

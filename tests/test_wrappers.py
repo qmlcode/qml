@@ -3,7 +3,7 @@ import numpy as np
 import os
 import sys
 
-from qml.wrappers import arad_kernels, arad_symmetric_kernels
+from qml.wrappers import arad_local_kernels, arad_local_symmetric_kernels
 
 def get_energies(filename):
     """ Returns a dictionary with heats of formation for each xyz-file.
@@ -63,12 +63,12 @@ def test_arad_wrapper():
     sigmas = [10.0, 100.0]
    
     
-    K1 = arad_symmetric_kernels(training, sigmas)
+    K1 = arad_local_symmetric_kernels(training, sigmas)
     assert np.all(K1 > 0.0), "ERROR: ARAD symmetric kernel negative"
     assert np.invert(np.all(np.isnan(K1))), "ERROR: ARAD symmetric kernel contains NaN"
     
 
-    K2 = arad_kernels(training, test, sigmas)
+    K2 = arad_local_kernels(training, test, sigmas)
     assert np.all(K2 > 0.0), "ERROR: ARAD symmetric kernel negative"
     assert np.invert(np.all(np.isnan(K2))), "ERROR: ARAD symmetric kernel contains NaN"
 

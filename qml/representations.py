@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen and Lars A. Bratholm
+# Copyright (c) 2017 Anders Steen Christensen, Lars A. Bratholm and Bing Huang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,9 @@
 from __future__ import print_function
 
 import numpy as np
+import itertools as itl
+
+import ase
 
 from .frepresentations import fgenerate_coulomb_matrix
 from .frepresentations import fgenerate_unsorted_coulomb_matrix
@@ -32,6 +35,10 @@ from .frepresentations import fgenerate_eigenvalue_coulomb_matrix
 from .frepresentations import fgenerate_bob
 
 from .data import NUCLEAR_CHARGE
+
+from .slatm import get_boa
+from .slatm import get_sbop
+from .slatm import get_sbot
 
 def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "row-norm"):
     """ Generates a sorted molecular coulomb, sort either by ``"row-norm"`` or ``"unsorted"``.
@@ -128,7 +135,7 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
     n = 0
     atoms = sorted(asize, key=asize.get)
     nmax = [asize[key] for key in atoms]
-    print(atoms,nmax)
+    # print(atoms,nmax)
     ids = np.zeros(len(nmax), dtype=int)
     for i, (key, value) in enumerate(zip(atoms,nmax)):
         n += value * (1+value)
@@ -139,3 +146,238 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
     n /= 2
 
     return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, nmax, n)
+
+
+def get_slatm_mbtypes(nuclear_charges):
+    """
+    Get the list of minimal types of many-body terms in a dataset. This resulting list
+    is necessary as input in the ``generate_slatm_representation()`` function.
+
+    :param zs: A list of the nuclear charges for each compound in the dataset.
+    :type fs: list of numpy arrays
+    :return: A list containing the types of many-body terms.
+    :rtype: list
+    """
+
+    # :param pbc: periodic boundary condition along x,y,z direction, defaulted to '000', i.e., molecule
+    # :type pbc: string
+
+    pbc = '000'
+
+    zs = nuclear_charges
+    # zs = [ read_xyz(f)[0] for f in fs ]
+    nm = len(zs)
+    zsmax = set()
+    nas = []
+    zs_ravel = []
+    for zsi in zs:
+        na = len(zsi); nas.append(na)
+        zsil = list(zsi); zs_ravel += zsil
+        zsmax.update( zsil )
+
+    zsmax = np.array( list(zsmax) )
+    nass = []
+    for i in range(nm):
+        zsi = zs[i]
+        nass.append( [ (zi == zsi).sum() for zi in zsmax ] )
+
+    nzmax = np.max(np.array(nass), axis=0)
+    nzmax_u = []
+    if pbc != '000':
+        # the PBC will introduce new many-body terms, so set
+        # nzmax to 3 if it's less than 3
+        for nzi in nzmax:
+            if nzi <= 2:
+                nzi = 3
+            nzmax_u.append(nzi)
+        nzmax = nzmax_u
+
+    boas = [ [zi,] for zi in zsmax ]
+    bops = [ [zi,zi] for zi in zsmax ] + list( itl.combinations(zsmax,2) )
+
+    bots = []
+    for i in zsmax:
+        for bop in bops:
+            j,k = bop
+            tas = [ [i,j,k], [i,k,j], [j,i,k] ]
+            for tasi in tas:
+                if (tasi not in bots) and (tasi[::-1] not in bots):
+                    nzsi = [ (zj == tasi).sum() for zj in zsmax ]
+                    if np.all(nzsi <= nzmax):
+                        bots.append( tasi )
+    mbtypes = boas + bops + bots
+
+    return mbtypes#, np.array(zs_ravel), np.array(nas)
+
+
+def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
+        local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8,
+        alchemy=False, rpower=6, iprt=False):
+    """
+    Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
+    Both global (``local=False``) and local (``local=True``) SLATM are available.
+
+    A version that works for periodic boundary conditions will be released soon.
+
+    NOTE: You will need to run the ``get_slatm_mbtypes()`` function to get the ``mbtypes`` input (or generate it manually).
+
+    :param coordinates: Input coordinates
+    :type coordinates: numpy array
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param mbtypes: Many-body types for the whole dataset, including 1-, 2- and 3-body types. Could be obtained by calling ``get_slatm_mbtypes()``.
+    :type mbtypes: list
+    :param local: Generate a local representation. Defaulted to False (i.e., global representation); otherwise, atomic version.
+    :type local: bool
+    :param sigmas: Controlling the width of Gaussian smearing function for 2- and 3-body parts, defaulted to [0.05,0.05], usually these do not need to be adjusted.
+    :type sigmas: list
+    :param dgrids: The interval between two sampled internuclear distances and angles, defaulted to [0.03,0.03], no need for change, compromised for speed and accuracy.
+    :type dgrids: list
+    :param rcut: Cut-off radius, defaulted to 4.8 Angstrom.
+    :type rcut: float
+    :param alchemy: Swith to use the alchemy version of SLATM. (default=False)
+    :type alchemy: bool
+    :param rpower: The power of R in 2-body potential, defaulted to London potential (=6).
+    :type rpower: float
+    :param iprt: Print debug output if True.
+    :type iprt: bool
+    :return: 1D SLATM representation
+    :rtype: numpy array
+    """
+    # :param pbc: defaulted to '000', meaning it's a molecule; the three digits in the string corresponds to x,y,z direction
+    # :type pbc: string
+
+    pbc = '000'
+
+    if pbc != '000' and iprt:
+        print(' -- handling systems with periodic boundary condition')
+        # =======================================================================
+        # PBC may introduce new many-body terms, so at the stage of get statistics
+        # info from db, we've already considered this point by letting maximal number
+        # of nuclear charges being 3.
+        # =======================================================================
+
+    m = ase.Atoms(nuclear_charges, coordinates)
+    zsm = nuclear_charges
+
+    iloc = local
+    if iloc:
+        mbs = []
+        na = len(m)
+        X2Ns = []
+        for ia in range(na):
+            if iprt: print('               -- ia = ', ia + 1)
+            n1 = 0; n2 = 0; n3 = 0
+            mbs_ia = np.zeros(0)
+            icount = 0
+            for mbtype in mbtypes:
+                if len(mbtype) == 1:
+                    mbsi = get_boa(mbtype[0], np.array([zsm[ia],])) #print ' -- mbsi = ', mbsi
+                    if alchemy:
+                        n1 = 1
+                        n1_0 = mbs_ia.shape[0]
+                        if n1_0 == 0:
+                            mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+                        elif n1_0 == 1:
+                            mbs_ia += mbsi
+                        else:
+                            raise '#ERROR'
+                    else:
+                        n1 += len(mbsi)
+                        mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+                elif len(mbtype) == 2:
+                    #print ' 001, pbc = ', pbc
+                    mbsi = get_sbop(mbtype, m, zsm, iloc=iloc, ia=ia, \
+                                    sigma=sigmas[0], dgrid=dgrids[0], rcut=rcut, \
+                                    pbc=pbc, rpower=rpower)[1]
+                    mbsi *= 0.5 # only for the two-body parts, local rpst
+                    #print ' 002'
+                    if alchemy:
+                        n2 = len(mbsi)
+                        n2_0 = mbs_ia.shape[0]
+                        if n2_0 == n1:
+                            mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+                        elif n2_0 == n1 + n2:
+                            t = mbs_ia[n1:n1+n2] + mbsi
+                            mbs_ia[n1:n1+n2] = t
+                        else:
+                            raise '#ERROR'
+                    else:
+                        n2 += len(mbsi)
+                        mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+                else: # len(mbtype) == 3:
+                    mbsi = get_sbot(mbtype, m, zsm, iloc=iloc, ia=ia, \
+                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)[1]
+                    if alchemy:
+                        n3 = len(mbsi)
+                        n3_0 = mbs_ia.shape[0]
+                        if n3_0 == n1 + n2:
+                            mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+                        elif n3_0 == n1 + n2 + n3:
+                            t = mbs_ia[n1+n2:n1+n2+n3] + mbsi
+                            mbs_ia[n1+n2:n1+n2+n3] = t
+                        else:
+                            raise '#ERROR'
+                    else:
+                        n3 += len(mbsi)
+                        mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
+
+            mbs.append( mbs_ia )
+            X2N = [n1,n2,n3];
+            if X2N not in X2Ns:
+                X2Ns.append(X2N)
+        assert len(X2Ns) == 1, '#ERROR: multiple `X2N ???'
+    else:
+        n1 = 0; n2 = 0; n3 = 0
+        mbs = np.zeros(0)
+        for mbtype in mbtypes:
+            if len(mbtype) == 1:
+                mbsi = get_boa(mbtype[0], zsm)
+                if alchemy:
+                    n1 = 1
+                    n1_0 = mbs.shape[0]
+                    if n1_0 == 0:
+                        mbs = np.concatenate( (mbs, [sum(mbsi)] ), axis=0 )
+                    elif n1_0 == 1:
+                        mbs += sum(mbsi )
+                    else:
+                        raise '#ERROR'
+                else:
+                    n1 += len(mbsi)
+                    mbs = np.concatenate( (mbs, mbsi), axis=0 )
+            elif len(mbtype) == 2:
+                mbsi = get_sbop(mbtype, m, zsm, sigma=sigmas[0], \
+                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)[1]
+
+                if alchemy:
+                    n2 = len(mbsi)
+                    n2_0 = mbs.shape[0]
+                    if n2_0 == n1:
+                        mbs = np.concatenate( (mbs, mbsi), axis=0 )
+                    elif n2_0 == n1 + n2:
+                        t = mbs[n1:n1+n2] + mbsi
+                        mbs[n1:n1+n2] = t
+                    else:
+                        raise '#ERROR'
+                else:
+                    n2 += len(mbsi)
+                    mbs = np.concatenate( (mbs, mbsi), axis=0 )
+            else: # len(mbtype) == 3:
+                mbsi = get_sbot(mbtype, m, zsm, sigma=sigmas[1], \
+                                 dgrid=dgrids[1], rcut=rcut)[1]
+                if alchemy:
+                    n3 = len(mbsi)
+                    n3_0 = mbs.shape[0]
+                    if n3_0 == n1 + n2:
+                        mbs = np.concatenate( (mbs, mbsi), axis=0 )
+                    elif n3_0 == n1 + n2 + n3:
+                        t = mbs[n1+n2:n1+n2+n3] + mbsi
+                        mbs[n1+n2:n1+n2+n3] = t
+                    else:
+                        raise '#ERROR'
+                else:
+                    n3 += len(mbsi)
+                    mbs = np.concatenate( (mbs, mbsi), axis=0 )
+
+    return mbs
+

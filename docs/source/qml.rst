@@ -40,43 +40,33 @@ qml\.math module
 qml\.Compound class
 --------------------
 
-.. autoclass:: qml.Compound
-   :members:
-   :undoc-members:
+.. automodule:: qml.compound
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-# qml\.arad module
-# ----------------
-# 
-# .. automodule:: qml.arad
-#     :members:
-#     :undoc-members:
-#     :show-inheritance:
+qml\.arad module
+----------------
 
-# qml\.arad\_kernels module
-# -------------------------
-# 
-# .. automodule:: qml.arad_kernels
-#     :members:
-#     :undoc-members:
-#     :show-inheritance:
+.. automodule:: qml.arad
+    :members:
+    :show-inheritance:
 
-# qml\.data module
-# ----------------
-# 
-# .. automodule:: qml.data
-#     :members:
-#     :undoc-members:
-#     :show-inheritance:
+qml\.data module
+----------------
 
+.. automodule:: qml.data
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-# qml\.wrappers module
-# --------------------
-# 
-# .. automodule:: qml.wrappers
-#     :members:
-#     :undoc-members:
-#     :show-inheritance:
-# 
+qml\.wrappers module
+--------------------
+
+.. automodule:: qml.wrappers
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 .. Module contents
 .. ---------------
