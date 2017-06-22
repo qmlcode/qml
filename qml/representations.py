@@ -25,8 +25,6 @@ from __future__ import print_function
 import numpy as np
 import itertools as itl
 
-import ase
-
 from .frepresentations import fgenerate_coulomb_matrix
 from .frepresentations import fgenerate_unsorted_coulomb_matrix
 from .frepresentations import fgenerate_local_coulomb_matrix
@@ -148,24 +146,21 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
     return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, nmax, n)
 
 
-def get_slatm_mbtypes(nuclear_charges):
+def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     """
     Get the list of minimal types of many-body terms in a dataset. This resulting list
     is necessary as input in the ``generate_slatm_representation()`` function.
 
-    :param zs: A list of the nuclear charges for each compound in the dataset.
-    :type fs: list of numpy arrays
+    :param nuclear_charges: A list of the nuclear charges for each compound in the dataset.
+    :type nuclear_charges: list of numpy arrays
+    :param pbc: periodic boundary condition along x,y,z direction, defaulted to '000', i.e., molecule
+    :type pbc: string
     :return: A list containing the types of many-body terms.
     :rtype: list
     """
 
-    # :param pbc: periodic boundary condition along x,y,z direction, defaulted to '000', i.e., molecule
-    # :type pbc: string
-
-    pbc = '000'
-
     zs = nuclear_charges
-    # zs = [ read_xyz(f)[0] for f in fs ]
+
     nm = len(zs)
     zsmax = set()
     nas = []
@@ -178,7 +173,7 @@ def get_slatm_mbtypes(nuclear_charges):
     zsmax = np.array( list(zsmax) )
     nass = []
     for i in range(nm):
-        zsi = zs[i]
+        zsi = np.array(zs[i],np.int)
         nass.append( [ (zi == zsi).sum() for zi in zsmax ] )
 
     nzmax = np.max(np.array(nass), axis=0)
@@ -207,12 +202,12 @@ def get_slatm_mbtypes(nuclear_charges):
                         bots.append( tasi )
     mbtypes = boas + bops + bots
 
-    return mbtypes#, np.array(zs_ravel), np.array(nas)
+    return mbtypes #, np.array(zs_ravel), np.array(nas)
 
 
-def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
-        local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8,
-        alchemy=False, rpower=6, iprt=False):
+def generate_slatm(coordinates, nuclear_charges, mbtypes,
+        unit_cell=None, local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03],
+        rcut=4.8, alchemy=False, pbc='000', rpower=6):
     """
     Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
     Both global (``local=False``) and local (``local=True``) SLATM are available.
@@ -237,42 +232,47 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
     :type rcut: float
     :param alchemy: Swith to use the alchemy version of SLATM. (default=False)
     :type alchemy: bool
+    :param pbc: defaulted to '000', meaning it's a molecule; the three digits in the string corresponds to x,y,z direction
+    :type pbc: string
     :param rpower: The power of R in 2-body potential, defaulted to London potential (=6).
     :type rpower: float
-    :param iprt: Print debug output if True.
-    :type iprt: bool
     :return: 1D SLATM representation
     :rtype: numpy array
     """
-    # :param pbc: defaulted to '000', meaning it's a molecule; the three digits in the string corresponds to x,y,z direction
-    # :type pbc: string
 
-    pbc = '000'
+    c = unit_cell
+    iprt=False
+    if c is None:
+        c = np.array([[1,0,0],[0,1,0],[0,0,1]])
 
-    if pbc != '000' and iprt:
-        print(' -- handling systems with periodic boundary condition')
+    if pbc != '000':
+        # print(' -- handling systems with periodic boundary condition')
+        assert c != None, 'ERROR: Please specify unit cell for SLATM'
         # =======================================================================
         # PBC may introduce new many-body terms, so at the stage of get statistics
         # info from db, we've already considered this point by letting maximal number
         # of nuclear charges being 3.
         # =======================================================================
 
-    m = ase.Atoms(nuclear_charges, coordinates)
-    zsm = nuclear_charges
+    zs = nuclear_charges
+    na = len(zs)
+    coords = coordinates
+    obj = [ zs, coords, c ]
 
     iloc = local
+
     if iloc:
         mbs = []
-        na = len(m)
         X2Ns = []
         for ia in range(na):
-            if iprt: print('               -- ia = ', ia + 1)
+            # if iprt: print '               -- ia = ', ia + 1
             n1 = 0; n2 = 0; n3 = 0
             mbs_ia = np.zeros(0)
             icount = 0
             for mbtype in mbtypes:
                 if len(mbtype) == 1:
-                    mbsi = get_boa(mbtype[0], np.array([zsm[ia],])) #print ' -- mbsi = ', mbsi
+                    mbsi = get_boa(mbtype[0], np.array([zs[ia],]))
+                    #print ' -- mbsi = ', mbsi
                     if alchemy:
                         n1 = 1
                         n1_0 = mbs_ia.shape[0]
@@ -287,7 +287,7 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
                         mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
                 elif len(mbtype) == 2:
                     #print ' 001, pbc = ', pbc
-                    mbsi = get_sbop(mbtype, m, zsm, iloc=iloc, ia=ia, \
+                    mbsi = get_sbop(mbtype, obj, iloc=iloc, ia=ia, \
                                     sigma=sigmas[0], dgrid=dgrids[0], rcut=rcut, \
                                     pbc=pbc, rpower=rpower)[1]
                     mbsi *= 0.5 # only for the two-body parts, local rpst
@@ -306,7 +306,7 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
                         n2 += len(mbsi)
                         mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
                 else: # len(mbtype) == 3:
-                    mbsi = get_sbot(mbtype, m, zsm, iloc=iloc, ia=ia, \
+                    mbsi = get_sbot(mbtype, obj, iloc=iloc, ia=ia, \
                                     sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)[1]
                     if alchemy:
                         n3 = len(mbsi)
@@ -332,7 +332,7 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
         mbs = np.zeros(0)
         for mbtype in mbtypes:
             if len(mbtype) == 1:
-                mbsi = get_boa(mbtype[0], zsm)
+                mbsi = get_boa(mbtype[0], zs)
                 if alchemy:
                     n1 = 1
                     n1_0 = mbs.shape[0]
@@ -346,7 +346,7 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
                     n1 += len(mbsi)
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             elif len(mbtype) == 2:
-                mbsi = get_sbop(mbtype, m, zsm, sigma=sigmas[0], \
+                mbsi = get_sbop(mbtype, obj, sigma=sigmas[0], \
                                 dgrid=dgrids[0], rcut=rcut, rpower=rpower)[1]
 
                 if alchemy:
@@ -363,8 +363,8 @@ def generate_slatm_representation(coordinates, nuclear_charges, mbtypes,
                     n2 += len(mbsi)
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             else: # len(mbtype) == 3:
-                mbsi = get_sbot(mbtype, m, zsm, sigma=sigmas[1], \
-                                 dgrid=dgrids[1], rcut=rcut)[1]
+                mbsi = get_sbot(mbtype, obj, sigma=sigmas[1], \
+                        dgrid=dgrids[1], rcut=rcut)[1]
                 if alchemy:
                     n3 = len(mbsi)
                     n3_0 = mbs.shape[0]

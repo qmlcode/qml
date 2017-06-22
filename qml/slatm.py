@@ -20,25 +20,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import ase
 import scipy.spatial.distance as ssd
 import itertools as itl
 import numpy as np
 
-from .data import NUCLEAR_CHARGE
+def get_pbc(obj, d0 = 3.6):
+    """
+    automatically tell if an compound object is periodic or not
 
-def get_pbc(m, d0 = 3.6):
+    :param d0: the threshhold value to tell if two cells are adjacent
+    :type d0: float
+    """
 
     pbc = []
 
-    c = m.cell
-    ps = m.positions
-    na = len(m); idxs = np.arange(na)
+    zs, ps, c = obj
+    na = len(zs); idxs = np.arange(na)
 
-    for ii in range(3):
-        psx = ps[:,ii]; xmin = min(psx)
+    for i in range(3):
+        psx = ps[:,i]; xmin = min(psx)
         idxs_i = idxs[ psx == xmin ]
-        ps1 = ps[idxs_i[0]] + c[ii]
+        ps1 = ps[idxs_i[0]] + c[i]
         if np.min( ssd.cdist([ps1,], ps)[0] ) < d0:
             pbc.append( '1' )
         else:
@@ -46,18 +48,18 @@ def get_pbc(m, d0 = 3.6):
 
     return ''.join(pbc)
 
-def update_m(m, ia, rcut=9.0, pbc=None):
-    # """
-    # retrieve local structure around atom `ia
-    # for periodic systems (or very large system)
-    # """
+def update_m(obj, ia, rcut=9.0, pbc=None):
+    """
+    retrieve local structure around atom `ia
+    for periodic systems (or very large system)
+    """
 
-    c = m.cell
+    zs, coords, c = obj
     v1, v2, v3 = c
-    ls = ssd.norm(c, axis=0)
+    vs = ssd.norm(c, axis=0)
 
     nns = []; ns = []
-    for i,li in enumerate(ls):
+    for i,vi in enumerate(vs):
         n1_doulbe = rcut/li
         n1 = int(n1_doulbe)
         if n1 - n1_doulbe == 0:
@@ -79,48 +81,52 @@ def update_m(m, ia, rcut=9.0, pbc=None):
 
     nau = len(n123s)
     n123s = np.array(n123s, np.float)
-    #print ' -- n123s = ', n123s
 
-    coords = m.positions; zs = m.numbers; ai = m[ia]; cia = coords[ia]
-    na = len(m)
+    na = len(zs)
+    ai = m[ia]; cia = coords[ia]
     if na == 1:
         ds = np.array([[0.]])
     else:
         ds = ssd.squareform( ssd.pdist(coords) )
 
-    idxs0 = []
-
-    mu = ase.Atoms([], cell=c); mu.append( ai ); idxs0.append( ia )
+    zs_u = []; coords_u = []
+    zs_u.append( zs[ia] ); coords_u.append( coords[ia] )
     for i in range(na) :
         di = ds[i,ia]
-        if di <= rcut:
-            if di > 0:
-                mu.append( m[i] ); idxs0.append( i )
+        if (di > 0) and (di <= rcut):
+            zs_u.append(zs[i]); coords_u.append(coords[ia])
 
-            # add new coords by translation
+# add new coords by translation
             ts = np.zeros((nau,3))
             for iau in range(nau):
                 ts[iau] = np.dot(n123s[iau],c)
 
-            coords_iu = coords[i] + ts
-            dsi = ssd.norm( coords_iu - cia, axis=1);
+            coords_iu = coords[i] + ts #np.dot(n123s, c)
+            dsi = ssd.norm(coords_iu - cia, axis=1);
             filt = np.logical_and(dsi > 0, dsi <= rcut); nx = filt.sum()
-            mii = ase.Atoms([zs[i],]*nx, coords_iu[filt,:])
-            for aii in mii: mu.append( aii ); idxs0.append( i )
+            zs_u += [zs[i],]*nx
+            coords_u += [ list( coords_iu[filt,:] ), ]
 
-    return mu, idxs0
+    obj_u = [zs_u, coords_u]
+
+    return obj_u
 
 
 def get_boa(z1, zs_):
     return z1*np.array( [(zs_ == z1).sum(), ])
+    #return -0.5*z1**2.4*np.array( [(zs_ == z1).sum(), ])
 
-def get_sbop(mbtype, m, zsm, iloc=False, ia=None, normalize=True, sigma=0.05, \
+def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
              rcut=4.8, dgrid=0.03, ipot=True, pbc='000', rpower=6):
-    # """
-    # two-body terms
-    # """
+    """
+    two-body terms
+
+    :param obj: molecule object, consisting of two parts: [ zs, coords ]
+    :type obj: list
+    """
 
     z1, z2 = mbtype
+    zs, coords, c = obj
 
     if iloc:
         assert ia != None, '#ERROR: plz specify `za and `ia '
@@ -128,19 +134,20 @@ def get_sbop(mbtype, m, zsm, iloc=False, ia=None, normalize=True, sigma=0.05, \
     if pbc != '000':
         if rcut < 9.0: raise '#ERROR: rcut too small for systems with pbc'
         assert iloc, '#ERROR: for periodic system, plz use atomic rpst'
-        m, idxs0 = update_m(m, ia, rcut=rcut, pbc=pbc)
-        zsmu = [ zsm[i] for i in idxs0 ]; zsm = zsmu
+        zs, coords = update_m(obj, ia, rcut=rcut, pbc=pbc)
 
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-    na = len(m)
-    coords = m.positions
-    ds = ssd.squareform( ssd.pdist(coords) )
+    na = len(zs)
+    ds_triu = ssd.pdist(coords) # upper triangle part of distance matrix
+    ds = ssd.squareform(ds_triu)
+    dmin = 0.25 # Angstrom
+    assert np.all(ds_triu.ravel() > dmin), '#ERROR: two small distance detected!'
 
     ias = np.arange(na)
-    ias1 = ias[zsm == z1]
-    ias2 = ias[zsm == z2]
+    ias1 = ias[zs == z1]
+    ias2 = ias[zs == z2]
 
     if z1 == z2:
         ias12 = list( itl.combinations(ias1,2) )
@@ -157,8 +164,6 @@ def get_sbop(mbtype, m, zsm, iloc=False, ia=None, normalize=True, sigma=0.05, \
         dsu = [ ds[i,j] for (i,j) in ias12 ]
 
     dsu = np.array(dsu)
-
-    #print ' -- (d_min, d_max) = (%.3f, %.3f)'%(np.min(ds), np.max(ds))
 
     # bop potential distribution
     r0 = 0.1
@@ -203,37 +208,37 @@ def vang(u,v):
 def cvang(u,v):
     return np.dot(u,v)/np.sqrt(np.dot(u,u)*np.dot(v,v))
 
-def get_sbot(mbtype, m, zsm, iloc=False, ia=None, normalize=True, sigma=0.05, label=None, \
+def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label=None, \
              rcut=4.8, dgrid=0.0262, ipot=True, pbc='000'):
-    # """
-    # sigma -- standard deviation of gaussian distribution centered on a specific angle
-    #         defaults to 0.05 (rad), approximately 3 degree
-    # dgrid    -- step of angle grid
-    #         defaults to 0.0262 (rad), approximately 1.5 degree
-    # """
+
+    """
+    sigma -- standard deviation of gaussian distribution centered on a specific angle
+            defaults to 0.05 (rad), approximately 3 degree
+    dgrid    -- step of angle grid
+            defaults to 0.0262 (rad), approximately 1.5 degree
+    """
 
     z1, z2, z3 = mbtype
+    zs, coords, c = obj
 
     if iloc:
         assert ia != None, '#ERROR: plz specify `za and `ia '
 
     if pbc != '000':
         assert iloc, '#ERROR: for periodic system, plz use atomic rpst'
-        m, idxs0 = update_m(m, ia, rcut=rcut, pbc=pbc)
-        zsm = [ zsm[i] for i in idxs0 ]
+        zs, coords = update_m(obj, ia, rcut=rcut, pbc=pbc)
 
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-    na = len(m)
-    coords = m.positions
+    na = len(zs)
     ds = ssd.squareform( ssd.pdist(coords) )
     #get_date(' ds matrix calc done ')
 
     ias = np.arange(na)
-    ias1 = ias[zsm == z1]; n1 = len(ias1)
-    ias2 = ias[zsm == z2]; n2 = len(ias2)
-    ias3 = ias[zsm == z3]; n3 = len(ias3)
+    ias1 = ias[zs == z1]; n1 = len(ias1)
+    ias2 = ias[zs == z2]; n2 = len(ias2)
+    ias3 = ias[zs == z3]; n3 = len(ias3)
     tas = []
 
     for ia1 in ias1:
