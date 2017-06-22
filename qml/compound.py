@@ -133,8 +133,6 @@ class Compound(object):
         if local: slatm = np.asarray(slatm)
         self.representation = slatm
 
-        assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
-        assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
 
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.
