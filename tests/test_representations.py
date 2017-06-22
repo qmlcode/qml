@@ -176,7 +176,7 @@ def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distanc
         int_decay = int_cutoff
 
     natoms = nuclear_charges.size
-    sorted_cm = np.zeros((natoms, (size * (size + 1)) / 2))
+    sorted_cm = np.zeros((natoms, (size * (size + 1)) // 2))
     cm_mat = np.zeros((natoms, size, size))
 
     for k in range(natoms):
