@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix Faber
+# Copyright (c) 2016 Anders Steen Christensen, Felix A. Faber, Lars A. Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ import numpy as np
 from .fkernels import fget_vector_kernels_gaussian
 from .fkernels import fget_vector_kernels_laplacian
 
-from .arad_kernels import get_atomic_kernels_arad
-from .arad_kernels import get_atomic_symmetric_kernels_arad
+from .arad import get_local_kernels_arad
+from .arad import get_local_symmetric_kernels_arad
 
 
 def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
@@ -96,7 +96,7 @@ def get_atomic_kernels_gaussian(mols1, mols2, sigmas):
         nm1, nm2, nsigmas)
 
 
-def arad_kernels(mols1, mols2, sigmas,
+def arad_local_kernels(mols1, mols2, sigmas,
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
 
     amax = mols1[0].representation.shape[0]
@@ -107,27 +107,21 @@ def arad_kernels(mols1, mols2, sigmas,
     X1 = np.array([mol.representation for mol in mols1]).reshape((nm1, amax, 5, amax))
     X2 = np.array([mol.representation for mol in mols2]).reshape((nm2, amax, 5, amax))
 
-    Z1 = [mol.nuclear_charges for mol in mols1]
-    Z2 = [mol.nuclear_charges for mol in mols2]
-
-    K = get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas, 
+    K = get_local_kernels_arad(X1, X2, sigmas, 
         width=width, cut_distance=cut_distance, r_width=r_width, c_width=c_width)
 
     return K
 
 
-def arad_symmetric_kernels(mols1, sigmas,
+def arad_local_symmetric_kernels(mols1, sigmas,
         width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
 
     amax = mols1[0].representation.shape[0]
-
     nm1 = len(mols1)
 
     X1 = np.array([mol.representation for mol in mols1]).reshape((nm1,amax,5,amax))
 
-    Z1 = [mol.nuclear_charges for mol in mols1]
-
-    K = get_atomic_symmetric_kernels_arad(X1, Z1, sigmas, \
+    K = get_local_symmetric_kernels_arad(X1, sigmas, \
         width=width, cut_distance=cut_distance, r_width=r_width, c_width=c_width)
 
     return K

@@ -3,6 +3,8 @@ language: python
 sudo: required
 dist: trusty
 
+group: edge
+
 deploy:
   provider: pages
   local_dir: ${TRAVIS_BUILD_DIR}/docs/build/html
@@ -16,7 +18,6 @@ deploy:
 
 python:
   - "2.7"
-  - "3.4"
   - "3.5"
   - "3.6"
 
@@ -29,6 +30,7 @@ install:
  - |
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
        sudo apt-get install python3-numpy
+       pip3 install scipy
        python3 setup.py build
        python3 setup.py install
        pip3 install sphinx
@@ -37,6 +39,7 @@ install:
        make html
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
+       pip2 install scipy
        python2 setup.py build
        python2 setup.py install
        pip2 install sphinx

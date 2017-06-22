@@ -22,12 +22,13 @@
 
 from __future__ import print_function
 
-import sys
-import time
+import os
 import numpy as np
 import qml
 from qml.kernels import laplacian_kernel
 from qml.math import cho_solve
+
+from qml.representations import get_slatm_mbtypes
 
 
 def get_energies(filename):
@@ -50,18 +51,20 @@ def get_energies(filename):
 
     return energies
 
-if __name__ == "__main__":
+def test_krr_cmat():
+
+    test_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("hof_qm7.txt")
+    data = get_energies(test_dir + "/data/hof_qm7.txt")
 
     # Generate a list of qml.Compound() objects
     mols = []
 
-    for xyz_file in sorted(data.keys()):
+    for xyz_file in sorted(data.keys())[:1000]:
 
         # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
+        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
@@ -71,14 +74,13 @@ if __name__ == "__main__":
 
         mols.append(mol)
 
-
     # Shuffle molecules
     np.random.seed(666)
     np.random.shuffle(mols)
 
     # Make training and test sets
-    n_test  = 1000
-    n_train = 4000
+    n_test  = 300
+    n_train = 700
 
     training = mols[:n_train]
     test  = mols[-n_test:]
@@ -96,19 +98,15 @@ if __name__ == "__main__":
     llambda = 10**(-10.0)
 
     # Generate training Kernel
-    print("Calculating training kernel ...")
     K = laplacian_kernel(X, X, sigma)
 
     # Solve alpha
-    print("Solving alphas ...")
     K[np.diag_indices_from(K)] += llambda
     alpha = cho_solve(K,Y)
 
     # Calculate prediction kernel
-    print("Calculating prediction kernel ...")
     Ks = laplacian_kernel(X, Xs, sigma)
     Yss = np.dot(Ks.transpose(), alpha)
 
-    # Print final RMSD
-    rmsd = np.sqrt(np.mean(np.square(Ys - Yss)))
-    print("RMSD = %6.2f kcal/mol" % rmsd)
+    mae = np.mean(np.abs(Ys - Yss))
+    print(mae)

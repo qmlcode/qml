@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|Build Status|
+|Build Status| |Beta|
 
 QML: A Python Toolkit for Quantum Machine Learning
 ==================================================
@@ -13,8 +13,8 @@ properties of molecules and solids. QML is not a high-level framework
 where you can do ``model.train()``, but supplies the building blocks to
 carry out efficient and accurate machine learning on chemical compounds.
 As such, the goal is to provide usable and efficient implementations of
-concepts such as representations and kernels, which can then be
-implemented in other machine learning codes.
+concepts such as representations and kernels. 
+
 
 Current list of contributors:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27,23 +27,31 @@ Current list of contributors:
 -  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
 -  O. Anatole von Lilienfeld (University of Basel)
 
-1) Citing QML:
+Code development
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The QML code is developed through our GitHub repository: 
+
+https://github.com/qmlcode/qml
+------------------------------
+
+Please add you code to QML by forking and making pull-requests to the "develop" branch.
+Every now and then develop branch is pushed to the "master" branch and automatically deployed to PyPI, where the latest stable version is hosted.
+
+See the "Installing QML" page for up-to-date installation instructions.
+
+
+Citing QML:
 --------------
 
-Until the preprint is available from arXiv, please cite this GitHub
-repository as:
+Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, F Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, FA Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
-2) Installation
----------------
-
-Please go to the QML github repository at https://github.com/qmlcode/qml/ 
-
-
+For citation of the individual procedures of QML, please see the "Citing use of QML" section.
 
 .. toctree::
    :maxdepth: 2
@@ -51,6 +59,8 @@ Please go to the QML github repository at https://github.com/qmlcode/qml/
    :name: index
 
    installation
+   citation
+   tutorial
    examples
 
 
@@ -61,10 +71,14 @@ Please go to the QML github repository at https://github.com/qmlcode/qml/
 
    qml
 
-3) License:
+License:
 -----------
 
 QML is freely available under the terms of the MIT license.
 
 .. |Build Status| image:: https://travis-ci.org/qmlcode/qml.svg?branch=master
    :target: https://travis-ci.org/qmlcode/qml
+
+.. |Beta| image:: http://i.imgur.com/5fMAeek.jpg
+   :width: 90 px
+   :target: https://github.com/qmlcode/qml
