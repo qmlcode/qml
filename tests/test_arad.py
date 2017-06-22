@@ -1,9 +1,11 @@
 from __future__ import print_function
 
+import os
 import sys
 import time
 import numpy as np
 import qml
+
 from qml.kernels import laplacian_kernel
 from qml.math import cho_solve
 from qml.arad import generate_arad_representation
@@ -35,8 +37,10 @@ def get_energies(filename):
     return energies
 
 def test_arad():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("hof_qm7.txt")
+    data = get_energies(test_dir + "/data/hof_qm7.txt")
 
     # Generate a list of qml.Compound() objects
     mols = []
@@ -44,7 +48,7 @@ def test_arad():
     for xyz_file in sorted(data.keys())[:10]:
 
         # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
+        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]

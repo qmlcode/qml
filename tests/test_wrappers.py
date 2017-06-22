@@ -30,7 +30,7 @@ def test_arad_wrapper():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
-    data = get_energies("%s/hof_qm7.txt" % test_dir)
+    data = get_energies("%s/data/hof_qm7.txt" % test_dir)
 
     # Generate a list of qml.Compound() objects
     mols = []

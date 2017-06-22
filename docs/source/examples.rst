@@ -1,4 +1,4 @@
-Examples
+xamples
 --------
 
 Generating representations using the ``Compound`` class
@@ -145,10 +145,25 @@ This input (the types of many-body terms) is generate via the ``get_slatm_mbtype
     for compound in qm7:
 
         # Generate the desired representation for each compound
-        compound.generate_slatm_representation(mbtypes, local=True)
+        compound.generate_slatm(mbtypes, local=True)
 
-The ``local`` keyword in this example specifies that a local representation is produced.
+The ``local`` keyword in this example specifies that a local representation is produced. Alternatively the SLATM representation can be generate via the ``qml.representations`` module:
     
+.. code:: python
+
+    from qml.representations import generate_slatm
+
+    # Dummy coordinates
+    coordinates = ... 
+
+    # Dummy nuclear charges
+    nuclear_charges = ...
+
+    # Dummy mbtypes
+    mbtypes = get_slatm_mbtypes( ... )
+
+    # Generate one representation
+    rep = generate_slatm(coordinates, nuclear_charges, mbtypes)
 
 Generating the ARAD representation and kernels
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
