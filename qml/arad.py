@@ -290,4 +290,3 @@ def get_atomic_symmetric_kernels_arad(X1, sigmas,
 
     return fget_atomic_symmetric_kernels_arad(X1, Z1_arad, N1, sigmas, 
                 na1, nsigmas, width, cut_distance, r_width, c_width)
-
