@@ -321,4 +321,3 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
 
     return mbs
-
