@@ -20,11 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from numpy import empty
 import numpy as np
 
-from .fdistance import fmanhattan_distance
-from .fdistance import fl2_distance
+from .fdistance import fmanhattan_distance, fl2_distance
 from .fdistance import fp_distance_integer, fp_distance_double
 
 def manhattan_distance(A, B):
@@ -54,7 +52,7 @@ def manhattan_distance(A, B):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
     fmanhattan_distance(A.T, B.T, D)
 
@@ -64,7 +62,7 @@ def l2_distance(A, B):
     """ Calculates the L2 distances, D, between two
         Numpy arrays of representations.
 
-            :math:`D_{ij} = \\|A_i - B_j\\|_1`
+            :math:`D_{ij} = \\|A_i - B_j\\|_2`
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         D is calculated using an OpenMP parallel Fortran routine.
@@ -87,19 +85,19 @@ def l2_distance(A, B):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
     fl2_distance(A.T, B.T, D)
 
     return D
 
-def p_distance(A, B, p=2):
+def p_distance(A, B, p = 2):
     """ Calculates the p-norm distances between two
         Numpy arrays of representations.
-        The value of the keyword argument ``p=`` sets the norm order. 
-        E.g. ``p=1.0`` and ``p=2.0`` with yield the Manhattan and L2 distances, respectively. 
+        The value of the keyword argument ``p =`` sets the norm order. 
+        E.g. ``p = 1.0`` and ``p = 2.0`` with yield the Manhattan and L2 distances, respectively.
     
-            :math:`D_{ij} = \\|A_i - B_j\\|_p`
+            .. math:: D_{ij} = \|A_i - B_j\|_p
 
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         D is calculated using an OpenMP parallel Fortran routine.
@@ -108,7 +106,9 @@ def p_distance(A, B, p=2):
         :type A: numpy array
         :param B: 2D array of descriptors - shape (M, representation size).
         :type B: numpy array
-    
+        :param p: The norm order
+        :type p: float
+
         :return: The distance matrix.
         :rtype: numpy array
     """
@@ -122,7 +122,7 @@ def p_distance(A, B, p=2):
     na = A.shape[0]
     nb = B.shape[0]
 
-    D = empty((na, nb), order='F')
+    D = np.empty((na, nb), order='F')
 
 
     if (type(p) == type(1)):
@@ -132,7 +132,15 @@ def p_distance(A, B, p=2):
             fp_distance_integer(A.T, B.T, D, p)
 
     elif (type(p) == type(1.0)):
-        fp_distance_double(A.T, B.T, D, p)
+        if p.is_integer():
+            p = int(p)
+            if (p == 2):
+                fl2_distance(A, B, D)
+            else:
+                fp_distance_integer(A.T, B.T, D, p)
+
+        else:
+            fp_distance_double(A.T, B.T, D, p)
     else:
         raise ValueError('expected exponent of integer or float type')
 

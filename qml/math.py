@@ -70,7 +70,7 @@ def cho_solve(A, y):
 
     n = A.shape[0]
 
-    x = np.zeros((n))
-    fcho_solve(A,y,x)
+    x = np.zeros(n)
+    fcho_solve(A, y, x)
 
     return x

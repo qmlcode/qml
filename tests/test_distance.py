@@ -22,59 +22,80 @@
 
 from __future__ import print_function
 
-import sys
-import os
-
 import numpy as np
 
-import qml
 from qml.distance import *
 
 
+def test_manhattan():
+
+    nfeatures = 5
+    n1 = 7
+    n2 = 9
+
+    v1 = np.random.random((n1, nfeatures))
+    v2 = np.random.random((n2, nfeatures))
+
+    D = manhattan_distance(v1, v2)
+
+    Dtest = np.zeros((n1, n2))
+
+    for i in range(n1):
+        for j in range(n2):
+            for k in range(nfeatures):
+                Dtest[i,j] += abs(v1[i, k] - v2[j, k])
+
+    assert np.allclose(D, Dtest), "Error in manhattan distance"
+
+def test_l2():
+
+    nfeatures = 5
+    n1 = 7
+    n2 = 9
+
+    v1 = np.random.random((n1, nfeatures))
+    v2 = np.random.random((n2, nfeatures))
+
+    D = l2_distance(v1, v2)
+
+    Dtest = np.zeros((n1, n2))
+
+    for i in range(n1):
+        for j in range(n2):
+            for k in range(nfeatures):
+                Dtest[i,j] += (v1[i, k] - v2[j, k])**2
+
+    np.sqrt(Dtest, out=Dtest)
+
+    assert np.allclose(D, Dtest), "Error in l2 distance"
+
+def test_p():
+
+    nfeatures = 5
+    n1 = 7
+    n2 = 9
+
+    v1 = np.random.random((n1, nfeatures))
+    v2 = np.random.random((n2, nfeatures))
+
+    D = p_distance(v1, v2, 3)
+
+
+    Dtest = np.zeros((n1, n2))
+
+    for i in range(n1):
+        for j in range(n2):
+            for k in range(nfeatures):
+                Dtest[i,j] += abs(v1[i, k] - v2[j, k])**3
+
+    Dtest = Dtest**(1.0/3)
+
+    assert np.allclose(D, Dtest), "Error in p-distance"
+
+    Dfloat = p_distance(v1, v2, 3.0)
+    assert np.allclose(D, Dfloat), "Floatingpoint Error in p-distance"
+
 if __name__ == "__main__":
-
-    # Generate a list of qml.Compound() objects
-    mols = []
-
-    for xyz_file in sorted(os.listdir("qm7/")):
-
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz="qm7/" + xyz_file)
-
-            # This is a Molecular Coulomb matrix sorted by row norm
-        mol.generate_coulomb_matrix(size=23, sorting="unsorted")
-
-        mols.append(mol)
-
-
-    # Shuffle molecules
-    np.random.seed(666)
-    np.random.shuffle(mols)
-
-    # Make training and test sets
-    n_test  = 5
-    n_train = 10
-
-    training = mols[:n_train]
-    test  = mols[-n_test:]
-
-    # List of representations
-    X  = np.array([mol.coulomb_matrix for mol in training])
-    Xs = np.array([mol.coulomb_matrix for mol in test])
-
-
-    D = manhattan_distance(X, Xs)
-    print("Manhattan Distances:")
-    print(D)
-
-    D = l2_distance(X, Xs)
-    print("L2 Distances:")
-    print(D)
-
-    D = p_distance(X, Xs, p=3)
-    print("p-norm = 3 Distances:")
-    print(D)
-
-    D = p_distance(X, Xs, p=3.0)
-    print("p-norm = 3.0 Distances:")
-    print(D)
+    test_manhattan()
+    test_l2()
+    test_p()

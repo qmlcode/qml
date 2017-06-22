@@ -5,7 +5,7 @@ __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
 __credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
 __license__ = "MIT"
-__version__ = "0.2.12"
+__version__ = "0.3.1"
 __maintainer__ = "Anders S. Christensen"
 __email__ = "andersbiceps@gmail.com"
 __status__ = "Beta"
@@ -81,7 +81,7 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 

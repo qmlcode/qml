@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import print_function
-
 import numpy as np
 
 import qml
@@ -29,13 +27,16 @@ import qml.math
 
 def test_cholesky():
 
-    A = np.array([[ 2.0, -1.0,  0.0],
+    A = np.asarray([[ 2.0, -1.0,  0.0],
                   [-1.0,  2.0, -1.0],
                   [ 0.0, -1.0,  2.0]])
 
-    y = np.array([1.0, 1.0, 1.0])
+    y = np.asarray([1.0, 1.0, 1.0])
 
     x_qml   = qml.math.cho_solve(A,y)
     x_scipy = np.linalg.solve(A, y)
 
     assert np.allclose(x_qml, x_scipy)
+
+if __name__ == "__main__":
+    test_cholesky()
