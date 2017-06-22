@@ -200,6 +200,7 @@ class Compound(object):
             :rtype: numpy array
         """
 
+
         self.representation = generate_atomic_coulomb_matrix(
             self.nuclear_charges, self.coordinates, size = size,
             sorting = sorting, central_cutoff = central_cutoff, central_decay = central_decay,
