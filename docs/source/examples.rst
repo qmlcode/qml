@@ -1,4 +1,4 @@
-xamples
+Examples
 --------
 
 Generating representations using the ``Compound`` class

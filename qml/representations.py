@@ -40,6 +40,7 @@ from .slatm import get_sbot
 
 def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "row-norm"):
     """ Creates a Coulomb Matrix representation of a molecule.
+        Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
         A matrix :math:`M` is constructed with elements
 
         .. math::
@@ -52,12 +53,16 @@ def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "
 
         where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
         :math:`\\bf R` is the coordinate in euclidean space.
-        if ``sorting = 'row-norm'``, the atom indices are reordered such that
+        If ``sorting = 'row-norm'``, the atom indices are reordered such that
 
             :math:`\\sum_j M_{1j}^2 \\geq \\sum_j M_{2j}^2 \\geq ... \\geq \\sum_j M_{nj}^2`
 
         The upper triangular of M, including the diagonal, is concatenated to a 1D
         vector representation.
+
+        If ``sorting = 'unsorted``, the elements are sorted in the same order as the input coordinates
+        and nuclear charges.
+
         The representation is calculated using an OpenMP parallel Fortran routine.
 
         :param nuclear_charges: Nuclear charges of the atoms in the molecule
