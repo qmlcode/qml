@@ -1,5 +1,5 @@
 # QML: A Python Toolkit for Quantum Machine Learning
-[![Build Status](https://travis-ci.org/qmlcode/qml.svg?branch=master)](https://travis-ci.org/qmlcode/qml) [![doi](https://badge.fury.io/py/qml.svg)](https://badge.fury.io/py/qml =90px) [![doi](https://zenodo.org/badge/89045103.svg)](https://zenodo.org/badge/latestdoi/89045103) [![doi](http://i.imgur.com/5fMAeek.jpg)](https://github.com/qmlcode/qml)
+[![Build Status](https://travis-ci.org/qmlcode/qml.svg?branch=master)](https://travis-ci.org/qmlcode/qml) [![doi](https://badge.fury.io/py/qml.svg)](https://badge.fury.io/py/qml) [![doi](https://zenodo.org/badge/89045103.svg)](https://zenodo.org/badge/latestdoi/89045103) [![doi](http://i.imgur.com/5fMAeek.jpg =90x)](https://github.com/qmlcode/qml)
 
 QML is a Python2/3-compatible toolkit for representation learning of properties of molecules and solids. 
 
