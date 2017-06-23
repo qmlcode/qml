@@ -80,7 +80,7 @@ QML is freely available under the terms of the MIT license.
    :target: https://travis-ci.org/qmlcode/qml
 
 .. |doi| image:: https://zenodo.org/badge/89045103.svg
-   :target: https://zenodo.org/badge/latestdoi/89045103)
+   :target: https://zenodo.org/badge/latestdoi/89045103
 
 .. |Beta| image:: http://i.imgur.com/5fMAeek.jpg
    :width: 90 px
