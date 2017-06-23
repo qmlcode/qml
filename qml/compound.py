@@ -71,54 +71,169 @@ class Compound(object):
             self.read_xyz(xyz)
 
     def generate_coulomb_matrix(self, size = 23, sorting = "row-norm"):
-        """ Generates a sorted molecular coulomb and stores it in the ``representation`` variable.
-    Sorting either by ``"row-norm"`` or ``"unsorted"``.
-    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
-    The resulting matrix is the upper triangle put into the form of a 1D-vector.
+        """ Creates a Coulomb Matrix representation of a molecule.
+            A matrix :math:`M` is constructed with elements
 
-    :param size: Max number of atoms in representation.
-    :type size: integer
-    :param sorting: Matrix sorting scheme, "row-norm" or "unsorted".
-    :type sorting: string
-    """
+            .. math::
+
+                M_{ij} =
+                  \\begin{cases}
+                     \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
+                     \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
+                  \\end{cases},
+
+            where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
+            :math:`\\bf R` is the coordinate in euclidean space.
+            if ``sorting = 'row-norm'``, the atom indices are reordered such that
+
+                :math:`\\sum_j M_{1j}^2 \\geq \\sum_j M_{2j}^2 \\geq ... \\geq \\sum_j M_{nj}^2`
+
+            The upper triangular of M, including the diagonal, is concatenated to a 1D
+            vector representation.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param size: The size of the largest molecule supported by the representation
+            :type size: integer
+            :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
+            :type sorting: string
+
+            :return: 1D representation - shape (size(size+1)/2,)
+            :rtype: numpy array
+        """
+
         self.representation = generate_coulomb_matrix(self.nuclear_charges, 
             self.coordinates, size = size, sorting = sorting)
 
     def generate_eigenvalue_coulomb_matrix(self, size = 23):
-        """ Generates the eigenvalue-Coulomb matrix representation and stores it in the ``representation`` variable.
-    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
-    The resulting matrix is in the form of a 1D-vector.
+        """ Creates an eigenvalue Coulomb Matrix representation of a molecule.
+            A matrix :math:`M` is constructed with elements
 
-    :param size: Max number of atoms in representation.
-    :type size: integer
-    """
+            .. math::
+
+                M_{ij} =
+                  \\begin{cases}
+                     \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
+                     \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
+                  \\end{cases},
+
+            where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
+            :math:`\\bf R` is the coordinate in euclidean space.
+            The molecular representation of the molecule is then the sorted eigenvalues of M.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param size: The size of the largest molecule supported by the representation
+            :type size: integer
+
+            :return: 1D representation - shape (size, )
+            :rtype: numpy array
+        """
+
         self.representation = generate_eigenvalue_coulomb_matrix(
                 self.nuclear_charges, self.coordinates, size = size)
 
-    def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm"):
-        """ Generates a list of sorted Coulomb matrices and stores it in the ``representation`` variable.
-    Sorting either by ``"row-norm"`` or ``"distance"``, the latter refers to sorting by distance to each query atom.
-    ``size=`` denotes the max number of atoms in the molecule (thus the size of the resulting square matrix.
-    The resulting matrix is the upper triangle put into the form of a 1D-vector.
+    def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm", 
+            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
+        """ Creates a Coulomb Matrix representation of the local environment of a central atom.
+            For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
 
-    :param size: Max number of atoms in representation.
-    :type size: integer
-    :param sorting: Matrix sorting scheme, "row-norm" or "distance".
-    :type sorting: string
-    """
+            .. math::
+
+                M_{ij}(k) =
+                  \\begin{cases}
+                     \\tfrac{1}{2} Z_{i}^{2.4} \\cdot f_{ik}^2 & \\text{if } i = j \\\\
+                     \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|} \\cdot f_{ik}f_{jk}f_{ij} & \\text{if } i \\neq j
+                  \\end{cases},
+
+            where :math:`i`, :math:`j` and :math:`k` are atom indices, :math:`Z` is nuclear charge and
+            :math:`\\bf R` is the coordinate in euclidean space.
+
+            :math:`f_{ij}` is a function that masks long range effects:
+
+            .. math::
+
+                f_{ij} =
+                  \\begin{cases}
+                     1 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                     \\tfrac{1}{2} \\big(1 + \\cos\\big(\\pi \\tfrac{\\|{\\bf R}_{i} - {\\bf R}_{j} \\|
+                        - r + \Delta r}{\Delta r} \\big)\\big)     
+                        & \\text{if } r - \Delta r < \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                     0 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| > r
+                  \\end{cases},
+
+            where the parameters ``central_cutoff`` and ``central_decay`` corresponds to the variables
+            :math:`r` and :math:`\Delta r` respectively for interactions involving the central atom,
+            and ``interaction_cutoff`` and ``interaction_decay`` corresponds to the variables
+            :math:`r` and :math:`\Delta r` respectively for interactions not involving the central atom.
+
+            if ``sorting = 'row-norm'``, the atom indices are ordered such that
+
+                :math:`\\sum_j M_{1j}(k)^2 \\geq \\sum_j M_{2j}(k)^2 \\geq ... \\geq \\sum_j M_{nj}(k)^2`
+
+            if ``sorting = 'distance'``, the atom indices are ordered such that
+
+            .. math::
+
+                \\|{\\bf R}_{1} - {\\bf R}_{k}\\| \\leq \\|{\\bf R}_{2} - {\\bf R}_{k}\\|
+                    \\leq ... \\leq \\|{\\bf R}_{n} - {\\bf R}_{k}\\|
+
+            The upper triangular of M, including the diagonal, is concatenated to a 1D
+            vector representation.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param size: The size of the largest molecule supported by the representation
+            :type size: integer
+            :param sorting: How the atom indices are sorted ('row-norm', 'distance')
+            :type sorting: string
+            :param central_cutoff: The distance from the central atom, where the coulomb interaction
+                element will be zero
+            :type central_cutoff: float
+            :param central_decay: The distance over which the the coulomb interaction decays from full to none
+            :type central_decay: float
+            :param interaction_cutoff: The distance between two non-central atom, where the coulomb interaction
+                element will be zero
+            :type interaction_cutoff: float
+            :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
+            :type interaction_decay: float
+
+
+            :return: nD representation - shape (:math:`N_{atoms}`, size(size+1)/2)
+            :rtype: numpy array
+        """
+
+
         self.representation = generate_atomic_coulomb_matrix(
-            self.nuclear_charges, self.coordinates, size = size, sorting = sorting)
+            self.nuclear_charges, self.coordinates, size = size,
+            sorting = sorting, central_cutoff = central_cutoff, central_decay = central_decay,
+            interaction_cutoff = interaction_cutoff, interaction_decay = interaction_decay)
 
     def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
-        """ Generates a bag-of-bonds (BOB) representation of the molecule and stores it in the ``representation`` variable. 
-    ``asize=`` is the maximum number of atoms of each type (necessary to generate bags of minimal sizes).
-    The resulting matrix is the BOB representation put into the form of a 1D-vector.
+        """ Creates a Bag of Bonds (BOB) representation of a molecule.
+            The representation expands on the coulomb matrix representation.
+            For each element a bag (vector) is constructed for self interactions
+            (e.g. ('C', 'H', 'O')).
+            For each element pair a bag is constructed for interatomic interactions
+            (e.g. ('CC', 'CH', 'CO', 'HH', 'HO', 'OO')), sorted by value.
+            The self interaction of element :math:`I` is given by
 
-    :param size: Max number of atoms in representation.
-    :type size: integer
-    :param asize: Max number of each element type.
-    :type asize: dict
-    """
+                :math:`\\tfrac{1}{2} Z_{I}^{2.4}`,
+
+            with :math:`Z_{i}` being the nuclear charge of element :math:`i`
+            The interaction between atom :math:`i` of element :math:`I` and 
+            atom :math:`j` of element :math:`J` is given by
+
+                :math:`\\frac{Z_{I}Z_{J}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}`
+
+            with :math:`R_{i}` being the euclidean coordinate of atom :math:`i`.
+            The sorted bags are concatenated to an 1D vector representation.
+            The representation is calculated using an OpenMP parallel Fortran routine.
+
+            :param asize: The maximum number of atoms of each element type supported by the representation
+            :type size: dictionary
+
+            :return: 1D representation
+            :rtype: numpy array
+        """
+
         self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
                 self.atomtypes, asize = asize)
 
@@ -176,24 +291,24 @@ class Compound(object):
     :param filename: Input xyz-filename.
     :type filename: string
     """
-    
+
         f = open(filename, "r")
         lines = f.readlines()
         f.close()
-    
+
         self.natoms = int(lines[0])
         self.atomtypes = np.empty(self.natoms, dtype=str)
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
-    
+
         self.name = filename
-    
+
         for i, line in enumerate(lines[2:]):
             tokens = line.split()
-    
+
             if len(tokens) < 4:
                 break
-    
+
             self.atomtypes[i] = tokens[0]
             self.atomtype_indices[tokens[0]].append(i)
             self.nuclear_charges[i] = NUCLEAR_CHARGE[tokens[0]]
