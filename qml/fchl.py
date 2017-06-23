@@ -53,9 +53,127 @@ PTP = {\
                ,104:[7,10],105:[7,11],106:[7,12],107:[7,13],108:[7,14],109:[7,15],110:[7,16],111:[7,17],112:[7,18]\
         ,89 :[7,19],90: [7,20],91 :[7,21],92 :[7,22],93 :[7,23],94 :[7,24],95 :[7,25],96 :[7,26],97 :[7,27],98 :[7,28],99 :[7,29],100:[7,30],101:[7,31],101:[7,32],102:[7,14],103:[7,33]}
 
+QtNm = {
+    #Row1
+    1  :[1,0,0,1./2.]
+    ,2:  [1,0,0,-1./2.]
+
+
+    #Row2
+    ,3  :[2,0,0,1./2.]
+    ,4: [2,0,0,-1./2.]
+
+    ,5  :[2,-1,1,1./2.],   6: [2,0,1,1./2.]  , 7  : [2,1,1,1./2.]
+    ,8  : [2,-1,1,-1./2.] ,9: [2,0,1,-1./2.] ,10 :[2,1,1,-1./2.]
+
+
+    #Row3
+    ,11 :[3,0,0,1./2.]
+    ,12: [3,0,0,-1./2.]
+
+    ,13 :[3,-1,1,1./2.] ,  14: [3,0,1,1./2.] ,   15 :[3,1,1,1./2.]
+    ,16 :[3,-1,1,-1./2.]  ,17 :[3,0,1,-1./2.]  ,18 :[3,1,1,-1./2.]
+
+
+    #Row3
+    ,19 :[4,0,0,1./2.]
+    ,20: [4,0,0,-1./2.]
+
+    ,31 :[4,-1,2,1./2.] , 32: [4,0,1,1./2.]  , 33 :[4,1,1,1./2.]
+    ,34 :[4,-1,1,-1./2.] ,35 :[4,0,1,-1./2.] ,36 :[4,1,1,-1./2.]
+
+    ,21 :[4,-2,2,1./2.],  22:[4,-1,2,1./2.],  23 :[4,0,2,1./2.], 24 :[4,1,2,1./2.], 25 :[4,2,2,1./2.]
+    ,26 :[4,-2,2,-1./2.], 27:[4,-1,2,-1./2.], 28 :[4,0,2,-1./2.],29 :[4,1,2,-1./2.],30 :[4,2,2,-1./2.]
+
+
+    #Row5
+    ,37 :[5,0,0,1./2.]
+    ,38: [5,0,0,-1./2.]
+
+    ,49 :[5,-1,1,1./2.] ,  50: [5,0,1,1./2.]  ,  51 :[5,1,1,1./2.]
+    ,52 :[5,-1,1,-1./2.]  ,53 :[5,0,1,-1./2.]  ,54 :[5,1,1,-1./2.]
+
+
+    ,39 :[5,-2,2,1./2.], 40:[5,-1,2,1./2.],   41 :[5,0,2,1./2.], 42 :[5,1,2,1./2.], 43 :[5,2,2,1./2.]
+    ,44 :[5,-2,2,-1./2.],45 :[5,-1,2,-1./2.],46 :[5,0,2,-1./2.],47 :[5,1,2,-1./2.],48 :[5,2,2,-1./2.]
+
+
+    #Row6
+    ,55 :[6,0,0,1./2.]
+    ,56: [6,0,0,-1./2.]
+
+    ,81 :[6,-1,1,1./2.] ,82: [6,0,1,1./2.] ,83: [6,1,1,1./2.]
+    ,84 :[6,-1,1,-1./2.] ,85 :[6,0,1,-1./2.] ,86 :[6,1,1,-1./2.]
+
+    ,71 :[6,-2,2,1./2.], 72: [6,-1,2,1./2.],  73 :[6,0,2,1./2.], 74 :[6,1,2,1./2.], 75 :[6,2,2,1./2.]
+    ,76 :[6,-2,2,-1./2.],77 :[6,-1,2,-1./2.],78 :[6,0,2,-1./2.],79 :[6,1,2,-1./2.],80 :[6,2,2,-1./2.]
+
+    ,57 :[6,-3,3,1./2.], 58: [6,-2,3,1./2.],  59 :[6,-1,3,1./2.], 60 :[6,0,3,1./2.],  61 :[6,1,3,1./2.], 62 :[6,2,3,1./2.], 63 :[6,3,3,1./2.]
+    ,64 :[6,-3,3,-1./2.],65 :[6,-2,3,-1./2.],66 :[6,-1,3,-1./2.],67 :[6,0,3,-1./2.],68 :[6,1,3,-1./2.],69 :[6,2,3,-1./2.],70 :[6,3,3,-1./2.]
+
+
+    #Row7
+    ,87 :[7,0,0,1./2.]
+    ,88: [7,0,0,-1./2.]
+
+    ,113:[7,-1,1,1./2.] , 114:[7,0,1,1./2.] ,  115:[7,1,1,1./2.]
+    ,116:[7,-1,1,-1./2.] ,117:[7,0,1,-1./2.] ,118:[7,1,1,-1./2.]
+
+    ,103:[7,-2,2,1./2.], 104:[7,-1,2,1./2.],  105:[7,0,2,1./2.], 106:[7,1,2,1./2.],  107:[7,2,2,1./2.]
+    ,108:[7,-2,2,-1./2.],109:[7,-1,2,-1./2.],110:[7,0,2,-1./2.],111:[7,1,2,-1./2.],112:[7,2,2,-1./2.]
+
+    ,89 :[7,-3,3,1./2.], 90: [7,-2,3,1./2.],  91 :[7,-1,3,1./2.], 92 :[7,0,3,1./2.],  93 :[7,1,3,1./2.],  94 :[7,2,3,1./2.],  95 :[7,3,3,1./2.]
+    ,96 :[7,-3,3,-1./2.],97 :[7,-2,3,-1./2.],98 :[7,-1,3,-1./2.],99 :[7,0,3,-1./2.],100:[7,1,3,-1./2.],101:[7,2,3,-1./2.],102:[7,3,3,-1./2.]}
+
+
+
+
+
+
+
+def QNum_distance(a,b, n_width, m_width, l_width, s_width):
+    """ Calculate stochiometric distance
+        a -- nuclear charge of element a
+        b -- nuclear charge of element b
+        r_width -- sigma in row-direction
+        c_width -- sigma in column direction
+    """
+
+    na = QtNm[int(a)][0]
+    nb = QtNm[int(b)][0]
+
+    ma = QtNm[int(a)][1]
+    mb = QtNm[int(b)][1]
+
+    la = QtNm[int(a)][2]
+    lb = QtNm[int(b)][2]
+
+    sa = QtNm[int(a)][3]
+    sb = QtNm[int(b)][3]
+
+    return  np.exp(-(na - nb)**2/(4 * n_width**2)
+                   -(ma - mb)**2/(4 * m_width**2)
+                   -(la - lb)**2/(4 * l_width**2)
+                   -(sa - sb)**2/(4 * s_width**2))
+
+def gen_QNum_distances(emax=100, n_width = 0.001, m_width = 0.001, l_width = 0.001, s_width = 0.001):
+    """ Generate stochiometric ditance matrix
+        emax -- Largest element
+        r_width -- sigma in row-direction
+        c_width -- sigma in column direction
+    """
+
+    pd = np.zeros((emax,emax))
+
+    for i in range(emax):
+        for j in range(emax):
+
+            pd[i,j] = QNum_distance(i+1, j+1, n_width, m_width, l_width, s_width)
+
+    return pd
 
 def periodic_distance(a, b, r_width, c_width):
-    """ Calculate stochiometric distance 
+    """ Calculate stochiometric distance
 
         a -- nuclear charge of element a
         b -- nuclear charge of element b
@@ -91,7 +209,7 @@ def gen_pd(emax=100, r_width=0.001, c_width=0.001):
     return pd
 
 
-def generate_fchl_representation(coordinates, nuclear_charges, 
+def generate_fchl_representation(coordinates, nuclear_charges,
         size=23, neighbors=23, cut_distance = 5.0, cell=None):
     """ Generates a representation for the FCHL kernel module.
 
@@ -160,13 +278,14 @@ def generate_fchl_representation(coordinates, nuclear_charges,
 
 def get_atomic_kernels_fchl(A, B, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
-        r_width=1.5, order=1, c_width=1.5, scale_distance=1.0, scale_angular=0.1):
+        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
+        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
 
         Where :math:`A_{i}` and :math:`B_{j}` are FCHL representation vectors.
-        K is calculated analytically using an OpenMP parallel Fortran routine. 
+        K is calculated analytically using an OpenMP parallel Fortran routine.
         Note, that this kernel will ONLY work with FCHL representations as input.
 
         :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
@@ -229,8 +348,16 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
 
     nsigmas = len(sigmas)
 
-    # 103 is max element in the PTP dictionary
-    pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+    pd = None
+    if alchemy == "periodic-table":
+        pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+
+    elif alchemy == "quantum-numbers":
+        pd = gen_QNum_distances(emax=101, n_width = n_width, m_width = m_width,
+                                          l_width = l_width, s_width = s_width)
+    else:
+        print("ERROR: Unknown alchemy specified:", alchemy)
+        exit(1)
 
     sigmas = np.array(sigmas)
 
@@ -240,13 +367,14 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
 
 def get_atomic_symmetric_kernels_fchl(A, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
-        r_width=1.5, order=1, c_width=1.5, scale_distance=1.0, scale_angular=0.1):
+        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
+        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
 
         Where :math:`A_{i}` and :math:`A_{j}` are FCHL representation vectors.
-        K is calculated analytically using an OpenMP parallel Fortran routine. 
+        K is calculated analytically using an OpenMP parallel Fortran routine.
         Note, that this kernel will ONLY work with FCHL representations as input.
 
         :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
@@ -292,8 +420,17 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
 
     nsigmas = len(sigmas)
 
-    # 103 is max element in the PTP dictionary
-    pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+    pd = None
+    if alchemy == "periodic-table":
+        pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+
+    elif alchemy == "quantum-numbers":
+        pd = gen_QNum_distances(emax=101, n_width = n_width, m_width = m_width,
+                                          l_width = l_width, s_width = s_width)
+    else:
+        print("ERROR: Unknown alchemy specified:", alchemy)
+        exit(1)
+
 
     sigmas = np.array(sigmas)
 

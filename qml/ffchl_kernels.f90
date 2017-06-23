@@ -83,6 +83,34 @@ pure function calc_G(a, b, c, d) result(G)
 
 end function calc_G
 
+pure function calc_ksi4(Ai, Bi, Ci, Di) result(ksi4)
+
+    implicit none
+
+    double precision, intent(in), dimension(3) :: Ai
+    double precision, intent(in), dimension(3) :: Bi
+    double precision, intent(in), dimension(3) :: Ci
+    double precision, intent(in), dimension(3) :: Di
+
+    double precision, dimension(3) :: a
+    double precision, dimension(3) :: b
+    double precision, dimension(3) :: c
+    double precision, dimension(3) :: d
+    double precision, dimension(3) :: e
+    double precision, dimension(3) :: f
+
+    double precision :: ksi4
+
+    a = Ci - Bi
+    b = Ai - Ci
+    c = Bi - Ai
+    d = Ai - Di
+    e = Bi - Di
+    f = Ci - Di
+
+    ksi4 = calc_G(c, a, f, d) + calc_G(c, e, f, b) + calc_G(b, a, e, d)
+
+end function
 
 function print_ksi4(X, nneighbors) result(ksi)
 
@@ -161,7 +189,7 @@ pure function cross_product(a, b) result(cross)
 
 end function cross_product
 
-pure function calc_dihedral_atan2(a, b, c, d) result(dihedral)
+pure function calc_dihedral(a, b, c, d) result(dihedral)
 
     implicit none
 
@@ -188,7 +216,10 @@ pure function calc_dihedral_atan2(a, b, c, d) result(dihedral)
 
     dihedral = atan2(dot_product(cross_product(x12, x23), b2/norm2(b2)), dot_product(x12, x23))
 
-end function calc_dihedral_atan2
+    ! hack to remove the sign for now 
+    dihedral = acos(cos(dihedral))
+
+end function calc_dihedral
 
 
 pure function atomic_distl2(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, &
@@ -338,7 +369,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
        & t_width, d_width, cut_distance, order, pd, &
        & distance_scale, angular_scale, kernels)
 
-    use fchl_utils, only: atomic_distl2, calc_angle, calc_ksi3
+    use fchl_utils, only: atomic_distl2, calc_angle, calc_ksi3, calc_ksi4, calc_dihedral
 
     implicit none
 
@@ -380,8 +411,18 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     double precision, dimension(nsigmas,nm1,nm2), intent(out) :: kernels
 
     ! Internal counters
-    integer :: i, j, k, ni, nj
+    integer :: i, j, k! , l
+    integer :: ni, nj
     integer :: a, b, m, n
+
+    ! double precision :: dihedral1
+    ! double precision :: dihedral2
+    ! double precision :: dihedral3
+    ! double precision :: dihedral4
+    ! double precision :: dihedral5
+    ! double precision :: dihedral6
+
+    ! double precision :: ksi4
 
     ! Temporary variables necessary for parallelization
     double precision :: l2dist
@@ -547,6 +588,43 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         enddo
     enddo
     !$OMP END PARALLEL do
+
+
+    ! do a = 1, nm1
+    !     ni = n1(a)
+
+    !     do i = 1, ni
+    !         nneighi = nneigh1(a, i)
+
+    !         do j = 2, nneighi
+    !             do k = j+1, nneighi
+    !                 do l = k+1, nneighi
+
+    !                     dihedral1 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, j), x1(a, i, 3:5, k), x1(a, i, 3:5, l))
+    !                     dihedral2 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, j), x1(a, i, 3:5, l), x1(a, i, 3:5, k))
+    !                     dihedral3 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, k), x1(a, i, 3:5, j), x1(a, i, 3:5, l))
+    !                     dihedral4 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, k), x1(a, i, 3:5, l), x1(a, i, 3:5, j))
+    !                     dihedral5 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, l), x1(a, i, 3:5, j), x1(a, i, 3:5, k))
+    !                     dihedral6 = calc_dihedral(x1(a, i, 3:5, 1), x1(a, i, 3:5, l), x1(a, i, 3:5, k), x1(a, i, 3:5, j))
+
+    !                     ksi4 = calc_ksi4(x1(a, i, 3:5, 1), &
+    !                                    & x1(a, i, 3:5, j), &
+    !                                    & x1(a, i, 3:5, k), &
+    !                                    & x1(a, i, 3:5, l))
+
+    !                     write (*,*), "KSI4_1", i, j, k, l, dihedral1 * ksi4
+    !                     write (*,*), "KSI4_2", i, j, k, l, dihedral2 * ksi4
+    !                     write (*,*), "KSI4_3", i, j, k, l, dihedral3 * ksi4
+    !                     write (*,*), "KSI4_4", i, j, k, l, dihedral4 * ksi4
+    !                     write (*,*), "KSI4_5", i, j, k, l, dihedral5 * ksi4
+    !                     write (*,*), "KSI4_6", i, j, k, l, dihedral6 * ksi4
+
+    !                 enddo
+    !             enddo
+    !         enddo
+    !     enddo
+    ! enddo
+
 
     allocate(selfl21(nm1, maxval(n1)))
     allocate(selfl22(nm2, maxval(n2)))
