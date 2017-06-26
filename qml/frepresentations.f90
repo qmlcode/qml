@@ -230,7 +230,6 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
 
     double precision, allocatable, dimension(:, :, :) :: pair_distance_matrix
     double precision, allocatable, dimension(:, :) :: distance_matrix
-    double precision, allocatable, dimension(:, :) :: distance_matrix_tmp
 
     integer i, j, m, n, k
 

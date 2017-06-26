@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix Faber
+# Copyright (c) 2016 Anders Steen Christensen, Felix A. Faber, Lars A. Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +38,9 @@ def laplacian_kernel(A, B, sigma):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -67,9 +67,9 @@ def gaussian_kernel(A, B, sigma):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -91,7 +91,7 @@ def gaussian_kernel(A, B, sigma):
 def linear_kernel(A, B):
     """ Calculates the linear kernel matrix K, where :math:`K_{ij}`:
 
-            :math:`K_{ij} = \hat{A}_i \cdot - \hat{B}_j`
+            :math:`K_{ij} = \hat{A}_i \cdot \hat{B}_j`
 
         Where :math:`\hat{A}_{i}` and :math:`\hat{B}_{j}` are normalized
         representation vectors. Note the normalization is handled inside
@@ -99,9 +99,9 @@ def linear_kernel(A, B):
 
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
 
         :return: The Gaussian kernel matrix - shape (N, M)
@@ -126,9 +126,9 @@ def sargan_kernel(A, B, sigma, gammas):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -168,9 +168,9 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
 
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
