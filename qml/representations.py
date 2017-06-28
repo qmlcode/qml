@@ -307,7 +307,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                         mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
                 else: # len(mbtype) == 3:
                     mbsi = get_sbot(mbtype, obj, iloc=iloc, ia=ia, \
-                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)[1]
+                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)
                     if alchemy:
                         n3 = len(mbsi)
                         n3_0 = mbs_ia.shape[0]
@@ -364,7 +364,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             else: # len(mbtype) == 3:
                 mbsi = get_sbot(mbtype, obj, sigma=sigmas[1], \
-                        dgrid=dgrids[1], rcut=rcut)[1]
+                        dgrid=dgrids[1], rcut=rcut)
                 if alchemy:
                     n3 = len(mbsi)
                     n3_0 = mbs.shape[0]
