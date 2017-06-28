@@ -26,7 +26,10 @@ from time import time
 import scipy.spatial.distance as ssd
 import itertools as itl
 import numpy as np
+
 from .fslatm import fget_sbot
+from .fslatm import fget_sbop
+
 def get_pbc(obj, d0 = 3.6):
     """
     automatically tell if an compound object is periodic or not
@@ -142,67 +145,25 @@ def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-    na = len(zs)
-    ds_triu = ssd.pdist(coords) # upper triangle part of distance matrix
-    ds = ssd.squareform(ds_triu)
-    dmin = 0.25 # Angstrom
-    assert np.all(ds_triu.ravel() > dmin), '#ERROR: two small distance detected!'
-
-    ias = np.arange(na)
-    ias1 = ias[zs == z1]
-    ias2 = ias[zs == z2]
-
-    if z1 == z2:
-        ias12 = list( itl.combinations(ias1,2) )
-    else:
-        ias12 = itl.product(ias1,ias2)
-
-    if iloc:
-        dsu = []; icnt = 0
-        for j1,j2 in ias12:
-            if ia == j1 or ia == j2:
-                dsu.append( ds[j1,j2] )
-            icnt += 1
-    else:
-        dsu = [ ds[i,j] for (i,j) in ias12 ]
-
-    dsu = np.array(dsu)
+    # if iloc:
+    #     dsu = []; icnt = 0
+    #     for j1,j2 in ias12:
+    #         if ia == j1 or ia == j2:
+    #             dsu.append( ds[j1,j2] )
+    #         icnt += 1
+    # else:
+    #     dsu = [ ds[i,j] for (i,j) in ias12 ]
 
     # bop potential distribution
     r0 = 0.1
     nx = (rcut - r0)/dgrid + 1
     xs = np.linspace(r0, rcut, nx)
-    ys0 = np.zeros(xs.shape)
 
-    # update dsu by exluding d > 6.0
-    nr = dsu.shape[0]
-    if nr > 0:
-        dsu = dsu[ dsu <= rcut ]
-        nr = len(dsu)
+    # coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
 
-    #print ' -- dsu = ', dsu
+    ys = fget_sbop(coords, zs, z1, z2, rcut, nx, dgrid, sigma, rpower)
 
-    coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
-    #print ' -- now calculating 2-body terms...'
-    # get distribution of 2-body potentials
-    # unit of x: Angstrom
-    c0 = (z1%1000)*(z2%1000)*coeff
-    ys = ys0
-    for i in range(nr):
-        ys += ( c0/(xs**rpower) )*np.exp( -0.5*((xs-dsu[i])/sigma)**2 )
-    ys *= dgrid
-
-    return xs, ys
-
-def vang(u,v):
-    cost = np.dot(u,v)/(np.linalg.norm(u) * np.linalg.norm(v))
-    # sometimes, cost might be 1.00000000002, then np.arccos(cost)
-    # does not exist!
-    u = cost if abs(cost) <= 1 else 1.0
-    return np.arccos( u )
-
-def cvang(u,v):
-    return np.dot(u,v)/np.sqrt(np.dot(u,u)*np.dot(v,v))
+    return ys
 
 def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label=None, \
              rcut=4.8, dgrid=0.0262, ipot=True, pbc='000'):
@@ -227,59 +188,6 @@ def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-
-    # start = time()
-    # na = len(zs)
-    # ds = ssd.squareform( ssd.pdist(coords) )
-    # #get_date(' ds matrix calc done ')
-
-    # ias = np.arange(na)
-    # ias1 = ias[zs == z1]
-    # ias2 = ias[zs == z2]
-    # ias3 = ias[zs == z3]
-
-    # n1 = len(ias1)
-    # n2 = len(ias2)
-    # n3 = len(ias3)
-
-    # tas = []
-    # for ia1 in ias1:
-    #     ias2u = ias2[ np.logical_and( ds[ia1,ias2] > 0, ds[ia1,ias2] <= rcut ) ]
-    #     for ia2 in ias2u:
-    #         filt1 = np.logical_and( ds[ia1,ias3] > 0, ds[ia1,ias3] <= rcut )
-    #         filt2 = np.logical_and( ds[ia2,ias3] > 0, ds[ia2,ias3] <= rcut )
-    #         ias3u = ias3[ np.logical_and(filt1, filt2) ]
-    #         for ia3 in ias3u:
-    #             tasi = [ia1,ia2,ia3]
-    #             iok1 = (tasi not in tas)
-    #             iok2 = (tasi[::-1] not in tas)
-    #             if iok1 and iok2:
-    #                 tas.append( tasi )
-    #                 # print "ptas", tasi
-    
-    #print "pmbtypes", z1, z2, z3
-    #print ias1 
-    #print ias2 
-    #print ias3
-
-
-    # tas = np.zeros((n1*n2*n3, 3), dtype=np.int)
-    # idx = 0
-    # for ia1 in ias1:
-    #     for ia2 in ias2:
-    #         if not ((ds[ia1,ia2] > 0)  and (ds[ia1,ia2] <= rcut)): continue
-    #         for ia3 in ias3:
-    #             if z1 == z3 and ia1 > ia3: continue
-    #             if not ((ds[ia1,ia3] > 0) and (ds[ia1,ia3] <= rcut)): continue
-    #             if not ((ds[ia2,ia3] > 0) and (ds[ia2,ia3] <= rcut)): continue
-    #             tas[idx][0]=ia1
-    #             tas[idx][1]=ia2
-    #             tas[idx][2]=ia3
-    #             idx += 1
-    #             # print "ptas", ia1, ia2, ia3
-    # tas = tas[:idx]
-
-
     # # print "python lentas", len(tas)
     # if iloc:
     #     tas_u = []
@@ -288,56 +196,16 @@ def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label
     #             tas_u.append( tas_i )
     #     tas = tas_u
 
-    # d2r = np.pi/180 # degree to rad
-    # a0 = -20.0*d2r
-    # a1 = np.pi + 20.0*d2r
-    # nx = int((a1-a0)/dgrid) + 1
-    # xs = np.linspace(a0, a1, nx)
-    # ys0 = np.zeros(nx, np.float)
-    # nt = len(tas)
-
-    # # print(a0, a1, nx, len(xs), xs)
-    # # u actually have considered the same 3-body term for
-    # # three times, so rescale it
-    # prefactor = 1.0/3
-
     # # for a normalized gaussian distribution, u should multiply this coeff
     # coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
 
-    # # get distribution of 3-body potentials
-    # # unit of x: Angstrom
-    # c0 = prefactor*(z1%1000)*(z2%1000)*(z3%1000)*coeff
-    # ys = ys0[:]
-
-    # 
-    # for it in range(nt):
-    #     i,j,k = tas[it]
-    #     # angle spanned by i <-- j --> k, i.e., vector ji and jk
-    #     u = coords[i] - coords[j]
-    #     v = coords[k] - coords[j]
-    #     ang = vang( u, v ) # ang_j
-
-    #     #print ' -- (i,j,k) = (%d,%d,%d),  ang = %.2f'%(i,j,k, ang)
-    #     cak = cvang( coords[j]-coords[k], coords[i]-coords[k] ) # cos(ang_k)
-    #     cai = cvang( coords[k]-coords[i], coords[j]-coords[i] ) # cos(ang_i)
-    #     ys += c0*( (1.0 + 1.0*np.cos(xs)*cak*cai)/(ds[i,j]*ds[i,k]*ds[j,k])**3 )*\
-    #                        ( np.exp(-(xs-ang)**2/(2*sigma**2)) )
-    #     # ys += xs
-    #     
-    #     #! if (it < 10): print("Pcuk", ang, cak, cai, ds[i,j]*ds[i,k]*ds[j,k])
-    # ys *= dgrid
-    # print("PXS", xs)
 
     d2r = np.pi/180 # degree to rad
     a0 = -20.0*d2r
     a1 = np.pi + 20.0*d2r
     nx = int((a1-a0)/dgrid) + 1
-    start = time()
-    fys = fget_sbot(coords, zs, z1, z2, z3, rcut, nx, dgrid, sigma)
-    # print(ys)
-    # print(fys)
 
-    ftime = time() - start
+    ys = fget_sbot(coords, zs, z1, z2, z3, rcut, nx, dgrid, sigma)
 
 
-    return fys
+    return ys

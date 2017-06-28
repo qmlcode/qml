@@ -39,9 +39,11 @@ function linspace(x0, x1, nx) result(xs)
 
     step = (x1 - x0) / (nx - 1)
 
+    !$OMP PARALLEL DO
     do i = 1, nx
         xs(i) = x0 + (i - 1) * step
     enddo
+    !$OMP END PARALLEL DO
 
 end function linspace
 
@@ -72,7 +74,7 @@ function calc_angle(a, b, c) result(angle)
     if (cos_angle < -1.0d0) cos_angle = -1.0d0
 
     angle = acos(cos_angle)
- 
+
 end function calc_angle
 
 function calc_cos_angle(a, b, c) result(cos_angle)
@@ -113,25 +115,20 @@ subroutine fget_sbot(coordinates, nuclear_charges, z1, z2, z3, rcut, nx, dgrid, 
     double precision, intent(in) :: dgrid
     double precision, intent(in) :: sigma
     double precision, dimension(nx), intent(out) :: ys
-    
+
     ! MBtype
     integer, intent(in) :: z1, z2, z3
 
-    ! Unique three-body atoms array
-    integer, dimension(:,:), allocatable :: tas
-    integer :: ntas
-
-    ! 
     integer, dimension(:), allocatable :: ias1, ias2, ias3
     integer :: nias1, nias2, nias3
-    
-    integer :: ia1, ia2, ia3, itas
+
+    integer :: ia1, ia2, ia3
 
     double precision, allocatable, dimension(:, :) :: distance_matrix
 
     double precision :: norm
 
-    integer :: i, j, k, idx
+    integer :: i, j, k
     integer :: natoms
 
     double precision, parameter :: eps = epsilon(0.0d0)
@@ -174,7 +171,7 @@ subroutine fget_sbot(coordinates, nuclear_charges, z1, z2, z3, rcut, nx, dgrid, 
     allocate(ias1(natoms))
     allocate(ias2(natoms))
     allocate(ias3(natoms))
-   
+
     ias1 = 0
     ias2 = 0
     ias3 = 0
@@ -201,27 +198,6 @@ subroutine fget_sbot(coordinates, nuclear_charges, z1, z2, z3, rcut, nx, dgrid, 
             nias3 = nias3 + 1
             ias3(nias3) = i
         endif
-    enddo 
-    
-    allocate(tas(3, nias1*nias2*nias3))
-
-    ntas = 0
-    do ia1 = 1, nias1
-        do ia2 = 1, nias2
-            if (.not. ((distance_matrix(ias1(ia1),ias2(ia2)) > eps) .and. &
-                     & (distance_matrix(ias1(ia1),ias2(ia2)) <= rcut))) cycle
-            do ia3 = 1, nias3
-                if ((z1 == z3) .and. (ias1(ia1) < ias3(ia3))) cycle
-                if (.not. ((distance_matrix(ias1(ia1),ias3(ia3)) > eps) .and. &
-                         & (distance_matrix(ias1(ia1),ias3(ia3)) <= rcut))) cycle
-                if (.not. ((distance_matrix(ias2(ia2),ias3(ia3)) > eps) .and. &
-                         & (distance_matrix(ias2(ia2),ias3(ia3)) <= rcut))) cycle
-                ntas = ntas + 1
-                tas(1, ntas) = ias1(ia1)
-                tas(2, ntas) = ias2(ia2)
-                tas(3, ntas) = ias3(ia3)
-            enddo
-        enddo
     enddo
 
     d2r = pi/180.0d0
@@ -233,44 +209,164 @@ subroutine fget_sbot(coordinates, nuclear_charges, z1, z2, z3, rcut, nx, dgrid, 
     prefactor = 1.0d0 / 3.0d0
 
     coeff = 1.0d0 / sqrt(2*sigma**2*pi)
-    c0 = prefactor * (mod(z1,1000)*mod(z2,1000)*mod(z3,1000)) * coeff
+    c0 = prefactor * (mod(z1,1000)*mod(z2,1000)*mod(z3,1000)) * coeff * dgrid
 
 
     ys = 0.0d0
-    inv_sigma = 1.0d0 / (2*sigma**2)
+    inv_sigma = -1.0d0 / (2*sigma**2)
 
     !$OMP PARALLEL DO
     do i = 1, nx
-        cos_xs(i) = cos(xs(i))
+        cos_xs(i) = cos(xs(i)) * c0
     enddo
     !$OMP END PARALLEL do
 
-    
-    !$OMP PARALLEL DO PRIVATE(i,j,k,ang,cai,cak,r) REDUCTION(+:ys)
-    do itas = 1, ntas
 
-        i = tas(1, itas)
-        j = tas(2, itas)
-        k = tas(3, itas)
+    !$OMP PARALLEL DO PRIVATE(i,j,k,ang,cai,cak,r) REDUCTION(+:ys) SCHEDULE(DYNAMIC)
+    do ia1 = 1, nias1
+        do ia2 = 1, nias2
+            if (.not. ((distance_matrix(ias1(ia1),ias2(ia2)) > eps) .and. &
+                     & (distance_matrix(ias1(ia1),ias2(ia2)) <= rcut))) cycle
+            do ia3 = 1, nias3
+                if ((z1 == z3) .and. (ias1(ia1) < ias3(ia3))) cycle
+                if (.not. ((distance_matrix(ias1(ia1),ias3(ia3)) > eps) .and. &
+                         & (distance_matrix(ias1(ia1),ias3(ia3)) <= rcut))) cycle
+                if (.not. ((distance_matrix(ias2(ia2),ias3(ia3)) > eps) .and. &
+                         & (distance_matrix(ias2(ia2),ias3(ia3)) <= rcut))) cycle
 
-        ang = calc_angle(coordinates(i, :), coordinates(j, :), coordinates(k, :))
-        cak = calc_cos_angle(coordinates(i, :), coordinates(k, :), coordinates(j, :))
-        cai = calc_cos_angle(coordinates(k, :), coordinates(i, :), coordinates(j, :))
+                    i = ias1(ia1)
+                    j = ias2(ia2)
+                    k = ias3(ia3)
 
-        r = distance_matrix(i,j) * distance_matrix(i,k) * distance_matrix(k,j)
+                    ang = calc_angle(coordinates(i, :), coordinates(j, :), coordinates(k, :))
+                    cak = calc_cos_angle(coordinates(i, :), coordinates(k, :), coordinates(j, :))
+                    cai = calc_cos_angle(coordinates(k, :), coordinates(i, :), coordinates(j, :))
 
-        ys = ys + c0 *( (1.0d0 + cos_xs*cak*cai)/(r**3 ) ) * ( exp(-(xs-ang)**2 * inv_sigma) )
+                    r = distance_matrix(i,j) * distance_matrix(i,k) * distance_matrix(k,j)
 
+                    ! ys = ys + c0 *( (1.0d0 + cos_xs*cak*cai)/(r**3 ) ) * ( exp((xs-ang)**2 * inv_sigma) )
+                    ys = ys + (c0 + cos_xs*cak*cai)/(r**3 ) * ( exp((xs-ang)**2 * inv_sigma) )
+
+            enddo
+        enddo
     enddo
     !$OMP END PARALLEL do
 
-    ys = ys * dgrid
 
-    deallocate(tas)
     deallocate(ias1)
     deallocate(ias2)
     deallocate(ias3)
     deallocate(distance_matrix)
-    
+
 end subroutine fget_sbot
 
+
+subroutine fget_sbop(coordinates, nuclear_charges, z1, z2, rcut, nx, dgrid, sigma, rpower, ys)
+
+    use slatm_utils, only: linspace
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: coordinates
+    double precision, dimension(:), intent(in) :: nuclear_charges
+    double precision, intent(in) :: rcut
+    integer, intent(in) :: nx
+    double precision, intent(in) :: dgrid
+    double precision, intent(in) :: sigma
+    double precision, intent(in) :: rpower
+    double precision, dimension(nx), intent(out) :: ys
+
+    integer, intent(in) :: z1, z2
+
+    double precision :: r0
+    double precision :: r
+    double precision :: rcut2
+    integer :: i
+    integer :: natoms
+
+    integer, dimension(:), allocatable :: ias1, ias2
+    integer :: nias1, nias2
+
+    integer :: ia1, ia2
+    double precision, parameter :: eps = epsilon(0.0d0)
+    double precision, dimension(nx) :: xs
+    double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
+    double precision :: coeff
+    double precision :: c0
+    double precision :: inv_sigma
+
+    double precision, dimension(nx) :: xs0
+
+    natoms = size(coordinates, dim=1)
+    if (size(coordinates, dim=1) /= size(nuclear_charges, dim=1)) then
+        write(*,*) "ERROR: Coulomb matrix generation"
+        write(*,*) size(coordinates, dim=1), "coordinates, but", &
+            & size(nuclear_charges, dim=1), "atom_types!"
+        stop
+    endif
+
+    allocate(ias1(natoms))
+    allocate(ias2(natoms))
+
+    ias1 = 0
+    ias2 = 0
+
+    nias1 = 0
+    do i = 1, natoms
+        if (int(nuclear_charges(i)).eq.z1) then
+            nias1 = nias1 + 1
+            ias1(nias1) = i
+        endif
+    enddo
+
+    nias2 = 0
+    do i = 1, natoms
+        if (int(nuclear_charges(i)).eq.z2) then
+            nias2 = nias2 + 1
+            ias2(nias2) = i
+        endif
+    enddo
+
+
+    r0 = 0.1d0
+    xs = linspace(r0, rcut, nx)
+    ys = 0.0d0
+
+    coeff = 1.0d0 / sqrt(2*sigma**2*pi)
+    c0 = (mod(z1,1000)*mod(z2,1000)) * coeff
+    inv_sigma = -0.5d0 / sigma**2 
+    xs0 = c0/(xs**rpower) * dgrid
+
+    rcut2 = rcut**2
+
+    if (z1.eq.z2) then
+
+        !$OMP PARALLEL DO REDUCTION(+:ys)
+        do ia1 = 1, nias1
+            do ia2 = ia1 + 1, nias2
+                r = sum((coordinates(ias1(ia1),:) - coordinates(ias2(ia2),:))**2)
+
+                if (r < rcut2) ys = ys + xs0 * exp( inv_sigma * (xs - sqrt(r))**2 )
+
+            enddo
+        enddo
+        !$OMP END PARALLEL DO
+
+    else
+
+        !$OMP PARALLEL DO REDUCTION(+:ys)
+        do ia1 = 1, nias1
+            do ia2 = 1, nias2
+                r = sum((coordinates(ias1(ia1),:) - coordinates(ias2(ia2),:))**2)
+
+                if (r < rcut2) ys = ys + xs0 * exp( inv_sigma * (xs - sqrt(r))**2 )
+            enddo
+        enddo
+        !$OMP END PARALLEL DO
+
+    endif
+
+    deallocate(ias1)
+    deallocate(ias2)
+
+end subroutine fget_sbop

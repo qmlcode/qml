@@ -289,7 +289,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     #print ' 001, pbc = ', pbc
                     mbsi = get_sbop(mbtype, obj, iloc=iloc, ia=ia, \
                                     sigma=sigmas[0], dgrid=dgrids[0], rcut=rcut, \
-                                    pbc=pbc, rpower=rpower)[1]
+                                    pbc=pbc, rpower=rpower)
                     mbsi *= 0.5 # only for the two-body parts, local rpst
                     #print ' 002'
                     if alchemy:
@@ -347,7 +347,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             elif len(mbtype) == 2:
                 mbsi = get_sbop(mbtype, obj, sigma=sigmas[0], \
-                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)[1]
+                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)
 
                 if alchemy:
                     n2 = len(mbsi)
