@@ -22,7 +22,6 @@
 
 from __future__ import print_function
 
-from time import time
 import scipy.spatial.distance as ssd
 import itertools as itl
 import numpy as np
@@ -31,30 +30,6 @@ from .fslatm import fget_sbot
 from .fslatm import fget_sbot_local
 from .fslatm import fget_sbop
 from .fslatm import fget_sbop_local
-
-def get_pbc(obj, d0 = 3.6):
-    """
-    automatically tell if an compound object is periodic or not
-
-    :param d0: the threshhold value to tell if two cells are adjacent
-    :type d0: float
-    """
-
-    pbc = []
-
-    zs, ps, c = obj
-    na = len(zs); idxs = np.arange(na)
-
-    for i in range(3):
-        psx = ps[:,i]; xmin = min(psx)
-        idxs_i = idxs[ psx == xmin ]
-        ps1 = ps[idxs_i[0]] + c[i]
-        if np.min( ssd.cdist([ps1,], ps)[0] ) < d0:
-            pbc.append( '1' )
-        else:
-            pbc.append( '0' )
-
-    return ''.join(pbc)
 
 def update_m(obj, ia, rcut=9.0, pbc=None):
     """
@@ -66,7 +41,7 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
     v1, v2, v3 = c
     vs = ssd.norm(c, axis=0)
 
-    nns = []; ns = []
+    nns = []
     for i,vi in enumerate(vs):
         n1_doulbe = rcut/li
         n1 = int(n1_doulbe)
@@ -91,7 +66,7 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
     n123s = np.array(n123s, np.float)
 
     na = len(zs)
-    ai = m[ia]; cia = coords[ia]
+    cia = coords[ia]
     if na == 1:
         ds = np.array([[0.]])
     else:
@@ -123,18 +98,10 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
 def get_boa(z1, zs_):
     return z1*np.array( [(zs_ == z1).sum(), ])
     #return -0.5*z1**2.4*np.array( [(zs_ == z1).sum(), ])
-def vang(u,v):
-    cost = np.dot(u,v)/(np.linalg.norm(u) * np.linalg.norm(v))
-    # sometimes, cost might be 1.00000000002, then np.arccos(cost)
-    # does not exist!
-    u = cost if abs(cost) <= 1 else 1.0
-    return np.arccos( u )
 
-def cvang(u,v):
-    return np.dot(u,v)/np.sqrt(np.dot(u,u)*np.dot(v,v))
 
 def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
-             rcut=4.8, dgrid=0.03, ipot=True, pbc='000', rpower=6):
+             rcut=4.8, dgrid=0.03, pbc='000', rpower=6):
     """
     two-body terms
 
@@ -169,8 +136,8 @@ def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
 
     return ys
 
-def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label=None, \
-             rcut=4.8, dgrid=0.0262, ipot=True, pbc='000'):
+def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
+             rcut=4.8, dgrid=0.0262, pbc='000'):
 
     """
     sigma -- standard deviation of gaussian distribution centered on a specific angle
