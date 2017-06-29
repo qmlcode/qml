@@ -28,7 +28,9 @@ import itertools as itl
 import numpy as np
 
 from .fslatm import fget_sbot
+from .fslatm import fget_sbot_local
 from .fslatm import fget_sbop
+from .fslatm import fget_sbop_local
 
 def get_pbc(obj, d0 = 3.6):
     """
@@ -121,6 +123,15 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
 def get_boa(z1, zs_):
     return z1*np.array( [(zs_ == z1).sum(), ])
     #return -0.5*z1**2.4*np.array( [(zs_ == z1).sum(), ])
+def vang(u,v):
+    cost = np.dot(u,v)/(np.linalg.norm(u) * np.linalg.norm(v))
+    # sometimes, cost might be 1.00000000002, then np.arccos(cost)
+    # does not exist!
+    u = cost if abs(cost) <= 1 else 1.0
+    return np.arccos( u )
+
+def cvang(u,v):
+    return np.dot(u,v)/np.sqrt(np.dot(u,u)*np.dot(v,v))
 
 def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
              rcut=4.8, dgrid=0.03, ipot=True, pbc='000', rpower=6):
@@ -145,23 +156,16 @@ def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-    # if iloc:
-    #     dsu = []; icnt = 0
-    #     for j1,j2 in ias12:
-    #         if ia == j1 or ia == j2:
-    #             dsu.append( ds[j1,j2] )
-    #         icnt += 1
-    # else:
-    #     dsu = [ ds[i,j] for (i,j) in ias12 ]
-
     # bop potential distribution
     r0 = 0.1
-    nx = (rcut - r0)/dgrid + 1
-    xs = np.linspace(r0, rcut, nx)
+    nx = int((rcut - r0)/dgrid) + 1
 
-    # coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
+    coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
 
-    ys = fget_sbop(coords, zs, z1, z2, rcut, nx, dgrid, sigma, rpower)
+    if iloc:
+        ys = fget_sbop_local(coords, zs, ia, z1, z2, rcut, nx, dgrid, sigma, coeff, rpower)
+    else:
+        ys = fget_sbop(coords, zs, z1, z2, rcut, nx, dgrid, sigma, coeff, rpower)
 
     return ys
 
@@ -188,24 +192,19 @@ def get_sbot(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, label
         # after update of `m, the query atom `ia will become the first atom
         ia = 0
 
-    # # print "python lentas", len(tas)
-    # if iloc:
-    #     tas_u = []
-    #     for tas_i in tas:
-    #         if ia == tas_i[1]:
-    #             tas_u.append( tas_i )
-    #     tas = tas_u
+    # for a normalized gaussian distribution, u should multiply this coeff
+    coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
 
-    # # for a normalized gaussian distribution, u should multiply this coeff
-    # coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
-
-
+    # Setup grid in Python
     d2r = np.pi/180 # degree to rad
     a0 = -20.0*d2r
     a1 = np.pi + 20.0*d2r
     nx = int((a1-a0)/dgrid) + 1
 
-    ys = fget_sbot(coords, zs, z1, z2, z3, rcut, nx, dgrid, sigma)
-
+    if iloc:
+        ys = fget_sbot_local(coords, zs, ia, z1, z2, z3, rcut, nx, dgrid, sigma, coeff)
+    else:
+        ys = fget_sbot(coords, zs, z1, z2, z3, rcut, nx, dgrid, sigma, coeff)
 
     return ys
+
