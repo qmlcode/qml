@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders Steen Christensen
+# Copyright (c) 2017 Anders Steen Christensen, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,41 @@ def test_atomic_coulomb_matrix():
     # Generate atomic coulomb matrix representation, sorted by row-norm, using the Compound class
     mol.generate_atomic_coulomb_matrix(size = size, sorting = "row-norm")
 
+    # Generate atomic coulomb matrix representation, sorted by row-norm, with reference implementation
     acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "row-norm")
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+    # Generate atomic coulomb matrix representation, sorted by row-norm, using the Compound class
+    # for a single atom
+    mol.generate_atomic_coulomb_matrix(size = size, sorting = "row-norm", indices = [0])
+
+    # Generate atomic coulomb matrix representation, sorted by row-norm, with reference implementation
+    # for a single atom
+    acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "row-norm",
+                indices = [0])
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+    # Generate atomic coulomb matrix representation, sorted by distance, using the Compound class
+    # for a single atom
+    mol.generate_atomic_coulomb_matrix(size = size, sorting = "distance", indices = [0])
+
+    # Generate atomic coulomb matrix representation, sorted by distance, with reference implementation
+    # for a single atom
+    acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "distance",
+                indices = [0])
+
+    assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
+
+    # Generate atomic coulomb matrix representation, sorted by row-norm, using the Compound class
+    # for carbons
+    mol.generate_atomic_coulomb_matrix(size = size, sorting = "row-norm", indices = "C")
+
+    # Generate atomic coulomb matrix representation, sorted by row-norm, with reference implementation
+    # for carbons
+    acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "row-norm",
+                indices = "C")
 
     assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
 
@@ -139,6 +173,7 @@ def test_atomic_coulomb_matrix():
             central_cutoff = 4.0, central_decay = 0.5,
             interaction_cutoff = 5.0, interaction_decay = 1.0)
 
+    # Generate atomic coulomb matrix representation, sorted by distance, with reference implementation
     acm = atomic_coulomb_matrix(mol.nuclear_charges, mol.coordinates, size, sorting = "distance",
             cent_cutoff = 4.0, cent_decay = 0.5,
             int_cutoff = 5.0, int_decay = 1.0)
@@ -157,7 +192,18 @@ def test_atomic_coulomb_matrix():
     assert np.allclose(mol.representation, acm), "Error in atomic coulomb matrix representation"
 
 def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distance",
-        cent_cutoff = 1e6, cent_decay = -1, int_cutoff = 1e6, int_decay = -1):
+        cent_cutoff = 1e6, cent_decay = -1, int_cutoff = 1e6, int_decay = -1,
+        indices = None):
+
+    if indices == None:
+        nindices = len(nuclear_charges)
+        indices = range(nindices)
+    elif type("") == type(indices):
+        if indices in NUCLEAR_CHARGE:
+            indices = np.where(nuclear_charges == NUCLEAR_CHARGE[indices])[0]
+            nindices = indices.size
+            if nindices == 0:
+                return np.zeros((0,0))
 
     if cent_cutoff < 0:
         cent_cutoff = 1e6
@@ -237,7 +283,7 @@ def atomic_coulomb_matrix(nuclear_charges, coordinates, size, sorting = "distanc
                 sorted_cm[k, idx] = cm_mat[k, si, sj]
                 idx += 1
 
-    return sorted_cm
+    return sorted_cm[indices]
 
 def test_eigenvalue_coulomb_matrix():
 
