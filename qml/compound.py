@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix Faber
+# Copyright (c) 2016-2017 Anders Steen Christensen, Felix Faber, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -70,7 +70,7 @@ class Compound(object):
         if xyz is not None:
             self.read_xyz(xyz)
 
-    def generate_coulomb_matrix(self, size = 23, sorting = "row-norm"):
+    def generate_coulomb_matrix(self, size = 23, sorting = "row-norm", indices = None):
         """ Creates a Coulomb Matrix representation of a molecule.
             A matrix :math:`M` is constructed with elements
 
@@ -132,7 +132,8 @@ class Compound(object):
                 self.nuclear_charges, self.coordinates, size = size)
 
     def generate_atomic_coulomb_matrix(self, size = 23, sorting = "row-norm", 
-            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
+            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1,
+            indices = None):
         """ Creates a Coulomb Matrix representation of the local environment of a central atom.
             For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
 
@@ -178,6 +179,11 @@ class Compound(object):
 
             The upper triangular of M, including the diagonal, is concatenated to a 1D
             vector representation.
+
+            The representation can be calculated for a subset by either specifying
+            ``indices = [0,1,...]``, where :math:`[0,1,...]` are the requested atom indices,
+            or by specifying ``indices = 'C'`` to only calculate central carbon atoms.
+
             The representation is calculated using an OpenMP parallel Fortran routine.
 
             :param size: The size of the largest molecule supported by the representation
@@ -194,6 +200,8 @@ class Compound(object):
             :type interaction_cutoff: float
             :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
             :type interaction_decay: float
+            :param indices: Subset indices or atomtype
+            :type indices: Nonetype/array/string
 
 
             :return: nD representation - shape (:math:`N_{atoms}`, size(size+1)/2)
@@ -202,7 +210,7 @@ class Compound(object):
 
 
         self.representation = generate_atomic_coulomb_matrix(
-            self.nuclear_charges, self.coordinates, size = size,
+            self.nuclear_charges, self.coordinates, size = size, indices = indices,
             sorting = sorting, central_cutoff = central_cutoff, central_decay = central_decay,
             interaction_cutoff = interaction_cutoff, interaction_decay = interaction_decay)
 
@@ -283,7 +291,6 @@ class Compound(object):
                 alchemy=alchemy, rpower=rpower)
         if local: slatm = np.asarray(slatm)
         self.representation = slatm
-
 
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.
