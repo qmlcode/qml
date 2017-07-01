@@ -66,12 +66,12 @@ def test_representations():
 
     asize = get_asize(mols,1)
 
-    coulomb_matrix_test(mols, size, path)
-    atomic_coulomb_matrix_test(mols, size, path)
-    eigenvalue_coulomb_matrix_test(mols, size, path)
-    bob_test(mols, asize, path)
+    coulomb_matrix(mols, size, path)
+    atomic_coulomb_matrix(mols, size, path)
+    eigenvalue_coulomb_matrix(mols, size, path)
+    bob(mols, asize, path)
 
-def coulomb_matrix_test(mols, size, path):
+def coulomb_matrix(mols, size, path):
 
     # Generate coulomb matrix representation, sorted by row-norm
     for i, mol in enumerate(mols): 
@@ -89,7 +89,7 @@ def coulomb_matrix_test(mols, size, path):
     X_ref = np.loadtxt(path + "/data/coulomb_matrix_representation_unsorted.txt")
     assert np.allclose(X_test, X_ref), "Error in coulomb matrix representation"
 
-def atomic_coulomb_matrix_test(mols, size, path):
+def atomic_coulomb_matrix(mols, size, path):
 
     # Generate coulomb matrix representation, sorted by distance
     for i, mol in enumerate(mols): 
@@ -157,7 +157,7 @@ def atomic_coulomb_matrix_test(mols, size, path):
         assert np.allclose(representation_subset, mol.representation), \
                 "Error in atomic coulomb matrix representation"
 
-def eigenvalue_coulomb_matrix_test(mols, size, path):
+def eigenvalue_coulomb_matrix(mols, size, path):
 
     # Generate coulomb matrix representation, sorted by row-norm
     for i, mol in enumerate(mols): 
@@ -167,7 +167,7 @@ def eigenvalue_coulomb_matrix_test(mols, size, path):
     X_ref = np.loadtxt(path + "/data/eigenvalue_coulomb_matrix_representation.txt")
     assert np.allclose(X_test, X_ref), "Error in eigenvalue coulomb matrix representation"
 
-def bob_test(mols, asize, path):
+def bob(mols, asize, path):
 
     # Generate coulomb matrix representation, sorted by row-norm
     for i, mol in enumerate(mols): 
