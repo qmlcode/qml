@@ -545,7 +545,7 @@ subroutine fgenerate_atomic_coulomb_matrix(central_atom_indices, central_natoms,
             do i = 1, cutoff_count(k)
                 j = minloc(distance_matrix_tmp(:,k), dim=1)
                 sorted_atoms_all(i, l) = j
-                distance_matrix_tmp(j, l) = huge_double
+                distance_matrix_tmp(j, k) = huge_double
             enddo
         !$OMP END CRITICAL
     enddo
