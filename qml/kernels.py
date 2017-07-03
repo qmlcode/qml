@@ -29,6 +29,9 @@ from .fkernels import flaplacian_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
 
+from .fkernels import fget_local_kernels_gaussian
+from .fkernels import fget_local_kernels_laplacian
+
 def laplacian_kernel(A, B, sigma):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
@@ -183,3 +186,84 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
 
     return K
 
+def get_local_kernels_gaussian(A, B, na, nb, sigmas):
+    """ Calculates the Gaussian kernel matrix K, for a local representation where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \sum_{a \in i} \sum_{b \in j} \\exp \\big( -\\frac{\\|A_a - B_b\\|_2^2}{2\sigma^2} \\big)`
+
+        Where :math:`A_{a}` and :math:`B_{b}` are representation vectors.
+
+        Note that the input array is one big 2D array with all atoms concatenated along the same axis.
+        Further more a series of kernels is produced (since calculating the distance matrix is expensive
+        but getting the resulting kernels elements for several sigmas is not.)
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of descriptors - shape (total atoms A, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (total atoms B, representation size).
+        :type B: numpy array
+        :param na: 1D array containing numbers of atoms in each compound.
+        :type na: numpy array
+        :param nb: 1D array containing numbers of atoms in each compound.
+        :type nb: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
+
+        :return: The Gaussian kernel matrix - shape (nsigmas, N, M)
+        :rtype: numpy array
+    """
+
+    assert np.sum(na) == A.shape[0], "Error in A input"
+    assert np.sum(nb) == B.shape[0], "Error in B input"
+
+    assert A.shape[1] == B.shape[1], "Error in representation sizes"
+
+    nma = len(na)
+    nmb = len(nb)
+     
+    sigmas = np.asarray(sigmas)
+    nsigmas = len(sigmas)
+
+    return fget_local_kernels_gaussian(A.T, B.T, na, nb, sigmas, nma, nmb, nsigmas)
+
+def get_local_kernels_laplacian(A, B, na, nb, sigmas):
+    """ Calculates the Local Laplacian kernel matrix K, for a local representation where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \sum_{a \in i} \sum_{b \in j} \\exp \\big( -\\frac{\\|A_a - B_b\\|_1}{\sigma} \\big)`
+
+        Where :math:`A_{a}` and :math:`B_{b}` are representation vectors.
+
+        Note that the input array is one big 2D array with all atoms concatenated along the same axis.
+        Further more a series of kernels is produced (since calculating the distance matrix is expensive
+        but getting the resulting kernels elements for several sigmas is not.)
+        
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of descriptors - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of descriptors - shape (M, representation size).
+        :type B: numpy array
+        :param na: 1D array containing numbers of atoms in each compound.
+        :type na: numpy array
+        :param nb: 1D array containing numbers of atoms in each compound.
+        :type nb: numpy array
+        :param sigmas: List of the sigmas.
+        :type sigmas: list
+
+        :return: The Laplacian kernel matrix - shape (nsigmas, N, M)
+        :rtype: numpy array
+    """
+
+    assert np.sum(na) == A.shape[0], "Error in A input"
+    assert np.sum(nb) == B.shape[0], "Error in B input"
+
+    assert A.shape[1] == B.shape[1], "Error in representation sizes"
+
+    nma = len(na)
+    nmb = len(nb)
+     
+    sigmas = np.asarray(sigmas)
+    nsigmas = len(sigmas)
+
+    return fget_local_kernels_laplacian(A.T, B.T, na, nb, sigmas, nma, nmb, nsigmas)
