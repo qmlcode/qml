@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from __future__ import print_function
 
 import scipy.spatial.distance as ssd
@@ -36,7 +37,6 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
     retrieve local structure around atom `ia
     for periodic systems (or very large system)
     """
-
     zs, coords, c = obj
     v1, v2, v3 = c
     vs = ssd.norm(c, axis=0)
@@ -67,6 +67,7 @@ def update_m(obj, ia, rcut=9.0, pbc=None):
 
     na = len(zs)
     cia = coords[ia]
+
     if na == 1:
         ds = np.array([[0.]])
     else:
@@ -126,6 +127,7 @@ def get_sbop(mbtype, obj, iloc=False, ia=None, normalize=True, sigma=0.05, \
     # bop potential distribution
     r0 = 0.1
     nx = int((rcut - r0)/dgrid) + 1
+
 
     coeff = 1/np.sqrt(2*sigma**2*np.pi) if normalize else 1.0
 

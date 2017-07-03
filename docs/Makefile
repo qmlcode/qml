@@ -19,3 +19,4 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	touch build/html/.nojekyll
+	echo "www.qmlcode.org" > build/html/CNAME

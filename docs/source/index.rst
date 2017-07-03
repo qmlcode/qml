@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|Build Status| |Beta|
+|Build Status| |pypi| |doi| |Beta|
 
 QML: A Python Toolkit for Quantum Machine Learning
 ==================================================
@@ -79,6 +79,12 @@ QML is freely available under the terms of the MIT license.
 .. |Build Status| image:: https://travis-ci.org/qmlcode/qml.svg?branch=master
    :target: https://travis-ci.org/qmlcode/qml
 
+.. |doi| image:: https://zenodo.org/badge/89045103.svg
+   :target: https://zenodo.org/badge/latestdoi/89045103
+
 .. |Beta| image:: http://i.imgur.com/5fMAeek.jpg
    :width: 90 px
    :target: https://github.com/qmlcode/qml
+
+.. |Pypi| image:: https://badge.fury.io/py/qml.svg
+    :target: https://badge.fury.io/py/qml

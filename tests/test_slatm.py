@@ -30,6 +30,7 @@ def test_slatm_global_representation():
     mbtypes = get_slatm_mbtypes(np.array([mol.nuclear_charges for mol in mols]))
 
     for i, mol in enumerate(mols): 
+
         mol.generate_slatm(mbtypes, local=False)
 
     X_qml = np.array([mol.representation for mol in mols])
@@ -78,3 +79,4 @@ if __name__ == "__main__":
 
     test_slatm_global_representation()
     test_slatm_local_representation()
+
