@@ -24,6 +24,7 @@ import numpy as np
 
 from .fkernels import fget_vector_kernels_gaussian
 from .fkernels import fget_vector_kernels_laplacian
+from .fkernels import fget_local_kernels_gaussian
 
 from .arad import get_local_kernels_arad
 from .arad import get_local_symmetric_kernels_arad
@@ -55,7 +56,6 @@ def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
     x1 = np.swapaxes(x1, 0, 2)
     x2 = np.swapaxes(x2, 0, 2)
 
-
     sigmas = np.asarray(sigmas, dtype=np.float64)
     nsigmas = sigmas.size
 
@@ -65,30 +65,38 @@ def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
 
 def get_atomic_kernels_gaussian(mols1, mols2, sigmas):
 
+    print 1
     n1 = np.array([mol.natoms for mol in mols1], dtype=np.int32)
     n2 = np.array([mol.natoms for mol in mols2], dtype=np.int32)
 
+    print 2
     max1 = np.max(n1)
     max2 = np.max(n2)
 
+    print 3
     nm1 = n1.size
     nm2 = n2.size
 
     cmat_size = mols1[0].representation.shape[1]
 
+    print 4
     x1 = np.zeros((nm1, max1, cmat_size), dtype=np.float64, order="F")
     x2 = np.zeros((nm2, max2, cmat_size), dtype=np.float64, order="F")
 
+    print 5
     for imol in range(nm1):
         x1[imol,:n1[imol],:cmat_size] = mols1[imol].representation
 
+    print 6
     for imol in range(nm2):
         x2[imol,:n2[imol],:cmat_size] = mols2[imol].representation
 
+    print 7
     # Reorder for Fortran speed
     x1 = np.swapaxes(x1, 0, 2)
     x2 = np.swapaxes(x2, 0, 2)
 
+    print 8
     sigmas = np.array(sigmas, dtype=np.float64)
     nsigmas = sigmas.size
 
