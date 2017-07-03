@@ -264,6 +264,7 @@ class Compound(object):
 
     A version that works for periodic boundary conditions will be released soon.
 
+
     NOTE: You will need to run the ``get_slatm_mbtypes()`` function to get the ``mbtypes`` input (or generate it manually).
 
     :param mbtypes: Many-body types for the whole dataset, including 1-, 2- and 3-body types. Could be obtained by calling ``get_slatm_mbtypes()``.
@@ -291,6 +292,7 @@ class Compound(object):
                 alchemy=alchemy, rpower=rpower)
         if local: slatm = np.asarray(slatm)
         self.representation = slatm
+
 
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.

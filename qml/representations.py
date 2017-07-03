@@ -280,6 +280,7 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, asize = {"O":3, "C":7,
 
     return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, nmax, n)
 
+
 def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     """
     Get the list of minimal types of many-body terms in a dataset. This resulting list
@@ -337,6 +338,7 @@ def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     mbtypes = boas + bops + bots
 
     return mbtypes #, np.array(zs_ravel), np.array(nas)
+
 
 def generate_slatm(coordinates, nuclear_charges, mbtypes,
         unit_cell=None, local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03],
@@ -422,7 +424,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     #print ' 001, pbc = ', pbc
                     mbsi = get_sbop(mbtype, obj, iloc=iloc, ia=ia, \
                                     sigma=sigmas[0], dgrid=dgrids[0], rcut=rcut, \
-                                    pbc=pbc, rpower=rpower)[1]
+                                    pbc=pbc, rpower=rpower)
                     mbsi *= 0.5 # only for the two-body parts, local rpst
                     #print ' 002'
                     if alchemy:
@@ -440,7 +442,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                         mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
                 else: # len(mbtype) == 3:
                     mbsi = get_sbot(mbtype, obj, iloc=iloc, ia=ia, \
-                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)[1]
+                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)
+
                     if alchemy:
                         n3 = len(mbsi)
                         n3_0 = mbs_ia.shape[0]
@@ -480,7 +483,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             elif len(mbtype) == 2:
                 mbsi = get_sbop(mbtype, obj, sigma=sigmas[0], \
-                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)[1]
+                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)
+
 
                 if alchemy:
                     n2 = len(mbsi)
@@ -497,7 +501,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             else: # len(mbtype) == 3:
                 mbsi = get_sbot(mbtype, obj, sigma=sigmas[1], \
-                        dgrid=dgrids[1], rcut=rcut)[1]
+                        dgrid=dgrids[1], rcut=rcut)
+
                 if alchemy:
                     n3 = len(mbsi)
                     n3_0 = mbs.shape[0]

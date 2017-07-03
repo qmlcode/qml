@@ -85,6 +85,15 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
+ext_fslatm = Extension(name = 'fslatm',
+                          sources = ['qml/fslatm.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
 # use README.md as long description
 def readme():
     with open('README.md') as f:
@@ -116,6 +125,7 @@ def setup_pepytools():
               ext_fcho_solve,
               ext_fdistance,
               ext_fkernels,
+              ext_fslatm,
               ext_frepresentations,
         ],
 )
