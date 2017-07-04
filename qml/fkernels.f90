@@ -1,6 +1,6 @@
 ! MIT License
 !
-! Copyright (c) 2016 Anders Steen Christensen
+! Copyright (c) 2016 Anders Steen Christensen, Lars A. Bratholm, Felix A. Faber
 !
 ! Permission is hereby granted, free of charge, to any person obtaining a copy
 ! of this software and associated documentation files (the "Software"), to deal
@@ -398,6 +398,30 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 !$OMP END PARALLEL DO
 
 end subroutine flaplacian_kernel
+
+
+subroutine flinear_kernel(a, na, b, nb, k)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+
+    integer, intent(in) :: na, nb
+
+    double precision, dimension(:,:), intent(inout) :: k
+
+    integer :: i, j
+
+!$OMP PARALLEL DO
+    do i = 1, nb
+        do j = 1, na
+            k(j,i) = dot_product(a(:,j), b(:,i))
+        enddo
+    enddo
+!$OMP END PARALLEL DO
+
+end subroutine flinear_kernel
 
 
 subroutine fmatern_kernel_l2(a, na, b, nb, k, sigma, order)

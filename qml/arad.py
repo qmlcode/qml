@@ -24,6 +24,9 @@ from __future__ import print_function
 
 import numpy as np
 
+from .farad_kernels import fget_global_kernels_arad
+from .farad_kernels import fget_global_symmetric_kernels_arad
+
 from .farad_kernels import fget_local_kernels_arad
 from .farad_kernels import fget_local_symmetric_kernels_arad
 
@@ -130,6 +133,85 @@ def generate_arad_representation(coordinates, nuclear_charges, size=23, cut_dist
         M[i, 4, :len(D1)] = np.sum(sinAngs,axis = 1) / norm
 
     return M
+
+def get_global_kernels_arad(X1, X2, sigmas, 
+        width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
+    """ Calculates the global Gaussian kernel matrix K for atomic ARAD
+        descriptors for a list of different sigmas. Each kernel element
+        is the sum of all kernel elements between pairs of atoms in two molecules.
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param X1: ARAD descriptors for molecules in set 1.
+        :type X1: numpy array
+        :param X2: Array of ARAD descriptors for molecules in set 2.
+        :type X2: numpy array
+        :param sigmas: List of sigmas for which to calculate the Kernel matrices.
+        :type sigmas: list
+
+        :return: The kernel matrices for each sigma - shape (number_sigmas, number_molecules1, number_molecules2)
+        :rtype: numpy array
+    """
+
+    amax = X1.shape[1]
+
+    assert X1.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 1"
+    assert X2.shape[1] == amax, "ERROR: Check ARAD decriptor sizes! code = 2"
+    assert X2.shape[3] == amax, "ERROR: Check ARAD decriptor sizes! code = 3"
+
+    nm1 = X1.shape[0]
+    nm2 = X2.shape[0]
+
+    N1 = np.empty(nm1, dtype = np.int32)
+    Z1_arad = np.zeros((nm1, amax, 2))
+    for i in range(nm1):
+        N1[i] = len(np.where(X1[i,:,2,0] > 0)[0])
+        Z1_arad[i] = X1[i,:,1:3,0]
+
+    N2 = np.empty(nm2, dtype = np.int32)
+    Z2_arad = np.zeros((nm2, amax, 2))
+    for i in range(nm2):
+        N2[i] = len(np.where(X2[i,:,2,0] > 0)[0])
+        Z2_arad[i] = X2[i,:,1:3,0]
+
+    sigmas = np.array(sigmas)
+    nsigmas = sigmas.size
+
+    return fget_global_kernels_arad(X1, X2, Z1_arad, Z2_arad, N1, N2, sigmas, 
+                nm1, nm2, nsigmas, width, cut_distance, r_width, c_width)
+
+
+def get_global_symmetric_kernels_arad(X1, sigmas, 
+    width=0.2, cut_distance=5.0, r_width=1.0, c_width=0.5):
+    """ Calculates the global Gaussian kernel matrix K for atomic ARAD
+        descriptors for a list of different sigmas. Each kernel element
+        is the sum of all kernel elements between pairs of atoms in two molecules.
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param X1: ARAD descriptors for molecules in set 1.
+        :type X1: numpy array
+        :param sigmas: List of sigmas for which to calculate the Kernel matrices.
+        :type sigmas: list
+
+        :return: The kernel matrices for each sigma - shape (number_sigmas, number_molecules1, number_molecules1)
+        :rtype: numpy array
+    """
+
+    nm1 = X1.shape[0]
+    amax = X1.shape[1]
+
+    N1 = np.empty(nm1, dtype = np.int32)
+    Z1_arad = np.zeros((nm1, amax, 2))
+    for i in range(nm1):
+        N1[i] = len(np.where(X1[i,:,2,0] > 0)[0])
+        Z1_arad[i] = X1[i,:,1:3,0]
+
+    sigmas = np.array(sigmas)
+    nsigmas = sigmas.size
+
+    return fget_global_symmetric_kernels_arad(X1, Z1_arad, N1, sigmas, 
+                nm1, nsigmas, width, cut_distance, r_width, c_width)
 
 
 def get_local_kernels_arad(X1, X2, sigmas, 

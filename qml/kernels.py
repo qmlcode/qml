@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix Faber
+# Copyright (c) 2016 Anders Steen Christensen, Felix A. Faber, Lars A. Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import numpy as np
 
 from .fkernels import fgaussian_kernel
 from .fkernels import flaplacian_kernel
+from .fkernels import flinear_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
 
@@ -40,9 +41,9 @@ def laplacian_kernel(A, B, sigma):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -69,9 +70,9 @@ def gaussian_kernel(A, B, sigma):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -90,6 +91,34 @@ def gaussian_kernel(A, B, sigma):
 
     return K
 
+def linear_kernel(A, B):
+    """ Calculates the linear kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = A_i \cdot B_j`
+
+        VWhere :math:`A_{i}` and :math:`B_{j}` are  representation vectors. 
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of representations - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of representations - shape (M, representation size).
+        :type B: numpy array
+
+        :return: The Gaussian kernel matrix - shape (N, M)
+        :rtype: numpy array
+    """
+
+    na = A.shape[0]
+    nb = B.shape[0]
+
+    K = np.empty((na, nb), order='F')
+
+    # Note: Transposed for Fortran
+    flinear_kernel(A.T, na, B.T, nb, K)
+
+    return K
+
 def sargan_kernel(A, B, sigma, gammas):
     """ Calculates the Sargan kernel matrix K, where :math:`K_{ij}`:
 
@@ -98,9 +127,9 @@ def sargan_kernel(A, B, sigma, gammas):
         Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
@@ -140,9 +169,9 @@ def matern_kernel(A, B, sigma, order = 0, metric = "l1"):
 
         K is calculated using an OpenMP parallel Fortran routine.
 
-        :param A: 2D array of descriptors - shape (N, representation size).
+        :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
-        :param B: 2D array of descriptors - shape (M, representation size).
+        :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
         :param sigma: The value of sigma in the kernel matrix.
         :type sigma: float
