@@ -238,36 +238,13 @@ subroutine flinear_kernel(a, na, b, nb, k)
 
     integer :: i, j
 
-    double precision, allocatable, dimension(:,:) :: a_normed
-    double precision, allocatable, dimension(:,:) :: b_normed
-
-    allocate(a_normed(size(a, dim=1),size(a, dim=2)))
-    allocate(b_normed(size(b, dim=1),size(b, dim=2)))
-
-   
-!$OMP PARALLEL DO
-    do i = 1, na
-        a_normed(:,i) = a(:,i) / norm2(a(:,i))
-    enddo
-!$OMP END PARALLEL DO
-
-!$OMP PARALLEL DO
-    do i = 1, nb
-        b_normed(:,i) = b(:,i) / norm2(b(:,i))
-    enddo
-!$OMP END PARALLEL DO
-
-
 !$OMP PARALLEL DO
     do i = 1, nb
         do j = 1, na
-            k(j,i) = dot_product(a_normed(:,j), b_normed(:,i))
+            k(j,i) = dot_product(a(:,j), b(:,i))
         enddo
     enddo
 !$OMP END PARALLEL DO
-
-    deallocate(a_normed)
-    deallocate(b_normed)
 
 end subroutine flinear_kernel
 

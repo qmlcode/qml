@@ -91,11 +91,9 @@ def gaussian_kernel(A, B, sigma):
 def linear_kernel(A, B):
     """ Calculates the linear kernel matrix K, where :math:`K_{ij}`:
 
-            :math:`K_{ij} = \hat{A}_i \cdot \hat{B}_j`
+            :math:`K_{ij} = A_i \cdot B_j`
 
-        Where :math:`\hat{A}_{i}` and :math:`\hat{B}_{j}` are normalized
-        representation vectors. Note the normalization is handled inside
-        the kernel function.
+        VWhere :math:`A_{i}` and :math:`B_{j}` are  representation vectors. 
 
         K is calculated using an OpenMP parallel Fortran routine.
 

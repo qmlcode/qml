@@ -107,18 +107,17 @@ def test_linear_kernel():
 
     for i in range(n_train):
         for j in range(n_test):
-            Ktest[i,j] = np.dot(X[i]/np.linalg.norm(X[i]),
-                                Xs[j]/np.linalg.norm(Xs[j]))
+            Ktest[i,j] = np.dot(X[i], Xs[j])
 
     K = linear_kernel(X, Xs)
 
     # Compare two implementations:
-    assert np.allclose(K, Ktest), "Error in Gaussian kernel"
+    assert np.allclose(K, Ktest), "Error in linear kernel"
 
     Ksymm = linear_kernel(X, X)
 
     # Check for symmetry:
-    assert np.allclose(Ksymm, Ksymm.T), "Error in Gaussian kernel"
+    assert np.allclose(Ksymm, Ksymm.T), "Error in linear kernel"
 
 def test_matern_kernel():
 
