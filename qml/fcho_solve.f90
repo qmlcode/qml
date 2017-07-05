@@ -46,23 +46,23 @@ subroutine fcho_solve(A,y,x)
 
 end subroutine fcho_solve
 
-! subroutine fcho_invert(A)
-! 
-!     implicit none
-! 
-!     double precision, dimension(:,:), intent(inout) :: A
-!     integer :: info, na
-! 
-!     na = size(A, dim=1)
-! 
-!     call dpotrf("L", na, A , na, info)
-!     if (info > 0) then
-!         write (*,*) "WARNING: Cholesky decomposition DPOTRF() exited with error code:", info
-!     endif
-! 
-!     call dpotri("L", na, A , na, info )
-!     if (info > 0) then
-!         write (*,*) "WARNING: Cholesky inversion DPOTRI() exited with error code:", info
-!     endif
-! 
-! end subroutine fcho_invert
+subroutine fcho_invert(A)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(inout) :: A
+    integer :: info, na
+
+    na = size(A, dim=1)
+
+    call dpotrf("L", na, A , na, info)
+    if (info > 0) then
+        write (*,*) "WARNING: Cholesky decomposition DPOTRF() exited with error code:", info
+    endif
+
+    call dpotri("L", na, A , na, info )
+    if (info > 0) then
+        write (*,*) "WARNING: Cholesky inversion DPOTRI() exited with error code:", info
+    endif
+
+end subroutine fcho_invert

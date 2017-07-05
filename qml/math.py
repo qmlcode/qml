@@ -22,45 +22,54 @@
 
 import numpy as np
 
+from copy import deepcopy
+
 from .fcho_solve import fcho_solve
-# from .fcho_solve import fcho_invert
+from .fcho_solve import fcho_invert
 
 
-# Disabled due to bug.
-# def cho_invert(A):
-#     """ Solves [A x = y] for x using a Cholesky decomposition
-#         via calls to LAPACK dpotrf and dpotri in the F2PY module.
-# 
-#         Arguments:
-#         ==============
-#         A -- the A-matrix (symmetric and positive definite).
-# 
-#         Returns:
-#         ==============
-#         A -- the inverted A-matrix
-#     """
-# 
-#     B = np.asfortranarray(A)
-#     fcho_invert(B)
-# 
-#     return B
+def cho_invert(A):
+    """ Returns the inverse of a positive definite matrix, using a Cholesky decomposition
+        via calls to LAPACK dpotrf and dpotri in the F2PY module.
+
+        :param A: Matrix (symmetric and positive definite, left-hand side).
+        :type A: numpy array
+
+        :return: The inverse matrix
+        :rtype: numpy array
+    """
+
+    if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
+        raise ValueError('expected square matrix')
+
+    I = np.asfortranarray(A)
+
+    fcho_invert(I)
+
+    # Matrix to store the inverse
+    i_lower = np.tril_indices_from(A)
+
+    # Copy lower triangle to upper
+    I.T[i_lower] = I[i_lower]
+
+    return I
 
 
 def cho_solve(A, y):
     """ Solves the equation
 
-            :math:`A x = y` 
+            :math:`A x = y`
 
-        for x using a Cholesky decomposition  via calls to LAPACK dpotrf and dpotrs in the F2PY module.
+        for x using a Cholesky decomposition  via calls to LAPACK dpotrf and dpotrs in the F2PY module. Preserves the input matrix A.
 
         :param A: Matrix (symmetric and positive definite, left-hand side).
-        :type A: numpy array 
+        :type A: numpy array
         :param y: Vector (right-hand side of the equation).
-        :type y: numpy array 
+        :type y: numpy array
 
         :return: The solution vector.
-        :rtype: numpy array 
-    """
+        :rtype: numpy array
+        """
 
     if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
         raise ValueError('expected square matrix')
@@ -70,7 +79,15 @@ def cho_solve(A, y):
 
     n = A.shape[0]
 
+    A_diag = A[np.diag_indices_from(A)]
+
     x = np.zeros(n)
     fcho_solve(A, y, x)
+
+    A[np.diag_indices_from(A)] = A_diag
+
+    # Copy lower triangle to upper
+    i_lower = np.tril_indices_from(A)
+    A.T[i_lower] = A[i_lower]
 
     return x
