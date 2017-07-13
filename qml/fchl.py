@@ -25,6 +25,8 @@ import copy
 
 from .ffchl_kernels import fget_kernels_fchl
 from .ffchl_kernels import fget_symmetric_kernels_fchl
+from .ffchl_kernels import fget_global_kernels_fchl
+from .ffchl_kernels import fget_global_symmetric_kernels_fchl
 
 PTP = {\
          1  :[1,1] ,2:  [1,8]#Row1
@@ -276,7 +278,7 @@ def generate_fchl_representation(coordinates, nuclear_charges,
     return M
 
 
-def get_atomic_kernels_fchl(A, B, sigmas, \
+def get_local_kernels_fchl(A, B, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
@@ -364,8 +366,7 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
     return fget_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
                 nm1, nm2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
 
-
-def get_atomic_symmetric_kernels_fchl(A, sigmas, \
+def get_local_symmetric_kernels_fchl(A, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
@@ -436,3 +437,164 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
 
     return fget_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
                 nm1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
+
+def get_global_symmetric_kernels_fchl(A, sigmas, \
+        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
+        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
+
+        Where :math:`A_{i}` and :math:`A_{j}` are FCHL representation vectors.
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+        Note, that this kernel will ONLY work with FCHL representations as input.
+
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+        :param t_width: Gaussian width for the angular (theta) terms.
+        :type t_width: float
+        :param d_width: Gaussian width for the distance terms.
+        :type d_width: float
+        :param cut_distance: Cut-off radius.
+        :type cut_distance: float
+        :param r_width: Gaussian width along rows in the periodic table.
+        :type r_width: float
+        :param c_width: Gaussian width along columns in the periodic table.
+        :type c_width: float
+        :param order: Fourier-expansion truncation order.
+        :type order: integer
+        :param scale_distance: Weight for distance-dependent terms.
+        :type scale_distance: float
+        :param scale_angular: Weight for angle-dependent terms.
+        :type scale_angular: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, N),
+        :rtype: numpy array
+    """
+
+    atoms_max = A.shape[1]
+    neighbors_max = A.shape[3]
+
+    nm1 = A.shape[0]
+    N1 = np.zeros((nm1),dtype=np.int32)
+
+    for a in range(nm1):
+        N1[a] = len(np.where(A[a,:,1,0] > 0.0001)[0])
+
+    neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
+
+    for a, representation in enumerate(A):
+        ni = N1[a]
+        for i, x in enumerate(representation[:ni]):
+            neighbors1[a,i] = len(np.where(x[0]< cut_distance)[0])
+
+    nsigmas = len(sigmas)
+
+    pd = None
+    if alchemy == "periodic-table":
+        pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+
+    elif alchemy == "quantum-numbers":
+        pd = gen_QNum_distances(emax=101, n_width = n_width, m_width = m_width,
+                                          l_width = l_width, s_width = s_width)
+    else:
+        print("ERROR: Unknown alchemy specified:", alchemy)
+        exit(1)
+
+
+    sigmas = np.array(sigmas)
+
+    return fget_global_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
+                nm1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
+
+    
+def get_global_kernels_fchl(A, B, sigmas, \
+        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
+        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table"):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are FCHL representation vectors.
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+        Note, that this kernel will ONLY work with FCHL representations as input.
+
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param B: Array of FCHL representation - shape=(M, maxsize, 5, maxneighbors).
+        :type B: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+        :param t_width: Gaussian width for the angular (theta) terms.
+        :type t_width: float
+        :param d_width: Gaussian width for the distance terms.
+        :type d_width: float
+        :param cut_distance: Cut-off radius.
+        :type cut_distance: float
+        :param r_width: Gaussian width along rows in the periodic table.
+        :type r_width: float
+        :param c_width: Gaussian width along columns in the periodic table.
+        :type c_width: float
+        :param order: Fourier-expansion truncation order.
+        :type order: integer
+        :param scale_distance: Weight for distance-dependent terms.
+        :type scale_distance: float
+        :param scale_angular: Weight for angle-dependent terms.
+        :type scale_angular: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
+        :rtype: numpy array
+    """
+
+    atoms_max = A.shape[1]
+    neighbors_max = A.shape[3]
+
+    assert B.shape[1] == atoms_max, "ERROR: Check FCHL representation sizes! code = 2"
+    assert B.shape[3] == neighbors_max, "ERROR: Check FCHL representation sizes! code = 3"
+
+    nm1 = A.shape[0]
+    nm2 = B.shape[0]
+
+    N1 = np.zeros((nm1),dtype=np.int32)
+    N2 = np.zeros((nm2),dtype=np.int32)
+
+    for a in range(nm1):
+        N1[a] = len(np.where(A[a,:,1,0] > 0.0001)[0])
+
+    for a in range(nm2):
+        N2[a] = len(np.where(B[a,:,1,0] > 0.0001)[0])
+
+    neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
+    neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
+
+    for a, representation in enumerate(A):
+        ni = N1[a]
+        for i, x in enumerate(representation[:ni]):
+            neighbors1[a,i] = len(np.where(x[0]< cut_distance)[0])
+
+    for a, representation in enumerate(B):
+        ni = N2[a]
+        for i, x in enumerate(representation[:ni]):
+            neighbors2[a,i] = len(np.where(x[0]< cut_distance)[0])
+
+    nsigmas = len(sigmas)
+
+    pd = None
+    if alchemy == "periodic-table":
+        pd = gen_pd(emax=103, r_width=r_width, c_width=c_width)
+
+    elif alchemy == "quantum-numbers":
+        pd = gen_QNum_distances(emax=101, n_width = n_width, m_width = m_width,
+                                          l_width = l_width, s_width = s_width)
+    else:
+        print("ERROR: Unknown alchemy specified:", alchemy)
+        exit(1)
+
+    sigmas = np.array(sigmas)
+
+    return fget_global_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
+                nm1, nm2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular)
