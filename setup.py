@@ -1,6 +1,8 @@
 import sys
 from numpy.distutils.core import Extension, setup
 
+from mkldiscover import mkl_exists
+
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
 __credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
@@ -21,6 +23,11 @@ COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC",
 LINKER_FLAGS = ["-lgomp"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
+# UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
+if mkl_exists(verbose=True):
+    LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+    MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+
 # For clang without OpenMP: (i.e. most Apple/mac system)
 if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
     COMPILER_FLAGS = ["-O3", "-m64", "-march=native", "-fPIC"]
@@ -35,9 +42,6 @@ if any(["intelem" in arg for arg in sys.argv]):
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
-# UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
-# LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
-# MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
 ext_farad_kernels = Extension(name = 'farad_kernels',
@@ -85,6 +89,15 @@ ext_frepresentations = Extension(name = 'frepresentations',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
+ext_fslatm = Extension(name = 'fslatm',
+                          sources = ['qml/fslatm.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
 # use README.md as long description
 def readme():
     with open('README.md') as f:
@@ -116,6 +129,7 @@ def setup_pepytools():
               ext_fcho_solve,
               ext_fdistance,
               ext_fkernels,
+              ext_fslatm,
               ext_frepresentations,
         ],
 )

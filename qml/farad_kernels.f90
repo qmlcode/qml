@@ -703,7 +703,6 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
 
     ! Value of PI at full FORTRAN precision.
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
-
     double precision :: mol_dist
 
     r_width2 = r_width**2
@@ -754,6 +753,7 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
     do j = 1, nm1
         nj = n1(j)
         do i = 1, j! nm1
+
             ni = n1(i)
 
             atomic_distance(:,:) = 0.0d0
@@ -913,6 +913,7 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
                        & c_width2/(c_width2 + (z1(i,i_1,2) - z1(i,j_1,2))**2))
 
             enddo
+
         enddo
     enddo
     !$OMP END PARALLEL DO
@@ -930,6 +931,7 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
 
 
             enddo
+
         enddo
     enddo
     !$OMP END PARALLEL DO
@@ -940,7 +942,9 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
     kernels(:,:,:) = 0.0d0
     atomic_distance(:,:) = 0.0d0
 
+
     !$OMP PARALLEL DO PRIVATE(l2dist,atomic_distance,ni,nj,mol_dist) schedule(dynamic)
+
     do j = 1, nm2
         nj = n2(j)
         do i = 1, nm1
@@ -954,8 +958,10 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
                     l2dist = atomic_distl2(q1(i,i_1,:,:), q2(j,j_1,:,:), n1(i), n2(j), &
                         & sin1(i,i_1,:), sin2(j,j_1,:), width, cut_distance, r_width, c_width)
 
+
                     L2dist =  l2dist * (r_width2/(r_width2 + (z1(i,i_1,1) - z2(j,j_1,1))**2) * &
                        & c_width2/(c_width2 + (z1(i,i_1,2) - z2(j,j_1,2))**2))
+
 
                     atomic_distance(i_1,j_1) = l2dist
 
@@ -966,6 +972,7 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
 
             do k = 1, nsigmas
                 kernels(k, i, j) =  exp(mol_dist * inv_sigma2(k))
+
             enddo
 
         enddo

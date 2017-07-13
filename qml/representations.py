@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders Steen Christensen, Lars A. Bratholm and Bing Huang
+# Copyright (c) 2017 Anders Steen Christensen, Lars Andersen Bratholm and Bing Huang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -90,9 +90,9 @@ def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "
         print("ERROR: Unknown sorting scheme requested")
         raise SystemExit
 
-
 def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "distance",
-            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1):
+            central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1,
+            indices = None):
     """ Creates a Coulomb Matrix representation of the local environment of a central atom.
         For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
 
@@ -138,6 +138,11 @@ def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sort
 
         The upper triangular of M, including the diagonal, is concatenated to a 1D
         vector representation.
+
+        The representation can be calculated for a subset by either specifying
+        ``indices = [0,1,...]``, where :math:`[0,1,...]` are the requested atom indices,
+        or by specifying ``indices = 'C'`` to only calculate central carbon atoms.
+
         The representation is calculated using an OpenMP parallel Fortran routine.
 
         :param nuclear_charges: Nuclear charges of the atoms in the molecule
@@ -158,6 +163,8 @@ def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sort
         :type interaction_cutoff: float
         :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
         :type interaction_decay: float
+        :param indices: Subset indices or atomtype
+        :type indices: Nonetype/array/string
 
 
         :return: nD representation - shape (:math:`N_{atoms}`, size(size+1)/2)
@@ -165,13 +172,31 @@ def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sort
     """
 
 
+    if indices == None:
+        nindices = len(nuclear_charges)
+        indices = np.arange(1,1+nindices, 1, dtype = int)
+    elif type("") == type(indices):
+        if indices in NUCLEAR_CHARGE:
+            indices = np.where(nuclear_charges == NUCLEAR_CHARGE[indices])[0] + 1
+            nindices = indices.size
+            if nindices == 0:
+                return np.zeros((0,0))
+
+        else:
+            print("ERROR: Unknown value %s given for 'indices' variable" % indices)
+            raise SystemExit
+    else:
+        indices = np.asarray(indices, dtype = int) + 1
+        nindices = indices.size
+
+
     if (sorting == "row-norm"):
-        return fgenerate_local_coulomb_matrix(nuclear_charges,
+        return fgenerate_local_coulomb_matrix(indices, nindices, nuclear_charges,
             coordinates, nuclear_charges.size, size,
             central_cutoff, central_decay, interaction_cutoff, interaction_decay)
 
     elif (sorting == "distance"):
-        return fgenerate_atomic_coulomb_matrix(nuclear_charges,
+        return fgenerate_atomic_coulomb_matrix(indices, nindices, nuclear_charges,
             coordinates, nuclear_charges.size, size, 
             central_cutoff, central_decay, interaction_cutoff, interaction_decay)
 
@@ -399,7 +424,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     #print ' 001, pbc = ', pbc
                     mbsi = get_sbop(mbtype, obj, iloc=iloc, ia=ia, \
                                     sigma=sigmas[0], dgrid=dgrids[0], rcut=rcut, \
-                                    pbc=pbc, rpower=rpower)[1]
+                                    pbc=pbc, rpower=rpower)
                     mbsi *= 0.5 # only for the two-body parts, local rpst
                     #print ' 002'
                     if alchemy:
@@ -417,7 +442,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                         mbs_ia = np.concatenate( (mbs_ia, mbsi), axis=0 )
                 else: # len(mbtype) == 3:
                     mbsi = get_sbot(mbtype, obj, iloc=iloc, ia=ia, \
-                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)[1]
+                                    sigma=sigmas[1], dgrid=dgrids[1], rcut=rcut, pbc=pbc)
+
                     if alchemy:
                         n3 = len(mbsi)
                         n3_0 = mbs_ia.shape[0]
@@ -457,7 +483,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             elif len(mbtype) == 2:
                 mbsi = get_sbop(mbtype, obj, sigma=sigmas[0], \
-                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)[1]
+                                dgrid=dgrids[0], rcut=rcut, rpower=rpower)
+
 
                 if alchemy:
                     n2 = len(mbsi)
@@ -474,7 +501,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
             else: # len(mbtype) == 3:
                 mbsi = get_sbot(mbtype, obj, sigma=sigmas[1], \
-                        dgrid=dgrids[1], rcut=rcut)[1]
+                        dgrid=dgrids[1], rcut=rcut)
+
                 if alchemy:
                     n3 = len(mbsi)
                     n3_0 = mbs.shape[0]
