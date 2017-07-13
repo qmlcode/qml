@@ -696,13 +696,15 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
     double precision, allocatable, dimension(:,:) :: atomic_distance
 
     ! Pre-computed terms in the full distance matrix
-    double precision, allocatable, dimension(:,:) :: selfl21
+    double precision, allocatable, dimension(:) :: selfl21
 
     ! Pre-computed sine terms
     double precision, allocatable, dimension(:,:,:) :: sin1
 
     ! Value of PI at full FORTRAN precision.
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
+
+    double precision :: mol_dist
 
     r_width2 = r_width**2
     c_width2 = c_width**2
@@ -723,14 +725,22 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
     enddo
     !$OMP END PARALLEL DO
 
-    allocate(selfl21(nm1, maxval(n1)))
+    allocate(selfl21(nm1))
 
-    !$OMP PARALLEL DO PRIVATE(ni)
+    selfl21 = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do i = 1, nm1
         ni = n1(i)
         do i_1 = 1, ni
-            selfl21(i,i_1) = atomic_distl2(q1(i,i_1,:,:), q1(i,i_1,:,:), n1(i), n1(i), &
-                & sin1(i,i_1,:), sin1(i,i_1,:), width, cut_distance, r_width, c_width)
+            do j_1 = 1, ni
+
+                selfl21(i) = selfl21(i) + atomic_distl2(q1(i,i_1,:,:), q1(i,j_1,:,:), n1(i), n1(i), &
+                    & sin1(i,i_1,:), sin1(i,j_1,:), width, cut_distance, r_width, c_width) &
+                    & * (r_width2/(r_width2 + (z1(i,i_1,1) - z1(i,j_1,1))**2) * &
+                       & c_width2/(c_width2 + (z1(i,i_1,2) - z1(i,j_1,2))**2))
+
+            enddo
         enddo
     enddo
     !$OMP END PARALLEL DO
@@ -740,10 +750,10 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
     kernels(:,:,:) = 0.0d0
     atomic_distance(:,:) = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(l2dist,atomic_distance,ni,nj) schedule(dynamic)
+    !$OMP PARALLEL DO PRIVATE(l2dist,atomic_distance,ni,nj,mol_dist) schedule(dynamic)
     do j = 1, nm1
         nj = n1(j)
-        do i = 1, j
+        do i = 1, j! nm1
             ni = n1(i)
 
             atomic_distance(:,:) = 0.0d0
@@ -754,17 +764,18 @@ subroutine fget_global_symmetric_kernels_arad(q1, z1, n1, sigmas, nm1, nsigmas, 
                     l2dist = atomic_distl2(q1(i,i_1,:,:), q1(j,j_1,:,:), n1(i), n1(j), &
                         & sin1(i,i_1,:), sin1(j,j_1,:), width, cut_distance, r_width, c_width)
 
-                    l2dist = selfl21(i,i_1) + selfl21(j,j_1) - 2.0d0 * l2dist &
-                        & * (r_width2/(r_width2 + (z1(i,i_1,1) - z1(j,j_1,1))**2) &
-                        & * c_width2/(c_width2 + (z1(i,i_1,2) - z1(j,j_1,2))**2))
+                    L2dist =  l2dist * (r_width2/(r_width2 + (z1(i,i_1,1) - z1(j,j_1,1))**2) * &
+                                      & c_width2/(c_width2 + (z1(i,i_1,2) - z1(j,j_1,2))**2))
 
                     atomic_distance(i_1,j_1) = l2dist
 
                 enddo
             enddo
 
+            mol_dist = selfl21(i) + selfl21(j) - 2.0d0 * sum(atomic_distance(:ni,:nj))
+
             do k = 1, nsigmas
-                kernels(k, i, j) =  exp(sum(atomic_distance(:ni,:nj)) * inv_sigma2(k))
+                kernels(k, i, j) =  exp(mol_dist * inv_sigma2(k))
                 kernels(k, j, i) =  kernels(k, i, j)
             enddo
 
@@ -834,8 +845,8 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
     double precision, allocatable, dimension(:,:) :: atomic_distance
 
     ! Pre-computed terms in the full distance matrix
-    double precision, allocatable, dimension(:,:) :: selfl21
-    double precision, allocatable, dimension(:,:) :: selfl22
+    double precision, allocatable, dimension(:) :: selfl21
+    double precision, allocatable, dimension(:) :: selfl22
 
     ! Pre-computed sine terms
     double precision, allocatable, dimension(:,:,:) :: sin1
@@ -843,6 +854,8 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
 
     ! Value of PI at full FORTRAN precision.
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
+
+    double precision :: mol_dist
 
     r_width2 = r_width**2
     c_width2 = c_width**2
@@ -882,25 +895,41 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
     enddo
     !$OMP END PARALLEL DO
 
-    allocate(selfl21(nm1, maxval(n1)))
-    allocate(selfl22(nm2, maxval(n2)))
+    allocate(selfl21(nm1))
+    allocate(selfl22(nm2))
 
-    !$OMP PARALLEL DO PRIVATE(ni)
+    selfl21 = 0.0d0
+    selfl22 = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do i = 1, nm1
         ni = n1(i)
         do i_1 = 1, ni
-            selfl21(i,i_1) = atomic_distl2(q1(i,i_1,:,:), q1(i,i_1,:,:), n1(i), n1(i), &
-                & sin1(i,i_1,:), sin1(i,i_1,:), width, cut_distance, r_width, c_width)
+            do j_1 = 1, ni
+
+                selfl21(i) = selfl21(i) + atomic_distl2(q1(i,i_1,:,:), q1(i,j_1,:,:), n1(i), n1(i), &
+                    & sin1(i,i_1,:), sin1(i,j_1,:), width, cut_distance, r_width, c_width) &
+                    & * (r_width2/(r_width2 + (z1(i,i_1,1) - z1(i,j_1,1))**2) * &
+                       & c_width2/(c_width2 + (z1(i,i_1,2) - z1(i,j_1,2))**2))
+
+            enddo
         enddo
     enddo
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(ni)
+    !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl22)
     do i = 1, nm2
         ni = n2(i)
         do i_1 = 1, ni
-            selfl22(i,i_1) = atomic_distl2(q2(i,i_1,:,:), q2(i,i_1,:,:), n2(i), n2(i), &
-                & sin2(i,i_1,:), sin2(i,i_1,:), width, cut_distance, r_width, c_width)
+            do j_1 = 1, ni
+
+                selfl22(i) = selfl22(i) + atomic_distl2(q2(i,i_1,:,:), q2(i,j_1,:,:), n2(i), n2(i), &
+                    & sin2(i,i_1,:), sin2(i,j_1,:), width, cut_distance, r_width, c_width) &
+                    &* (r_width2/(r_width2 + (z2(i,i_1,1) - z2(i,j_1,1))**2) * &
+                      & c_width2/(c_width2 + (z2(i,i_1,2) - z2(i,j_1,2))**2))
+
+
+            enddo
         enddo
     enddo
     !$OMP END PARALLEL DO
@@ -911,7 +940,7 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
     kernels(:,:,:) = 0.0d0
     atomic_distance(:,:) = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(l2dist,atomic_distance,ni,nj) schedule(dynamic)
+    !$OMP PARALLEL DO PRIVATE(l2dist,atomic_distance,ni,nj,mol_dist) schedule(dynamic)
     do j = 1, nm2
         nj = n2(j)
         do i = 1, nm1
@@ -925,17 +954,18 @@ subroutine fget_global_kernels_arad(q1, q2, z1, z2, n1, n2, sigmas, nm1, nm2, ns
                     l2dist = atomic_distl2(q1(i,i_1,:,:), q2(j,j_1,:,:), n1(i), n2(j), &
                         & sin1(i,i_1,:), sin2(j,j_1,:), width, cut_distance, r_width, c_width)
 
-                    l2dist = selfl21(i,i_1) + selfl22(j,j_1) - 2.0d0 * l2dist &
-                        & * (r_width2/(r_width2 + (z1(i,i_1,1) - z2(j,j_1,1))**2) * &
-                        & c_width2/(c_width2 + (z1(i,i_1,2) - z2(j,j_1,2))**2))
+                    L2dist =  l2dist * (r_width2/(r_width2 + (z1(i,i_1,1) - z2(j,j_1,1))**2) * &
+                       & c_width2/(c_width2 + (z1(i,i_1,2) - z2(j,j_1,2))**2))
 
                     atomic_distance(i_1,j_1) = l2dist
 
                 enddo
             enddo
 
+            mol_dist = selfl21(i) + selfl22(j) - 2.0d0 * sum(atomic_distance(:ni,:nj))
+
             do k = 1, nsigmas
-                kernels(k, i, j) =  exp(sum(atomic_distance(:ni,:nj)) * inv_sigma2(k))
+                kernels(k, i, j) =  exp(mol_dist * inv_sigma2(k))
             enddo
 
         enddo
