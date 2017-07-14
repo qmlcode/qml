@@ -1023,6 +1023,8 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
 
     allocate(selfl21(nm1))
 
+    selfl21 = 0.0d0
+
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do a = 1, nm1
         ni = n1(a)
@@ -1307,6 +1309,9 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
 
     allocate(selfl21(nm1))
     allocate(selfl22(nm2))
+
+    selfl21 = 0.0d0
+    selfl22 = 0.0d0
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do a = 1, nm1
