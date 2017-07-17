@@ -504,7 +504,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, sin_m, cos_m) REDUCTION(+:cosp1,sinp1)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, sin_m, cos_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -537,7 +537,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL do
+    ! !$OMP END PARALLEL do
 
     allocate(cosp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
     allocate(sinp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
@@ -545,7 +545,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp2 = 0.0d0
     sinp2 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp2,sinp2)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp2,sinp2)
     do a = 1, nm2
         ni = n2(a)
 
@@ -578,7 +578,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL do
+    ! !$OMP END PARALLEL do
 
     allocate(selfl21(nm1, maxval(n1)))
     allocate(selfl22(nm2, maxval(n2)))
@@ -774,7 +774,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp1,sinp1)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -807,7 +807,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL DO
+    ! !$OMP END PARALLEL DO
 
     allocate(selfl21(nm1, maxval(n1)))
 
@@ -986,7 +986,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp1,sinp1)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -1019,9 +1019,11 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL DO
+    ! !$OMP END PARALLEL DO
 
     allocate(selfl21(nm1))
+
+    selfl21 = 0.0d0
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do a = 1, nm1
@@ -1229,7 +1231,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp1 = 0.0d0
     sinp1 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, sin_m, cos_m) REDUCTION(+:cosp1,sinp1)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, sin_m, cos_m) REDUCTION(+:cosp1,sinp1)
     do a = 1, nm1
         ni = n1(a)
 
@@ -1262,7 +1264,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL do
+    ! !$OMP END PARALLEL do
 
     allocate(cosp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
     allocate(sinp2(nm2, maxval(n2), pmax2, order, maxval(nneigh2)))
@@ -1270,7 +1272,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     cosp2 = 0.0d0
     sinp2 = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp2,sinp2)
+    ! !$OMP PARALLEL DO PRIVATE(ni, nneighi, ksi3, pj, pk, theta, cos_m, sin_m) REDUCTION(+:cosp2,sinp2)
     do a = 1, nm2
         ni = n2(a)
 
@@ -1307,6 +1309,9 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
 
     allocate(selfl21(nm1))
     allocate(selfl22(nm2))
+
+    selfl21 = 0.0d0
+    selfl22 = 0.0d0
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:selfl21)
     do a = 1, nm1
