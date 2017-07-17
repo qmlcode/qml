@@ -1305,7 +1305,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL do
+    ! !$OMP END PARALLEL do
 
     allocate(selfl21(nm1))
     allocate(selfl22(nm2))
