@@ -45,7 +45,7 @@ ext_ffchl_kernels = Extension(name = 'ffchl_kernels',
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
