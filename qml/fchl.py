@@ -527,7 +527,7 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
                 na1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
-def get_atomic_force_alphas_fchl(A, F, sigmas, \
+def get_atomic_force_alphas_fchl(A, F, sigmas, llambda=1e-7, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
@@ -583,7 +583,7 @@ def get_atomic_force_alphas_fchl(A, F, sigmas, \
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
-    return fget_atomic_force_alphas_fchl(A, F, neighbors1, sigmas, \
+    return fget_atomic_force_alphas_fchl(A, F, neighbors1, sigmas, llambda, \
                 na1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
  

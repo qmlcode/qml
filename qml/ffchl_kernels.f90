@@ -1905,7 +1905,7 @@ end subroutine fget_atomic_symmetric_kernels_fchl
 
 
 subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
-       & sigmas, na1, nsigmas, &
+       & sigmas, lambda, na1, nsigmas, &
        & t_width, d_width, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, alphas)
 
@@ -1927,6 +1927,7 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
 
     ! Sigma in the Gaussian kernel
     double precision, dimension(:), intent(in) :: sigmas
+    double precision, intent(in) :: lambda
 
     ! Number of molecules
     integer, intent(in) :: na1
@@ -1951,13 +1952,16 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
     double precision, dimension(:,:), intent(in) :: pd
 
     ! Resulting alpha vector
-    double precision, allocatable, dimension(:,:,:) :: kernels
     double precision, dimension(nsigmas,na1), intent(out) :: alphas
-    double precision, allocatable, dimension(:) :: y
-    double precision, allocatable, dimension(:,:,:,:)  :: l2_displaced
-    double precision, allocatable, dimension(:,:)  :: kernel_delta
-    double precision, allocatable, dimension(:,:,:)  :: kernel_derivatives
-    double precision, allocatable, dimension(:,:)  :: kernel_scratch
+
+    double precision, allocatable, dimension(:,:) :: y
+    !DEC$ attributes align: 64:: y
+
+    double precision, allocatable, dimension(:,:,:)  :: kernel_delta
+    !DEC$ attributes align: 64:: kernel_delta
+
+    double precision, allocatable, dimension(:,:,:)  :: kernel_scratch
+    !DEC$ attributes align: 64:: kernel_scratch
 
     ! Internal counters
     integer :: i, j, k
@@ -1993,13 +1997,14 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
 
     double precision :: ang_norm2
 
-    double precision :: mol_dist
-    double precision, parameter :: dx = 0.0001d0
+    double precision, parameter :: dx = 0.0005d0
     double precision, parameter :: inv_2dx = 1.0d0 / (2.0d0 * dx)
+    double precision :: dx_sign 
     
     integer :: maxneigh1
 
     ! write (*,*) "INIT"
+
 
 
     maxneigh1 = maxval(nneigh1)
@@ -2058,6 +2063,7 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
     enddo
     !$OMP END PARALLEL DO
    
+    ! write (*,*) "SELF SCALAR"
     allocate(self_scalar1(na1))
 
     self_scalar1 = 0.0d0
@@ -2074,22 +2080,42 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
     enddo
     !$OMP END PARALLEL DO
 
-    allocate(l2_displaced(na1,na1,3,2))
-    l2_displaced = 0.0d0
+    ! write (*,*) "ALLOCATE AND CLEAR"
+    allocate(kernel_delta(na1,na1,nsigmas))
+
+    allocate(kernel_scratch(na1,na1,nsigmas))
+    kernel_scratch = 0.0d0
 
     allocate(ksi1_displaced(maxneigh1))
-    allocate(fourier_displaced(2, pmax1, order, maxneigh1))
     ksi1_displaced = 0.0d0
+
+    allocate(fourier_displaced(2, pmax1, order, maxneigh1))
     fourier_displaced = 0.0d0
 
-    ! write (*,*) "DERIVATIVE"
-    !$OMP PARALLEL DO schedule(dynamic), &
-    !$OMP& PRIVATE(l2dist,self_scalar1_displaced,ksi1_displaced,fourier_displaced)
-    do i = 1, na1
+    allocate(y(na1,nsigmas))
+    y = 0.0d0
+
+    alphas = 0.0d0 
+
+    do xyz = 1, 3
+
+        kernel_delta = 0.0d0
+
+
+        ! Plus/minus displacemenets
         do pm = 1, 2
-           do xyz = 1, 3
        
-                ksi1_displaced(:) = get_twobody_weights(x1_displaced(i,:,:,xyz,pm), nneigh1(i), &
+            ! Get the sign and magnitude of displacement 
+            dx_sign = ((dble(pm) - 1.5d0) * 2.0d0) * inv_2dx
+        
+            ! write (*,*) "DERIVATIVE", xyz, ((dble(pm) - 1.5d0) * 2.0d0) 
+
+            !$OMP PARALLEL DO schedule(dynamic), &
+            !$OMP& PRIVATE(l2dist,self_scalar1_displaced,ksi1_displaced,fourier_displaced)
+            do i = 1, na1
+       
+                ksi1_displaced(:) = &
+                    & get_twobody_weights(x1_displaced(i,:,:,xyz,pm), nneigh1(i), &
                     & two_body_power, maxneigh1)
 
                 fourier_displaced(:,:,:,:) = get_threebody_fourier(x1_displaced(i,:,:,xyz,pm), & 
@@ -2112,86 +2138,66 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
                         & t_width, d_width, cut_distance, order, &
                         & pd, ang_norm2, distance_scale, angular_scale, alchemy)
 
-                    ! Note I<->J ?? Possiblity for a bug here?
-                    l2_displaced(i,j,xyz,pm) = self_scalar1_displaced &
+                    ! l2_displaced(i,j,xyz,pm) = self_scalar1_displaced &
+                    !    & + self_scalar1(j) - 2.0d0 * l2dist
+
+                    l2dist = self_scalar1_displaced &
                         & + self_scalar1(j) - 2.0d0 * l2dist
-                enddo
-            enddo
-        enddo
-    enddo
-    !$OMP END PARALLEL DO
-    
-    allocate(kernel_delta(na1,na1))
-    ! allocate(kernel_derivatives(na1,na1,3))
-    allocate(kernel_scratch(na1,na1))
-    
-    allocate(y(na1))
-    alphas = 0.0d0 
 
-    ! write (*,*) "ALPHA ASSEMBLY"
-    do k = 1, nsigmas
-        kernel_scratch(:,:) = 0.0d0
-        y(:) = 0.0d0
+                    do k = 1, nsigmas                
+                        kernel_delta(i,j,k) = kernel_delta(i,j,k) + &
+                            & exp(l2dist * inv_sigma2(k)) * dx_sign
+                    enddo
 
-        ! kernel_derivatives(:,:,:) = 0.0d0
-
-        do xyz = 1, 3
-
-            ! write (*,*) "    SIGMA", k, xyz
-            !$OMP PARALLEL DO
-            do j = 1, na1
-                do i = 1, na1
-                    
-                    kernel_delta(i,j) = (exp(l2_displaced(i,j,xyz,2)*inv_sigma2(k)) &
-                                & - exp(l2_displaced(i,j,xyz,1)*inv_sigma2(k))) * inv_2dx
                 enddo
             enddo
             !$OMP END PARALLEL DO
-
+        enddo
+    
+        do k = 1, nsigmas                
             ! write (*,*) "    DGEMM"
-            ! DGEMM call corresponds to: C := C + K^T * K
-            call dgemm("t", "n", na1, na1, na1, 1.0d0, kernel_delta, na1, &
-                        & kernel_delta, na1, 1.0d0, kernel_scratch, na1)
-          
+            ! DGEMM call corresponds to: C := 1.0 *  K^T * K + 1.0 * C
+            call dgemm("t", "n", na1, na1, na1, 1.0d0, kernel_delta(:,:,k), na1, &
+                        & kernel_delta(:,:,k), na1, 1.0d0, kernel_scratch(:,:,k), na1)
+            
 
             ! write (*,*) "    DSYMV"
-            ! DGEMV call corresponds to Y := Y + K^T * F
-            call dgemv("t", na1, na1, 1.0d0, kernel_delta(:,:), na1, &
-                        & forces(:,xyz), 1, 1.0d0, y, 1)
-
+            ! DGEMV call corresponds to alphas := 1.0 * K^T * F + 1.0 * alphas
+            call dgemv("T", na1, na1, 1.0d0, kernel_delta(:,:,k), na1, &
+                            & forces(:,xyz), 1, 1.0d0, y(:,k), 1)
         enddo
-        
+
+    enddo
+   
+    do k = 1, nsigmas
         do i = 1, na1
-            kernel_scratch(i,i) = kernel_scratch(i,i) + 1.0e-7
+            kernel_scratch(i,i,k) = kernel_scratch(i,i,k) + lambda
         enddo
+    enddo
 
+    do k = 1, nsigmas                
         ! write (*,*) "  DPOTRF"
-        call dpotrf("U", na1, kernel_scratch, na1, info)
+        call dpotrf("U", na1, kernel_scratch(:,:,k), na1, info)
         if (info > 0) then
-            write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
-            write (*,*) "WARNING: The", info, "-th leading order is not positive definite."
+            write (*,*) "QML WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
+            write (*,*) "QML WARNING: The", info, "-th leading order is not positive definite."
         else if (info < 0) then
-            write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
-            write (*,*) "WARNING: The", -info, "-th argument had an illegal value."
+            write (*,*) "QML WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
+            write (*,*) "QML WARNING: The", -info, "-th argument had an illegal value."
         endif
 
         ! write (*,*) "  DPOTRS"
-        call dpotrs("U", na1, 1, kernel_scratch, na1, y, na1, info)
+        call dpotrs("U", na1, 1, kernel_scratch(:,:,k), na1, y(:,k), na1, info)
         if (info < 0) then
-            write (*,*) "WARNING: Error in LAPACK Cholesky solver DPOTRS()."
-            write (*,*) "WARNING: The", -info, "-th argument had an illegal value."
+            write (*,*) "QML WARNING: Error in LAPACK Cholesky solver DPOTRS()."
+            write (*,*) "QML WARNING: The", -info, "-th argument had an illegal value."
         endif
 
-        alphas(k,:) = y(:)
-
+        alphas(k,:) = y(:,k)
     enddo
 
-    deallocate(y)
-    ! deallocate(kernels)
     deallocate(kernel_delta)
-    ! deallocate(kernel_derivatives)
     deallocate(kernel_scratch)
-    deallocate(l2_displaced)
     deallocate(self_scalar1)
     deallocate(cosp1)
     deallocate(sinp1)
@@ -2286,20 +2292,21 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
 
     integer :: dim1, dim2, dim3
     integer :: xyz, pm
-    integer :: info
 
     double precision :: ang_norm2
 
-    double precision :: mol_dist
     double precision, parameter :: dx = 0.0001d0
     double precision, parameter :: inv_2dx = 1.0d0 / (2.0d0 * dx)
+    double precision :: dx_sign
     
     integer :: maxneigh1
     integer :: maxneigh2
 
+    ! write (*,*) "INIT"
+    
+    ! write (*,*) "CLEARING KERNEL MEM"
     kernels = 0.0d0
 
-    ! write (*,*) "INIT"
 
 
     maxneigh1 = maxval(nneigh1(:))
@@ -2318,7 +2325,7 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
 
     inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
 
-    write (*,*) "DISPLACED REPS"
+    ! write (*,*) "DISPLACED REPS"
     
     dim1 = size(x2, dim=1)
     dim2 = size(x2, dim=2)
@@ -2333,7 +2340,7 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     enddo
     !$OMP END PARALLEL do
 
-    write (*,*) "KSI1"
+    ! write (*,*) "KSI1"
     allocate(ksi1(na1, maxneigh1))
 
     ksi1 = 0.0d0
@@ -2345,7 +2352,7 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     enddo
     !$OMP END PARALLEL do
   
-    write (*,*) "FOURIER"
+    ! write (*,*) "FOURIER"
     allocate(cosp1(na1, pmax1, order, maxneigh1))
     allocate(sinp1(na1, pmax1, order, maxneigh1))
 
@@ -2365,7 +2372,7 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     !$OMP END PARALLEL DO
    
     
-    write (*,*) "SELF SCALAR"
+    ! write (*,*) "SELF SCALAR"
     allocate(self_scalar1(na1))
 
     self_scalar1 = 0.0d0
@@ -2381,23 +2388,26 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     enddo
     !$OMP END PARALLEL DO
 
-    allocate(l2_displaced(na2,na1,3,2))
-    l2_displaced = 0.0d0
 
     allocate(ksi2_displaced(maxneigh2))
     allocate(fourier_displaced(2, pmax2, order, maxneigh2))
     ksi2_displaced = 0.0d0
     fourier_displaced = 0.0d0
 
-    write (*,*) "KERNEL DERIVATIVES"
-    !$OMP PARALLEL DO schedule(dynamic), &
-    !$OMP& PRIVATE(l2dist,self_scalar2_displaced,ksi2_displaced,fourier_displaced)
-    do i = 1, na2
-        do pm = 1, 2
+    ! write (*,*) "KERNEL DERIVATIVES"
+    do pm = 1, 2
+       
+        ! Get the sign and magnitude of displacement 
+        dx_sign = ((dble(pm) - 1.5d0) * 2.0d0) * inv_2dx
+
+        !$OMP PARALLEL DO schedule(dynamic), &
+        !$OMP& PRIVATE(l2dist,self_scalar2_displaced,ksi2_displaced,fourier_displaced)
+        do i = 1, na2
            do xyz = 1, 3
        
-                ksi2_displaced(:) = get_twobody_weights(x2_displaced(i,:,:,xyz,pm),  &
-                    & nneigh2(i), two_body_power,maxneigh2)
+                ksi2_displaced(:) = &
+                    & get_twobody_weights(x2_displaced(i,:,:,xyz,pm), nneigh2(i), &
+                    & two_body_power, maxneigh2)
 
                 fourier_displaced(:,:,:,:) = get_threebody_fourier(x2_displaced(i,:,:,xyz,pm), & 
                     & nneigh2(i), order, three_body_power, pmax2, order, maxneigh2)
@@ -2419,34 +2429,20 @@ subroutine fget_atomic_force_kernels_fchl(x1, x2, nneigh1, nneigh2, &
                         & t_width, d_width, cut_distance, order, &
                         & pd, ang_norm2, distance_scale, angular_scale, alchemy)
 
-                    l2_displaced(i,j,xyz,pm) = self_scalar2_displaced &
+                    l2dist = self_scalar2_displaced &
                         & + self_scalar1(j) - 2.0d0 * l2dist
+
+                    do k = 1, nsigmas                
+                        kernels(k,xyz,i,j) = kernels(k,xyz,i,j) + &
+                            & exp(l2dist * inv_sigma2(k)) * dx_sign
+                    enddo
+
                 enddo
             enddo
         enddo
-    enddo
-    !$OMP END PARALLEL DO
-
-        
-
-    do k = 1, nsigmas
-        do xyz = 1, 3
-            !$OMP PARALLEL DO
-            do j = 1, na1
-                do i = 1, na2
-                    
-                kernels(k,xyz,i,j) = (exp(l2_displaced(i,j,xyz,2)*inv_sigma2(k)) &
-                                 & - exp(l2_displaced(i,j,xyz,1)*inv_sigma2(k))) * inv_2dx
-
-                ! kernels(k,xyz,i,j) = (sqrt(l2_displaced(i,j,xyz,2) + sigmas(k)**2) &
-                !                   & - sqrt(l2_displaced(i,j,xyz,1) + sigmas(k)**2)) * inv_2dx
-                enddo
-            enddo
-            !$OMP END PARALLEL DO
-        enddo
+        !$OMP END PARALLEL DO
     enddo
 
-    ! deallocate(l2_displaced)
     deallocate(self_scalar1)
     deallocate(cosp1)
     deallocate(sinp1)
