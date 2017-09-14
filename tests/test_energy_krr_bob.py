@@ -110,7 +110,7 @@ def test_krr_bob():
 
     mae = np.mean(np.abs(Ys - Yss))
     print(mae)
-    assert mae < 6.0, "ERROR: Too high MAE!"
+    assert mae < 2.6, "ERROR: Too high MAE!"
 
 if __name__ == "__main__":
 
