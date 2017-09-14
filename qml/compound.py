@@ -214,7 +214,7 @@ class Compound(object):
             sorting = sorting, central_cutoff = central_cutoff, central_decay = central_decay,
             interaction_cutoff = interaction_cutoff, interaction_decay = interaction_decay)
 
-    def generate_bob(self, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
+    def generate_bob(self, size=23, asize = {"O":3, "C":7, "N":3, "H":16, "S":1}):
         """ Creates a Bag of Bonds (BOB) representation of a molecule.
             The representation expands on the coulomb matrix representation.
             For each element a bag (vector) is constructed for self interactions

@@ -51,7 +51,7 @@ def get_energies(filename):
 
     return energies
 
-def test_krr_cmat():
+def test_krr_bob():
 
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -70,7 +70,7 @@ def test_krr_cmat():
         mol.properties = data[xyz_file]
 
         # This is a Molecular Coulomb matrix sorted by row norm
-        mol.generate_coulomb_matrix(size=23, sorting="row-norm")
+        mol.generate_bob()
 
         mols.append(mol)
 
@@ -94,8 +94,8 @@ def test_krr_cmat():
     Ys = np.array([mol.properties for mol in test])
 
     # Set hyper-parameters
-    sigma = 10**(4.2)
-    llambda = 10**(-10.0)
+    sigma = 26214.40
+    llambda = 1e-10
 
     # Generate training Kernel
     K = laplacian_kernel(X, X, sigma)
@@ -109,9 +109,9 @@ def test_krr_cmat():
     Yss = np.dot(Ks.transpose(), alpha)
 
     mae = np.mean(np.abs(Ys - Yss))
-
+    print(mae)
     assert mae < 6.0, "ERROR: Too high MAE!"
 
 if __name__ == "__main__":
 
-    test_krr_cmat()
+    test_krr_bob()

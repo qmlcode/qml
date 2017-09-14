@@ -69,7 +69,7 @@ def test_representations():
     coulomb_matrix(mols, size, path)
     atomic_coulomb_matrix(mols, size, path)
     eigenvalue_coulomb_matrix(mols, size, path)
-    bob(mols, asize, path)
+    bob(mols, size, asize, path)
 
 def coulomb_matrix(mols, size, path):
 
@@ -167,11 +167,10 @@ def eigenvalue_coulomb_matrix(mols, size, path):
     X_ref = np.loadtxt(path + "/data/eigenvalue_coulomb_matrix_representation.txt")
     assert np.allclose(X_test, X_ref), "Error in eigenvalue coulomb matrix representation"
 
-def bob(mols, asize, path):
+def bob(mols, size, asize, path):
 
-    # Generate coulomb matrix representation, sorted by row-norm
     for i, mol in enumerate(mols): 
-        mol.generate_bob(asize)
+        mol.generate_bob(size=size, asize=asize)
 
     X_test = np.asarray([mol.representation for mol in mols])
     X_ref = np.loadtxt(path + "/data/bob_representation.txt")
