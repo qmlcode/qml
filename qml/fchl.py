@@ -23,14 +23,14 @@
 import numpy as np
 import copy
 
-from .ffchl_kernels import fget_kernels_fchl
-from .ffchl_kernels import fget_symmetric_kernels_fchl
-from .ffchl_kernels import fget_global_kernels_fchl
-from .ffchl_kernels import fget_global_symmetric_kernels_fchl
-from .ffchl_kernels import fget_atomic_kernels_fchl
-from .ffchl_kernels import fget_atomic_symmetric_kernels_fchl
-from .ffchl_kernels import fget_atomic_force_alphas_fchl
-from .ffchl_kernels import fget_atomic_force_kernels_fchl
+from .ffchl_module import fget_kernels_fchl
+from .ffchl_module import fget_symmetric_kernels_fchl
+from .ffchl_module import fget_global_kernels_fchl
+from .ffchl_module import fget_global_symmetric_kernels_fchl
+from .ffchl_module import fget_atomic_kernels_fchl
+from .ffchl_module import fget_atomic_symmetric_kernels_fchl
+from .ffchl_module import fget_atomic_force_alphas_fchl
+from .ffchl_module import fget_atomic_force_kernels_fchl
 
 from .alchemy import get_alchemy
 
