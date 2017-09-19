@@ -31,6 +31,7 @@ from .ffchl_module import fget_atomic_kernels_fchl
 from .ffchl_module import fget_atomic_symmetric_kernels_fchl
 from .ffchl_module import fget_atomic_force_alphas_fchl
 from .ffchl_module import fget_atomic_force_kernels_fchl
+from .ffchl_module import fget_symmetric_scalar_vector_kernels_fchl
 
 from .alchemy import get_alchemy
 
@@ -656,3 +657,92 @@ def get_atomic_force_kernels_fchl(A, B, sigmas,
 
     return fget_atomic_force_kernels_fchl(A, B, neighbors1, neighbors2, sigmas, \
                 na1, na2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+
+    
+def get_force_energy_alphas_fchl(A, F, E, sigmas, llambda=1e-7, \
+        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
+        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", \
+        two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
+
+        Where :math:`A_{i}` and :math:`A_{j}` are FCHL representation vectors.
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+        Note, that this kernel will ONLY work with FCHL representations as input.
+
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+        :param t_width: Gaussian width for the angular (theta) terms.
+        :type t_width: float
+        :param d_width: Gaussian width for the distance terms.
+        :type d_width: float
+        :param cut_distance: Cut-off radius.
+        :type cut_distance: float
+        :param r_width: Gaussian width along rows in the periodic table.
+        :type r_width: float
+        :param c_width: Gaussian width along columns in the periodic table.
+        :type c_width: float
+        :param order: Fourier-expansion truncation order.
+        :type order: integer
+        :param scale_distance: Weight for distance-dependent terms.
+        :type scale_distance: float
+        :param scale_angular: Weight for angle-dependent terms.
+        :type scale_angular: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, N),
+        :rtype: numpy array
+    """
+
+    atoms_max = A.shape[1]
+    neighbors_max = A.shape[3]
+
+    nm1 = A.shape[0]
+    N1 = np.zeros((nm1),dtype=np.int32)
+
+    for a in range(nm1):
+        N1[a] = len(np.where(A[a,:,1,0] > 0.0001)[0])
+
+    neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
+
+    for a, representation in enumerate(A):
+        ni = N1[a]
+        for i, x in enumerate(representation[:ni]):
+            neighbors1[a,i] = len(np.where(x[0]< cut_distance)[0])
+
+    nsigmas = len(sigmas)
+
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
+        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
+        elemental_vectors=elemental_vectors)
+
+    sigmas = np.array(sigmas)
+    assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
+
+    # Until here, everything is identical to the local symmmetrical kernel.
+
+    na1 = np.sum(N1[:nm1])
+
+    X1 = np.zeros((na1, 5, neighbors_max))
+    forces = np.zeros((na1, 3))
+    energies = np.zeros((na1)) 
+
+    index = 0
+    for a in range(nm1):
+        for i in range(N1[a]):
+
+            X1[index, :5, :atoms_max] = A[a, i, :5, :neighbors_max] 
+            forces[index,:3] = F[a][i][:3]
+            energies[index] = E[a]
+
+            index += 1
+
+    print(X1.shape)
+
+    return fget_symmetric_scalar_vector_kernels_fchl(A, X1, forces, energies, neighbors1, sigmas, \
+                llambda, nm1, na1, N1, nsigmas, t_width, d_width, cut_distance, order, pd, \
+                scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+
