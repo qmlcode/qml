@@ -244,12 +244,12 @@ subroutine fget_atomic_force_alphas_fchl(x1, forces, nneigh1, &
 
         do k = 1, nsigmas
 
-            write (*,*) "    DSYRK"
+            write (*,*) "    DSYRK", sigmas(k)
             ! DSYRK call corresponds to: C := 1.0 *  K^T * K + 1.0 * C
             call dsyrk("U", "T", na1, na1, 1.0d0, kernel_delta(:,:,k), na1, &
                 & 1.0d0, kernel_scratch(:,:,k), na1)
 
-            write (*,*) "    DGEMV"
+            write (*,*) "    DGEMV", sigmas(k)
             ! DGEMV call corresponds to y := 1.0 * K^T * F + 1.0 * y
             call dgemv("T", na1, na1, 1.0d0, kernel_delta(:,:,k), na1, &
                             & forces(:,xyz), 1, 1.0d0, y(:,k), 1)
@@ -847,7 +847,6 @@ subroutine fget_scalar_vector_alphas_fchl(x1, forces, energies, nneigh1, &
     do i = 2, nm1
         istart(i) = istart(i-1) + n1(i)
         iend(i) = iend(i-1) + n1(i)
-        write(*,*) i, istart(i), iend(i)
     enddo
 
     do i = 1, nm1
@@ -912,6 +911,7 @@ subroutine fget_scalar_vector_alphas_fchl(x1, forces, energies, nneigh1, &
         e_scratch = 0.0d0
 
         ! DGEMM call corresponds to: C := 1.0 *  K^T * K + 1.0 * C
+        write (*,*) "    DGEMM", sigmas(k)
         call dgemm("t", "n", nm1, nm1, nm1, 1.0d0, kernel_molecular(:,:,k), nm1, &
             & kernel_molecular(:,:,k), nm1, 0.0d0, kernel_molecular_scratch(:,:), nm1)
 
@@ -923,7 +923,7 @@ subroutine fget_scalar_vector_alphas_fchl(x1, forces, energies, nneigh1, &
             enddo
         enddo
 
-        write (*,*) "    DGEMV"
+        write (*,*) "    DGEMV", sigmas(k)
         ! DGEMV call corresponds to alphas := 1.0 * K^T * F + 1.0 * alphas
         call dgemv("T", nm1, nm1, 1.0d0, kernel_molecular(:,:,k), nm1, &
                         & e(:), 1, 0.0d0, e_scratch(:), 1)

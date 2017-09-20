@@ -656,8 +656,8 @@ def get_atomic_force_kernels_fchl(A, B, sigmas,
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1
 
-    print(neighbors1)
-    print(neighbors2)
+    # print(neighbors1)
+    # print(neighbors2)
     return fget_atomic_force_kernels_fchl(A, B, neighbors1, neighbors2, sigmas, \
                 na1, na2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
@@ -745,7 +745,7 @@ def get_scalar_vector_alphas_fchl(A, F, E, sigmas, llambda=1e-7, \
 
             index += 1
 
-    print(X1.shape)
+    # print(X1.shape)
 
     return fget_scalar_vector_alphas_fchl(X1, forces, energies, nneigh1, sigmas, \
                 llambda, nm1, na1, N1, nsigmas, t_width, d_width, cut_distance, order, pd, \
@@ -846,7 +846,7 @@ def get_scalar_vector_kernels_fchl(A, B, sigmas,
             nneigh1[index] = neighbors1[a,i]
             index += 1
 
-    print(X1.shape)
+    # print(X1.shape)
 
     index = 0
     for a in range(nm2):
@@ -855,14 +855,14 @@ def get_scalar_vector_kernels_fchl(A, B, sigmas,
             nneigh2[index] = neighbors2[a,i]
             index += 1
 
-    print(X2.shape)
+    # print(X2.shape)
 
-    np.save("X1_new.npy", X1)
-    np.save("X2_new.npy", X2)
-    print("saved")
+    # np.save("X1_new.npy", X1)
+    # np.save("X2_new.npy", X2)
+    # print("saved")
 
-    print(nneigh1)
-    print(nneigh2)
+    # print(nneigh1)
+    # print(nneigh2)
     
     return fget_scalar_vector_kernels_fchl(X1, X2, nneigh1, nneigh2, sigmas, \
                 na1, na2, nm1, nm2, N1, N2, nsigmas, t_width, d_width, cut_distance, order, \

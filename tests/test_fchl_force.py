@@ -25,7 +25,7 @@ SIGMAS = [0.25]
 # SIGMAS = [0.01 * 2**i for i in range(20)]
 SIZE = 19
 
-TRAINING = 40
+TRAINING = 320
 TEST =  100
 
 def csv_to_atomic_reps(csv_filename):
@@ -104,7 +104,7 @@ def test_old_forces():
                     alchemy="off"
                 )[0]
 
-    print(alphas)
+    # print(alphas)
 
     np.save("X1_old.npy", X)
     np.save("X2_old.npy", Xs)
@@ -114,15 +114,15 @@ def test_old_forces():
                     cut_distance=CUT_DISTANCE, 
                     alchemy="off"
                 )[0]
-    print(Ks)
+    # print(Ks)
     np.save("Ks_old.npy", Ks)
 
     Yss = np.einsum('jkl,l->kj', Ks, alphas)
 
     print("RMSE FORCE COMPONENT", np.mean(np.abs(Yss - Ys)))
 
-    print(Ys[:19])
-    print(Yss[:19])
+    # print(Ys[:19])
+    # print(Yss[:19])
 
 
 def test_new_forces():
@@ -148,27 +148,27 @@ def test_new_forces():
                     alchemy="off"
                 )[0]
 
-    print(alphas)
+    # print(alphas)
 
-    np.save("alpha_new.npy", alphas)
+    # np.save("alpha_new.npy", alphas)
     Ks = get_scalar_vector_kernels_fchl(X, Xs, SIGMAS,
                     cut_distance=CUT_DISTANCE, 
                     alchemy="off"
                 )[0]
-    print(Ks)
-    np.save("Ks_new.npy", Ks)
+    # print(Ks)
+    # np.save("Ks_new.npy", Ks)
 
     Fss = np.einsum('jkl,l->kj', Ks, alphas)
 
     Fs = np.array(Fs)
     Fs = np.reshape(Fs, (Fss.shape[0], Fss.shape[1]))
 
-    print(Fs.shape)
-    print(Fss.shape)
+    # print(Fs.shape)
+    # print(Fss.shape)
     print("RMSE FORCE COMPONENT", np.mean(np.abs(Fss - Fs)))
 
-    print(Fs[:19])
-    print(Fss[:19])
+    #print(Fs[:19])
+    #print(Fss[:19])
     
 
 if __name__ == "__main__":
@@ -176,26 +176,26 @@ if __name__ == "__main__":
     test_old_forces()
     test_new_forces()
 
-    new = np.load("alpha_new.npy")
-    old = np.load("alpha_old.npy")
+    # new = np.load("alpha_new.npy")
+    # old = np.load("alpha_old.npy")
 
-    print("ALPHA DEVIATION:", np.amax(np.abs(old-new)))
-    
-    new = np.load("Ks_new.npy")
-    old = np.load("Ks_old.npy")
+    # print("ALPHA DEVIATION:", np.amax(np.abs(old-new)))
+    # 
+    # new = np.load("Ks_new.npy")
+    # old = np.load("Ks_old.npy")
 
-    print("K* DEVIATION:", np.amax(np.abs(old-new)))
-    # print(new - old)
-    
-    new = np.load("X1_new.npy")
-    old = np.load("X1_old.npy")
+    # print("K* DEVIATION:", np.amax(np.abs(old-new)))
+    # # print(new - old)
+    # 
+    # new = np.load("X1_new.npy")
+    # old = np.load("X1_old.npy")
 
-    print("X DEVIATION:", np.amax(np.abs(old-new)))
-    # print(new - old)
+    # print("X DEVIATION:", np.amax(np.abs(old-new)))
+    # # print(new - old)
 
 
-    new = np.load("X2_new.npy")
-    old = np.load("X2_old.npy")
+    # new = np.load("X2_new.npy")
+    # old = np.load("X2_old.npy")
 
-    print("X* DEVIATION:", np.amax(np.abs(old-new)))
-    # print(new - old)
+    # print("X* DEVIATION:", np.amax(np.abs(old-new)))
+    # # print(new - old)
