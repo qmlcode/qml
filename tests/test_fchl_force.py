@@ -14,16 +14,19 @@ from qml.math import cho_solve
 from qml.fchl import generate_fchl_representation
 from qml.fchl import get_atomic_force_alphas_fchl
 from qml.fchl import get_atomic_force_kernels_fchl
-from qml.fchl import get_force_energy_alphas_fchl
-from qml.fchl import get_local_symmetric_kernels_fchl
+from qml.fchl import get_scalar_vector_alphas_fchl
+from qml.fchl import get_scalar_vector_kernels_fchl
 
-np.set_printoptions(linewidth=100, suppress=True)
+np.set_printoptions(linewidth=19999999999, suppress=True, edgeitems=10)
 
 CUT_DISTANCE = 1e6
 # SIGMAS = [5.0]
 SIGMAS = [0.25]
 # SIGMAS = [0.01 * 2**i for i in range(20)]
 SIZE = 19
+
+TRAINING = 40
+TEST =  100
 
 def csv_to_atomic_reps(csv_filename):
 
@@ -54,34 +57,6 @@ def csv_to_atomic_reps(csv_filename):
 
     return np.array(reps), np.array(y)
 
-def test_old_forces():
-
-    Xall, Yall = csv_to_atomic_reps("data/molecule_300.csv")
-
-    train = SIZE*40
-    test = SIZE*20
-
-    X = Xall[:train]
-    Y = Yall[:train]
-
-    Xs = Xall[-test:]
-    Ys = Yall[-test:]
-
-    alphas = get_atomic_force_alphas_fchl(X, Y, SIGMAS,
-                    cut_distance=CUT_DISTANCE, 
-                    alchemy="off"
-                )[0]
-
-    print(alphas)
-
-    Ks  = get_atomic_force_kernels_fchl(X, Xs, SIGMAS,
-                    cut_distance=CUT_DISTANCE, 
-                    alchemy="off"
-                )[0]
-
-    Yss = np.einsum('jkl,l->kj', Ks, alphas)
-
-    print("RMSE FORCE COMPONENT", np.mean(np.abs(Yss - Ys)))
 
 def csv_to_molecular_reps(csv_filename, force_key="forces", energy_key="energy"):
 
@@ -111,6 +86,45 @@ def csv_to_molecular_reps(csv_filename, force_key="forces", energy_key="energy")
     return np.array(x), f, e
 
 
+def test_old_forces():
+
+    Xall, Yall = csv_to_atomic_reps("data/molecule_300.csv")
+
+    train = SIZE*TRAINING
+    test = SIZE*TEST
+
+    X = Xall[:train]
+    Y = Yall[:train]
+
+    Xs = Xall[-test:]
+    Ys = Yall[-test:]
+
+    alphas = get_atomic_force_alphas_fchl(X, Y, SIGMAS,
+                    cut_distance=CUT_DISTANCE, 
+                    alchemy="off"
+                )[0]
+
+    print(alphas)
+
+    np.save("X1_old.npy", X)
+    np.save("X2_old.npy", Xs)
+
+    np.save("alpha_old.npy", alphas)
+    Ks  = get_atomic_force_kernels_fchl(X, Xs, SIGMAS,
+                    cut_distance=CUT_DISTANCE, 
+                    alchemy="off"
+                )[0]
+    print(Ks)
+    np.save("Ks_old.npy", Ks)
+
+    Yss = np.einsum('jkl,l->kj', Ks, alphas)
+
+    print("RMSE FORCE COMPONENT", np.mean(np.abs(Yss - Ys)))
+
+    print(Ys[:19])
+    print(Yss[:19])
+
+
 def test_new_forces():
     
     # Xall, Fall, Eall = csv_to_molecular_reps("data/02.csv",
@@ -118,28 +132,70 @@ def test_new_forces():
     Xall, Fall, Eall = csv_to_molecular_reps("data/molecule_300.csv", 
                                 force_key="forces", energy_key="om2_energy")
 
-    train = 40
-    test = 20
+    train = TRAINING
+    test = TEST
 
     X = Xall[:train]
     F = Fall[:train]
     E = Eall[:train]
+    
+    Xs = Xall[-test:]
+    Fs = Fall[-test:]
+    Es = Eall[-test:]
 
-    alphas = get_force_energy_alphas_fchl(X, F, E, SIGMAS,
+    alphas = get_scalar_vector_alphas_fchl(X, F, E, SIGMAS,
                     cut_distance=CUT_DISTANCE, 
                     alchemy="off"
                 )[0]
 
     print(alphas)
-    K = get_local_symmetric_kernels_fchl(X, SIGMAS,
+
+    np.save("alpha_new.npy", alphas)
+    Ks = get_scalar_vector_kernels_fchl(X, Xs, SIGMAS,
                     cut_distance=CUT_DISTANCE, 
                     alchemy="off"
                 )[0]
-    print(K)
+    print(Ks)
+    np.save("Ks_new.npy", Ks)
+
+    Fss = np.einsum('jkl,l->kj', Ks, alphas)
+
+    Fs = np.array(Fs)
+    Fs = np.reshape(Fs, (Fss.shape[0], Fss.shape[1]))
+
+    print(Fs.shape)
+    print(Fss.shape)
+    print("RMSE FORCE COMPONENT", np.mean(np.abs(Fss - Fs)))
+
+    print(Fs[:19])
+    print(Fss[:19])
+    
 
 if __name__ == "__main__":
 
-    # test_old_forces()
+    test_old_forces()
     test_new_forces()
 
+    new = np.load("alpha_new.npy")
+    old = np.load("alpha_old.npy")
 
+    print("ALPHA DEVIATION:", np.amax(np.abs(old-new)))
+    
+    new = np.load("Ks_new.npy")
+    old = np.load("Ks_old.npy")
+
+    print("K* DEVIATION:", np.amax(np.abs(old-new)))
+    # print(new - old)
+    
+    new = np.load("X1_new.npy")
+    old = np.load("X1_old.npy")
+
+    print("X DEVIATION:", np.amax(np.abs(old-new)))
+    # print(new - old)
+
+
+    new = np.load("X2_new.npy")
+    old = np.load("X2_old.npy")
+
+    print("X* DEVIATION:", np.amax(np.abs(old-new)))
+    # print(new - old)
