@@ -32,7 +32,7 @@ from .ffchl_module import fget_atomic_symmetric_kernels_fchl
 from .ffchl_module import fget_atomic_force_alphas_fchl
 from .ffchl_module import fget_atomic_force_kernels_fchl
 from .ffchl_module import fget_scalar_vector_alphas_fchl
-from .ffchl_module import fget_scalar_vector_kernels_fchl
+# from .ffchl_module import fget_scalar_vector_kernels_fchl
 
 from .alchemy import get_alchemy
 
@@ -104,7 +104,7 @@ def generate_fchl_representation(coordinates, nuclear_charges,
 
 
 def get_local_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
@@ -125,6 +125,8 @@ def get_local_kernels_fchl(A, B, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -183,10 +185,10 @@ def get_local_kernels_fchl(A, B, sigmas, \
     assert len(sigmas.shape) == 1, "Third argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
-                nm1, nm2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nm2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
 def get_local_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
@@ -205,6 +207,8 @@ def get_local_symmetric_kernels_fchl(A, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -248,10 +252,10 @@ def get_local_symmetric_kernels_fchl(A, sigmas, \
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
-                nm1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
 def get_global_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
@@ -270,6 +274,8 @@ def get_global_symmetric_kernels_fchl(A, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -313,11 +319,11 @@ def get_global_symmetric_kernels_fchl(A, sigmas, \
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_global_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
-                nm1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
 def get_global_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
@@ -338,6 +344,10 @@ def get_global_kernels_fchl(A, B, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -396,11 +406,11 @@ def get_global_kernels_fchl(A, B, sigmas, \
     assert len(sigmas.shape) == 1, "Third argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_global_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
-                nm1, nm2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nm2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
 def get_atomic_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
@@ -421,6 +431,8 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -466,11 +478,11 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
     assert len(sigmas.shape) == 1
 
     return fget_atomic_kernels_fchl(A, B, neighbors1, neighbors2, sigmas, \
-                na1, na2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, na2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
 def get_atomic_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
         two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
@@ -490,6 +502,8 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -526,11 +540,11 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_atomic_symmetric_kernels_fchl(A, neighbors1, sigmas, \
-                na1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
 def get_atomic_force_alphas_fchl(A, F, sigmas, llambda=1e-7, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
         two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
@@ -550,6 +564,8 @@ def get_atomic_force_alphas_fchl(A, F, sigmas, llambda=1e-7, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -586,11 +602,11 @@ def get_atomic_force_alphas_fchl(A, F, sigmas, llambda=1e-7, \
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_atomic_force_alphas_fchl(A, F, neighbors1, sigmas, llambda, \
-                na1, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
  
 def get_atomic_force_kernels_fchl(A, B, sigmas,
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0,
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0,
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
         two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
@@ -612,6 +628,8 @@ def get_atomic_force_kernels_fchl(A, B, sigmas,
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -659,11 +677,11 @@ def get_atomic_force_kernels_fchl(A, B, sigmas,
     # print(neighbors1)
     # print(neighbors2)
     return fget_atomic_force_kernels_fchl(A, B, neighbors1, neighbors2, sigmas, \
-                na1, na2, nsigmas, t_width, d_width, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, na2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
     
 def get_scalar_vector_alphas_fchl(A, F, E, sigmas, llambda=1e-7, \
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", \
         two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
@@ -683,6 +701,8 @@ def get_scalar_vector_alphas_fchl(A, F, E, sigmas, llambda=1e-7, \
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -748,12 +768,12 @@ def get_scalar_vector_alphas_fchl(A, F, E, sigmas, llambda=1e-7, \
     # print(X1.shape)
 
     return fget_scalar_vector_alphas_fchl(X1, forces, energies, nneigh1, sigmas, \
-                llambda, nm1, na1, N1, nsigmas, t_width, d_width, cut_distance, order, pd, \
+                llambda, nm1, na1, N1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, \
                 scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
 
 def get_scalar_vector_kernels_fchl(A, B, sigmas,
-        t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0,
+        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0,
         r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
         n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
         two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
@@ -775,6 +795,8 @@ def get_scalar_vector_kernels_fchl(A, B, sigmas,
         :type t_width: float
         :param d_width: Gaussian width for the distance terms.
         :type d_width: float
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+        :type cut_start: float
         :param cut_distance: Cut-off radius.
         :type cut_distance: float
         :param r_width: Gaussian width along rows in the periodic table.
@@ -855,15 +877,10 @@ def get_scalar_vector_kernels_fchl(A, B, sigmas,
             nneigh2[index] = neighbors2[a,i]
             index += 1
 
-    # print(X2.shape)
+    return fget_atomic_force_kernels_fchl(X1, X2, nneigh1, nneigh2, sigmas, \
+                na1, na2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, \
+                scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
 
-    # np.save("X1_new.npy", X1)
-    # np.save("X2_new.npy", X2)
-    # print("saved")
+# def get_energy_fchl(Ks, alphas):
 
-    # print(nneigh1)
-    # print(nneigh2)
-    
-    return fget_scalar_vector_kernels_fchl(X1, X2, nneigh1, nneigh2, sigmas, \
-                na1, na2, nm1, nm2, N1, N2, nsigmas, t_width, d_width, cut_distance, order, \
-                pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+

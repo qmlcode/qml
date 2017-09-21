@@ -1,6 +1,6 @@
 subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
        & sigmas, nm1, nm2, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -36,6 +36,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -122,7 +123,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         ni = n1(a)
         do i = 1, ni
             ksi1(a, i, :) = get_twobody_weights(x1(a,i,:,:), nneigh1(a, i), &
-                & two_body_power, maxneigh1)
+                & two_body_power, cut_start, cut_distance, maxneigh1)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -132,7 +133,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         ni = n2(a)
         do i = 1, ni
             ksi2(a, i, :) = get_twobody_weights(x2(a,i,:,:), nneigh2(a, i), &
-               & two_body_power, maxneigh2)
+               & two_body_power, cut_start, cut_distance, maxneigh2)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -150,7 +151,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         do i = 1, ni
 
             fourier = get_threebody_fourier(x1(a,i,:,:), &
-                & nneigh1(a, i), order, three_body_power, pmax1, order, maxneigh1)
+                & nneigh1(a, i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxneigh1)
 
             cosp1(a,i,:,:,:) = fourier(1,:,:,:)
             sinp1(a,i,:,:,:) = fourier(2,:,:,:)
@@ -171,7 +172,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         do i = 1, ni
 
             fourier = get_threebody_fourier(x2(a,i,:,:), &
-                & nneigh2(a, i), order, three_body_power, pmax2, order, maxneigh2)
+                & nneigh2(a, i), order, three_body_power, cut_start, cut_distance, pmax2, order, maxneigh2)
 
             cosp2(a,i,:,:,:) = fourier(1,:,:,:)
             sinp2(a,i,:,:,:) = fourier(2,:,:,:)
@@ -264,7 +265,7 @@ end subroutine fget_kernels_fchl
 
 
 subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -296,6 +297,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -366,7 +368,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
         ni = n1(a)
         do i = 1, ni
             ksi1(a, i, :) = get_twobody_weights(x1(a,i,:,:), nneigh1(a, i), &
-               & two_body_power, maxneigh1)
+               & two_body_power, cut_start, cut_distance, maxneigh1)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -383,7 +385,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
         do i = 1, ni
 
             fourier = get_threebody_fourier(x1(a,i,:,:), &
-                & nneigh1(a, i), order, three_body_power, pmax1, order, maxval(nneigh1))
+                & nneigh1(a, i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxval(nneigh1))
 
             cosp1(a,i,:,:,:) = fourier(1,:,:,:)
             sinp1(a,i,:,:,:) = fourier(2,:,:,:)
@@ -457,7 +459,7 @@ end subroutine fget_symmetric_kernels_fchl
 
 
 subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -489,6 +491,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -561,7 +564,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
         ni = n1(a)
         do i = 1, ni
             ksi1(a, i, :) = get_twobody_weights(x1(a,i,:,:), nneigh1(a, i), &
-               & two_body_power, maxneigh1)
+               & two_body_power, cut_start, cut_distance, maxneigh1)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -578,7 +581,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
         do i = 1, ni
 
             fourier = get_threebody_fourier(x1(a,i,:,:), &
-                & nneigh1(a, i), order, three_body_power, pmax1, order, maxneigh1)
+                & nneigh1(a, i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxneigh1)
 
             cosp1(a,i,:,:,:) = fourier(1,:,:,:)
             sinp1(a,i,:,:,:) = fourier(2,:,:,:)
@@ -657,7 +660,7 @@ end subroutine fget_global_symmetric_kernels_fchl
 
 subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
        & sigmas, nm1, nm2, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -693,6 +696,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -778,7 +782,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         ni = n1(a)
         do i = 1, ni
             ksi1(a, i, :) = get_twobody_weights(x1(a,i,:,:), nneigh1(a, i), &
-               & two_body_power, maxneigh1)
+               & two_body_power, cut_start, cut_distance, maxneigh1)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -788,7 +792,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         ni = n2(a)
         do i = 1, ni
             ksi2(a, i, :) = get_twobody_weights(x2(a,i,:,:), nneigh2(a, i), &
-               & two_body_power, maxneigh2)
+               & two_body_power, cut_start, cut_distance, maxneigh2)
         enddo
     enddo
     !$OMP END PARALLEL do
@@ -805,7 +809,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         do i = 1, ni
 
             fourier = get_threebody_fourier(x1(a,i,:,:), &
-                & nneigh1(a, i), order, three_body_power, pmax1, order, maxneigh1)
+                & nneigh1(a, i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxneigh1)
 
             cosp1(a,i,:,:,:) = fourier(1,:,:,:)
             sinp1(a,i,:,:,:) = fourier(2,:,:,:)
@@ -826,7 +830,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         do i = 1, ni
 
             fourier = get_threebody_fourier(x2(a,i,:,:), &
-                & nneigh2(a, i), order, three_body_power, pmax2, order, maxval(nneigh2))
+                & nneigh2(a, i), order, three_body_power, cut_start, cut_distance, pmax2, order, maxval(nneigh2))
 
             cosp2(a,i,:,:,:) = fourier(1,:,:,:)
             sinp2(a,i,:,:,:) = fourier(2,:,:,:)
@@ -928,7 +932,7 @@ end subroutine fget_global_kernels_fchl
 
 subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
        & sigmas, na1, na2, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -960,6 +964,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -1042,14 +1047,14 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     !$OMP PARALLEL DO
     do i = 1, na1
         ksi1(i, :) = get_twobody_weights(x1(i,:,:), nneigh1(i), &
-            & two_body_power, maxneigh1)
+            & two_body_power, cut_start, cut_distance, maxneigh1)
     enddo
     !$OMP END PARALLEL do
 
     !$OMP PARALLEL DO
     do i = 1, na2
         ksi2(i, :) = get_twobody_weights(x2(i,:,:), nneigh2(i), &
-            & two_body_power, maxneigh2)
+            & two_body_power, cut_start, cut_distance, maxneigh2)
     enddo
     !$OMP END PARALLEL do
 
@@ -1063,7 +1068,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     do i = 1, na1
 
         fourier = get_threebody_fourier(x1(i,:,:), &
-            & nneigh1(i), order, three_body_power, pmax1, order, maxneigh1)
+            & nneigh1(i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxneigh1)
 
         cosp1(i,:,:,:) = fourier(1,:,:,:)
         sinp1(i,:,:,:) = fourier(2,:,:,:)
@@ -1081,7 +1086,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
     do i = 1, na2
 
         fourier = get_threebody_fourier(x2(i,:,:), &
-            & nneigh2(i), order, three_body_power, pmax2, order, maxneigh2)
+            & nneigh2(i), order, three_body_power, cut_start, cut_distance, pmax2, order, maxneigh2)
 
         cosp2(i,:,:,:) = fourier(1,:,:,:)
         sinp2(i,:,:,:) = fourier(2,:,:,:)
@@ -1149,7 +1154,7 @@ end subroutine fget_atomic_kernels_fchl
 
 subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
        & sigmas, na1, nsigmas, &
-       & t_width, d_width, cut_distance, order, pd, &
+       & t_width, d_width, cut_start, cut_distance, order, pd, &
        & distance_scale, angular_scale, alchemy, two_body_power, three_body_power, kernels)
 
     use ffchl_module, only: scalar, get_threebody_fourier, get_twobody_weights
@@ -1178,6 +1183,7 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
+    double precision, intent(in) :: cut_start
     double precision, intent(in) :: cut_distance
     integer, intent(in) :: order
     double precision, intent(in) :: distance_scale
@@ -1245,7 +1251,7 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
     !$OMP PARALLEL DO
     do i = 1, na1
         ksi1(i, :) = get_twobody_weights(x1(i,:,:), nneigh1(i), &
-            & two_body_power, maxneigh1)
+            & two_body_power, cut_start, cut_distance, maxneigh1)
     enddo
     !$OMP END PARALLEL do
 
@@ -1259,7 +1265,7 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
     do i = 1, na1
 
         fourier = get_threebody_fourier(x1(i,:,:), &
-            & nneigh1(i), order, three_body_power, pmax1, order, maxneigh1)
+            & nneigh1(i), order, three_body_power, cut_start, cut_distance, pmax1, order, maxneigh1)
 
         cosp1(i,:,:,:) = fourier(1,:,:,:)
         sinp1(i,:,:,:) = fourier(2,:,:,:)

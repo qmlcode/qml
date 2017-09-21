@@ -4,6 +4,48 @@ module ffchl_module
 
 contains
 
+pure function cut_function(r, cut_start, cut_distance) result(f)
+
+    implicit none
+
+    ! Distance
+    double precision, intent(in) :: r
+
+    ! Lower limit of damping
+    double precision, intent(in) :: cut_start
+
+    ! Upper limit of damping
+    double precision, intent(in) :: cut_distance
+
+    ! Intermediate variables
+    double precision :: x
+    double precision :: rl
+    double precision :: ru
+
+    ! Damping function at distance r
+    double precision :: f
+
+    ru = cut_distance
+    rl = cut_start * cut_distance
+
+    if (r > ru) then
+
+        f = 0.0d0
+
+    else if (r < rl) then
+
+        f = 1.0d0
+
+    else
+
+        x = (ru - r) / (ru - rl)
+        f = 1.0d0 - (10.0d0 * x**3) + (15.0d0 * x**4) - (6.0d0 * x**5)
+
+    endif
+
+end function cut_function
+
+
 pure function get_angular_norm2(t_width) result(ang_norm2)
 
     implicit none
@@ -80,24 +122,36 @@ pure function get_displaced_representaions(x, neighbors, dx, dim1, dim2) result(
 
 end function get_displaced_representaions
 
-pure function get_twobody_weights(x, neighbors, power, dim1) result(ksi)
+pure function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1) result(ksi)
 
     implicit none
 
     double precision, dimension(:,:), intent(in) :: x
     integer, intent(in) :: neighbors
     double precision, intent(in) :: power
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
     integer, intent(in) :: dim1
 
     double precision, dimension(dim1) :: ksi
+    integer :: i
+
 
     ksi = 0.0d0
-    ksi(2:neighbors) = 1.0d0 / x(1, 2:neighbors)**power
+
+    do i = 2, neighbors
+
+        ksi(i) = cut_function(x(1, i), cut_start, cut_distance) / x(1, i)**power
+
+    enddo
+
+    ! ksi(2:neighbors) = 1.0d0 / x(1, 2:neighbors)**power
 
 end function get_twobody_weights
 
 ! Calculate the Fourier terms for the FCHL three-body expansion
-pure function get_threebody_fourier(x, neighbors, order, power, dim1, dim2, dim3) result(fourier)
+pure function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distance, &
+    & dim1, dim2, dim3) result(fourier)
 
     implicit none
 
@@ -112,6 +166,12 @@ pure function get_threebody_fourier(x, neighbors, order, power, dim1, dim2, dim3
 
     ! Power law
     double precision, intent(in) :: power
+
+    ! Lower limit of damping function
+    double precision, intent(in) :: cut_start
+    
+    ! Upper limit of damping function
+    double precision, intent(in) :: cut_distance
 
     ! Dimensions or the output array.
     integer, intent(in) :: dim1, dim2, dim3
@@ -142,7 +202,7 @@ pure function get_threebody_fourier(x, neighbors, order, power, dim1, dim2, dim3
     do j = 2, neighbors
         do k = j+1, neighbors
 
-            ksi3 = calc_ksi3(X(:,:), j, k, power)
+            ksi3 = calc_ksi3(X(:,:), j, k, power, cut_start, cut_distance)
             theta = calc_angle(x(3:5, j), x(3:5, 1), x(3:5, k))
 
             pj =  int(x(2,k))
@@ -229,7 +289,7 @@ pure function calc_cos_angle(a, b, c) result(cos_angle)
 end function calc_cos_angle
 
 
-pure function calc_ksi3(X, j, k, power) result(ksi3)
+pure function calc_ksi3(X, j, k, power, cut_start, cut_distance) result(ksi3)
 
     implicit none
 
@@ -238,11 +298,14 @@ pure function calc_ksi3(X, j, k, power) result(ksi3)
     integer, intent(in) :: j
     integer, intent(in) :: k
     double precision, intent(in) :: power
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
 
     double precision :: cos_i, cos_j, cos_k
     double precision :: di, dj, dk
 
     double precision :: ksi3
+    double precision :: cut
 
     cos_i = calc_cos_angle(x(3:5, k), x(3:5, 1), x(3:5, j))
     cos_j = calc_cos_angle(x(3:5, j), x(3:5, k), x(3:5, 1))
@@ -252,7 +315,14 @@ pure function calc_ksi3(X, j, k, power) result(ksi3)
     dj = x(1, k)
     di = norm2(x(3:5, j) - x(3:5, k))
 
-    ksi3 = (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
+
+    cut = cut_function(dk, cut_start, cut_distance) * &
+        & cut_function(dj, cut_start, cut_distance) * &
+        & cut_function(di, cut_start, cut_distance)
+
+    ksi3 = cut * (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
+
+    ! ksi3 = (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
 
 end function calc_ksi3
 
