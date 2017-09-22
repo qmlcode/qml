@@ -44,7 +44,6 @@ ext_ffchl_module = Extension(name = 'ffchl_module',
                           sources = [
                                 'qml/ffchl_module.f90',
                                 'qml/ffchl_scalar_kernels.f90',
-                                'qml/ffchl_vector_kernels.f90'
                             ],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
