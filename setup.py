@@ -16,7 +16,7 @@ __url__ = "https://github.com/qmlcode/qml"
 FORTRAN = "f90"
 
 # GNU (default)
-COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC", 
+COMPILER_FLAGS = ["-O3", "-fopenmp", "-m64", "-march=native", "-fPIC",
                     "-Wno-maybe-uninitialized", "-Wno-unused-function", "-Wno-cpp"]
 LINKER_FLAGS = ["-lgomp"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
@@ -40,8 +40,29 @@ if any(["intelem" in arg for arg in sys.argv]):
 # MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
-ext_ffchl_kernels = Extension(name = 'ffchl_kernels',
-                          sources = ['qml/ffchl_kernels.f90'],
+ext_ffchl_module = Extension(name = 'ffchl_module',
+                          sources = [
+                                'qml/ffchl_module.f90',
+                                'qml/ffchl_scalar_kernels.f90',
+                            ],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS ,
+                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
+ext_ffchl_scalar_kernels = Extension(name = 'ffchl_scalar_kernels',
+                          sources = ['qml/ffchl_scalar_kernels.f90'],
+                          extra_f90_compile_args = COMPILER_FLAGS,
+                          extra_f77_compile_args = COMPILER_FLAGS,
+                          extra_compile_args = COMPILER_FLAGS,
+                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
+                          language = FORTRAN,
+                          f2py_options=['--quiet'])
+
+ext_ffchl_vector_kernels = Extension(name = 'ffchl_vector_kernels',
+                          sources = ['qml/ffchl_vector_kernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -121,7 +142,7 @@ def setup_pepytools():
 
         ext_package = 'qml',
         ext_modules = [
-              ext_ffchl_kernels,
+              ext_ffchl_module,
               ext_farad_kernels,
               ext_fcho_solve,
               ext_fdistance,
