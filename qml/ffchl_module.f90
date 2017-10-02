@@ -4,7 +4,7 @@ module ffchl_module
 
 contains
 
-pure function cut_function(r, cut_start, cut_distance) result(f)
+function cut_function(r, cut_start, cut_distance) result(f)
 
     implicit none
 
@@ -39,10 +39,11 @@ pure function cut_function(r, cut_start, cut_distance) result(f)
     else
 
         x = (ru - r) / (ru - rl)
-        f = 1.0d0 - (10.0d0 * x**3) + (15.0d0 * x**4) - (6.0d0 * x**5)
+        f = (10.0d0 * x**3) - (15.0d0 * x**4) + (6.0d0 * x**5)
 
     endif
 
+    write (*,*) "CUT", r, rl, ru, f
 end function cut_function
 
 
@@ -122,7 +123,7 @@ pure function get_displaced_representaions(x, neighbors, dx, dim1, dim2) result(
 
 end function get_displaced_representaions
 
-pure function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1) result(ksi)
+function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1) result(ksi)
 
     implicit none
 
@@ -150,7 +151,7 @@ pure function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, 
 end function get_twobody_weights
 
 ! Calculate the Fourier terms for the FCHL three-body expansion
-pure function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distance, &
+function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distance, &
     & dim1, dim2, dim3) result(fourier)
 
     implicit none
@@ -289,7 +290,7 @@ pure function calc_cos_angle(a, b, c) result(cos_angle)
 end function calc_cos_angle
 
 
-pure function calc_ksi3(X, j, k, power, cut_start, cut_distance) result(ksi3)
+function calc_ksi3(X, j, k, power, cut_start, cut_distance) result(ksi3)
 
     implicit none
 
