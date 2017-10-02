@@ -43,7 +43,6 @@ function cut_function(r, cut_start, cut_distance) result(f)
 
     endif
 
-    write (*,*) "CUT", r, rl, ru, f
 end function cut_function
 
 
