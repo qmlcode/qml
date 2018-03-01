@@ -816,9 +816,9 @@ subroutine fgenerate_bob(atomic_charges, coordinates, nuclear_charges, id, &
             enddo
         enddo
 
-        start_indices(i) = start_indices(i) + natoms1
+        start_indices(i) = start_indices(i) + nmax(i)
 
-        nbag = (natoms1 * natoms1 - natoms1) / 2
+        nbag = (nmax(i) * nmax(i) - nmax(i)) / 2
         ! sort
         do j = 1, nbag
             k = minloc(bag(:nbag), dim=1)
@@ -845,7 +845,7 @@ subroutine fgenerate_bob(atomic_charges, coordinates, nuclear_charges, id, &
             enddo
 
             ! sort
-            nbag = natoms1 * natoms2
+            nbag = nmax(i) * nmax(j)
             do k = 1, nbag
                 l = minloc(bag(:nbag), dim=1)
                 cm(start_indices(i) + nbag - k + 1) = bag(l)
