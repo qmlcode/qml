@@ -70,8 +70,7 @@ using ``brew``:
     # Install GCC
     brew install gcc
 
-Note the Clang Fortran compiler from brew unfortunately does not support
-OpenMP.
+Note the Fortran compiler from brew (gfortran) unfortunately does not support OpenMP.
 Therefore parallelism via OpenMP is disabled as default for MacOS systems.
 
 Additionally, we found that some users have multiple version of the ``as`` assembler - this might happen if you have GCC from e.g. brew and macports at the same time. Look for the following error:
