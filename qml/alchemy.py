@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import division 
+from __future__ import division
 from __future__ import print_function
 
 import numpy as np
@@ -233,18 +233,18 @@ def gen_custom(e_vec, emax=100):
     for k,v in e_vec.items():
         tmp[k,:] = copy(v)
     pd = np.dot(tmp,tmp.T)
-    
+
     return pd
 
 def get_alchemy(alchemy, emax=100, r_width=0.001, c_width=0.001, elemental_vectors={}, \
                 n_width = 0.001, m_width = 0.001, l_width = 0.001, s_width = 0.001):
 
     if (alchemy == "off"):
-        
+
         pd = np.eye(emax)
         doalchemy = False
 
-        return doalchemy, pd 
+        return doalchemy, pd
 
     elif (alchemy == "periodic-table"):
 
@@ -253,16 +253,16 @@ def get_alchemy(alchemy, emax=100, r_width=0.001, c_width=0.001, elemental_vecto
 
         return doalchemy, pd
 
-    
+
     elif (alchemy == "quantum-numbers"):
         pd = gen_QNum_distances(emax=emax, n_width = n_width, m_width = m_width,
                                           l_width = l_width, s_width = s_width)
         doalchemy = True
-        
+
         return doalchemy, pd
-    
+
     elif (alchemy == "custom"):
-    
+
         pd = gen_custom(elemental_vectors,emax)
         doalchemy = True
 

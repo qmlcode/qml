@@ -32,25 +32,27 @@ from .ffchl_module import fget_atomic_symmetric_kernels_fchl
 
 from .alchemy import get_alchemy
 
-def generate_fchl_representation(coordinates, nuclear_charges,
-        size=23, neighbors=23, cut_distance = 5.0, cell=None):
+def generate_representation(coordinates, nuclear_charges,
+        max_size=23, neighbors=23, cut_distance = 5.0, cell=None):
     """ Generates a representation for the FCHL kernel module.
 
     :param coordinates: Input coordinates.
     :type coordinates: numpy array
     :param nuclear_charges: List of nuclear charges.
     :type nuclear_charges: numpy array
-    :param size: Max number of atoms in representation.
-    :type size: integer
+    :param max_size: Max number of atoms in representation.
+    :type max_size: integer
     :param neighbors: Max number of atoms within the cut-off around an atom. (For periodic systems)
     :type neighbors: integer
     :param cell: Unit cell vectors. The presence of this keyword argument will generate a periodic representation.
     :type cell: numpy array
-    :param cut_distance: Spatial cut-off distance.
+    :param cut_distance: Spatial cut-off distance - must be the same as used in the kernel function call.
     :type cut_distance: float
     :return: FCHL representation, shape = (size,5,neighbors).
     :rtype: numpy array
     """
+
+    size = max_size
 
     if cell is None:
         neighbors=size
@@ -71,8 +73,8 @@ def generate_fchl_representation(coordinates, nuclear_charges,
                         coordsExt = coords + i*cell[0,:] + j*cell[1,:] + k*cell[2,:]
                         ocupationListExt = copy.copy(ocupationList)
                     else:
-                        ocupationListExt = append(ocupationListExt,ocupationList)
-                        coordsExt = append(coordsExt,coords + i*cell[0,:] + j*cell[1,:] + k*cell[2,:],axis = 0)
+                        ocupationListExt = np.append(ocupationListExt,ocupationList)
+                        coordsExt = np.append(coordsExt,coords + i*cell[0,:] + j*cell[1,:] + k*cell[2,:],axis = 0)
     else:
         coordsExt = copy.copy(coords)
         ocupationListExt = copy.copy(ocupationList)
@@ -99,10 +101,70 @@ def generate_fchl_representation(coordinates, nuclear_charges,
     return M
 
 
-def get_local_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+def dummy_fchl(A, B, sigmas,
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are FCHL representations.
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+        Note, that this kernel will ONLY work with FCHL representations as input.
+
+        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
+        :type A: numpy array
+        :param B: Array of FCHL representation - shape=(M, maxsize, 5, maxneighbors).
+        :type B: numpy array
+        :param sigma: List of kernel-widths.
+        :type sigma: list
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
+        :type cut_start: float
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
+        :type cut_distance: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
+
+        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
+        :rtype: numpy array
+    """
+
+
+def get_local_kernels(A, B, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
@@ -117,24 +179,36 @@ def get_local_kernels_fchl(A, B, sigmas, \
         :type B: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
         :rtype: numpy array
@@ -173,20 +247,22 @@ def get_local_kernels_fchl(A, B, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Third argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
-                nm1, nm2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nm2, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)
 
-def get_local_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+
+def get_local_symmetric_kernels(A, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
@@ -199,24 +275,36 @@ def get_local_symmetric_kernels_fchl(A, sigmas, \
         :type A: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, N),
         :rtype: numpy array
@@ -240,20 +328,22 @@ def get_local_symmetric_kernels_fchl(A, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
-                nm1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)
 
-def get_global_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+
+def get_global_symmetric_kernels(A, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - A_j\\|_2^2}{2\sigma^2} \\big)`
@@ -266,24 +356,36 @@ def get_global_symmetric_kernels_fchl(A, sigmas, \
         :type A: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, N),
         :rtype: numpy array
@@ -307,21 +409,22 @@ def get_global_symmetric_kernels_fchl(A, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_global_symmetric_kernels_fchl(A, N1, neighbors1, sigmas, \
-                nm1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)
 
-    
-def get_global_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+
+def get_global_kernels(A, B, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
@@ -336,26 +439,36 @@ def get_global_kernels_fchl(A, B, sigmas, \
         :type B: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
-        :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
         :rtype: numpy array
@@ -394,21 +507,22 @@ def get_global_kernels_fchl(A, B, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Third argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_global_kernels_fchl(A, B, N1, N2, neighbors1, neighbors2, sigmas, \
-                nm1, nm2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                nm1, nm2, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)
 
-    
-def get_atomic_kernels_fchl(A, B, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table", two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+
+def get_atomic_kernels(A, B, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
@@ -423,24 +537,36 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
         :type B: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
         :rtype: numpy array
@@ -466,22 +592,22 @@ def get_atomic_kernels_fchl(A, B, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1
 
     return fget_atomic_kernels_fchl(A, B, neighbors1, neighbors2, sigmas, \
-                na1, na2, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, na2, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)
 
-    
-def get_atomic_symmetric_kernels_fchl(A, sigmas, \
-        t_width=np.pi/1.0, d_width=0.2, cut_start=1.0, cut_distance=5.0, \
-        r_width=1.0, order=1, c_width=0.5, scale_distance=1.0, scale_angular=0.1,
-        n_width = 1.0, m_width = 1.0, l_width = 1.0, s_width = 1.0, alchemy="periodic-table",
-        two_body_power=6.0, three_body_power=3.0, elemental_vectors=None):
+
+def get_atomic_symmetric_kernels(A, sigmas, \
+        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
+        two_body_width=0.2, three_body_width=np.pi,
+        two_body_power=4.0, three_body_power=2.0,
+        cut_start=1.0, cut_distance=5.0,
+        fourier_order=1, alchemy="periodic-table",
+        alchemy_period_width=1.6, alchemy_group_width=1.6):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
@@ -494,24 +620,36 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
         :type A: numpy array
         :param sigma: List of kernel-widths.
         :type sigma: list
-        :param t_width: Gaussian width for the angular (theta) terms.
-        :type t_width: float
-        :param d_width: Gaussian width for the distance terms.
-        :type d_width: float
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start
+
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+
+        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
         :type cut_start: float
-        :param cut_distance: Cut-off radius.
+        :param cut_distance: Cut-off radius. (default=5 angstrom)
         :type cut_distance: float
-        :param r_width: Gaussian width along rows in the periodic table.
-        :type r_width: float
-        :param c_width: Gaussian width along columns in the periodic table.
-        :type c_width: float
-        :param order: Fourier-expansion truncation order.
-        :type order: integer
-        :param scale_distance: Weight for distance-dependent terms.
-        :type scale_distance: float
-        :param scale_angular: Weight for angle-dependent terms.
-        :type scale_angular: float
+
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
+        :type alchemy: string
+
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
 
         :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
         :rtype: numpy array
@@ -528,12 +666,10 @@ def get_atomic_symmetric_kernels_fchl(A, sigmas, \
 
     nsigmas = len(sigmas)
 
-    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=r_width, c_width=c_width, 
-        n_width = n_width, m_width = m_width, l_width = l_width, s_width = s_width,
-        elemental_vectors=elemental_vectors)
+    doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=alchemy_group_width, c_width=alchemy_period_width)
 
     sigmas = np.array(sigmas)
     assert len(sigmas.shape) == 1, "Second argument (sigmas) is not a 1D list/numpy.array!"
 
     return fget_atomic_symmetric_kernels_fchl(A, neighbors1, sigmas, \
-                na1, nsigmas, t_width, d_width, cut_start, cut_distance, order, pd, scale_distance, scale_angular, doalchemy, two_body_power, three_body_power)
+                na1, nsigmas, three_body_width, two_body_width, cut_start, cut_distance, fourier_order, pd, two_body_scaling, three_body_scaling, doalchemy, two_body_power, three_body_power)

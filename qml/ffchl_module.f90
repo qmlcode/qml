@@ -4,7 +4,7 @@ module ffchl_module
 
 contains
 
-function cut_function(r, cut_start, cut_distance) result(f)
+pure function cut_function(r, cut_start, cut_distance) result(f)
 
     implicit none
 
@@ -75,53 +75,6 @@ pure function get_angular_norm2(t_width) result(ang_norm2)
 
 end function
 
-pure function get_displaced_representaions(x, neighbors, dx, dim1, dim2) result(x_displaced)
-
-    implicit none
-
-    ! Input geometry, dimension(5,neightbors_max)
-    double precision, dimension(:,:), intent(in) :: x
-
-    integer, intent(in) :: neighbors
-
-    double precision, intent(in) :: dx
-
-    integer, intent(in) :: dim1
-    integer, intent(in) :: dim2
-
-    integer :: xyz, i
-
-
-    double precision :: q0
-    double precision, dimension(3) :: minus, plus
-
-    double precision, dimension(dim1,dim2,3,2) :: x_displaced
-
-    do xyz = 1, 3
-
-
-        x_displaced(:,:,xyz,1) = x(:,:)
-        x_displaced(:,:,xyz,2) = x(:,:)
-
-        q0 = x(xyz+2,1)
-
-        x_displaced(xyz+2,1,xyz,1) = q0 - dx
-        x_displaced(xyz+2,1,xyz,2) = q0 + dx
-
-        minus = x_displaced(3:5,1,xyz,1)
-        plus  = x_displaced(3:5,1,xyz,2)
-
-        do i = 1, neighbors
-
-            x_displaced(1,i,xyz,1) = norm2(x_displaced(3:5,i,xyz,1) - minus)
-            x_displaced(1,i,xyz,2) = norm2(x_displaced(3:5,i,xyz,2) - plus)
-
-        enddo
-
-    enddo
-
-end function get_displaced_representaions
-
 function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1) result(ksi)
 
     implicit none
@@ -145,8 +98,6 @@ function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1)
 
     enddo
 
-    ! ksi(2:neighbors) = 1.0d0 / x(1, 2:neighbors)**power
-
 end function get_twobody_weights
 
 ! Calculate the Fourier terms for the FCHL three-body expansion
@@ -169,7 +120,7 @@ function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distan
 
     ! Lower limit of damping function
     double precision, intent(in) :: cut_start
-    
+
     ! Upper limit of damping function
     double precision, intent(in) :: cut_distance
 
@@ -213,13 +164,9 @@ function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distan
                 cos_m = (cos(m * theta) - cos((theta + pi) * m))*ksi3
                 sin_m = (sin(m * theta) - sin((theta + pi) * m))*ksi3
 
-                ! cosp1(pj, m, j) = cosp1(pj, m, j) + cos_m
-                ! sinp1(pj, m, j) = sinp1(pj, m, j) + sin_m
                 fourier(1, pj, m, j) = fourier(1, pj, m, j) + cos_m
                 fourier(2, pj, m, j) = fourier(2, pj, m, j) + sin_m
 
-                ! cosp1(pk, m, k) = cosp1(pk, m, k) + cos_m
-                ! sinp1(pk, m, k) = sinp1(pk, m, k) + sin_m
                 fourier(1, pk, m, k) = fourier(1, pk, m, k) + cos_m
                 fourier(2, pk, m, k) = fourier(2, pk, m, k) + sin_m
 
@@ -231,7 +178,6 @@ function get_threebody_fourier(x, neighbors, order, power, cut_start, cut_distan
     return
 
 end function get_threebody_fourier
-
 
 
 pure function calc_angle(a, b, c) result(angle)
@@ -322,8 +268,6 @@ function calc_ksi3(X, j, k, power, cut_start, cut_distance) result(ksi3)
 
     ksi3 = cut * (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
 
-    ! ksi3 = (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
-
 end function calc_ksi3
 
 
@@ -355,20 +299,28 @@ pure function scalar(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, &
     double precision, intent(in) :: angular_scale
     double precision, intent(in) :: distance_scale
 
+    double precision :: true_angular_scale
+    double precision :: true_distance_scale
+    
     double precision, intent(in):: ang_norm2
 
     double precision :: aadist
 
     logical, intent(in) :: alchemy
 
+    ! We changed the convention for the scaling factors when the paper was under review
+    ! so this is a quick fix
+    true_angular_scale = angular_scale / sqrt(8.0d0)
+    true_distance_scale = distance_scale / 16.0d0
+
     if (alchemy) then
         aadist = scalar_alchemy(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, &
             & t_width, d_width, order, pd, ang_norm2, &
-            & distance_scale, angular_scale)
+            & true_distance_scale, true_angular_scale)
     else
         aadist = scalar_noalchemy(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2, &
             & t_width, d_width, ang_norm2, &
-            & distance_scale, angular_scale)
+            & true_distance_scale, true_angular_scale)
     endif
 
 
@@ -396,8 +348,6 @@ pure function scalar_noalchemy(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos
 
     double precision, intent(in) :: t_width
     double precision, intent(in) :: d_width
-    ! double precision, intent(in) :: cut_distance
-    ! integer, intent(in) :: order
 
     double precision, intent(in) :: angular_scale
     double precision, intent(in) :: distance_scale

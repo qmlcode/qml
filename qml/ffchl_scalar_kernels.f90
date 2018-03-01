@@ -109,7 +109,7 @@ subroutine fget_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         pmax2 = max(pmax2, int(maxval(x2(a,1,2,:n2(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxneigh1))
     allocate(ksi2(nm2, maxval(n2), maxneigh2))
@@ -357,7 +357,7 @@ subroutine fget_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsigmas, &
         pmax1 = max(pmax1, int(maxval(x1(a,1,2,:n1(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxval(nneigh1)))
 
@@ -553,7 +553,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
         pmax1 = max(pmax1, int(maxval(x1(a,1,2,:n1(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxval(nneigh1)))
 
@@ -769,7 +769,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
         pmax2 = max(pmax2, int(maxval(x2(a,1,2,:n2(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(nm1, maxval(n1), maxval(nneigh1)))
     allocate(ksi2(nm2, maxval(n2), maxval(nneigh2)))
@@ -1036,7 +1036,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
         pmax2 = max(pmax2, int(maxval(x2(a,2,:nneigh2(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(na1, maxval(nneigh1)))
     allocate(ksi2(na2, maxval(nneigh2)))
@@ -1152,6 +1152,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, nneigh1, nneigh2, &
 
 end subroutine fget_atomic_kernels_fchl
 
+
 subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
        & sigmas, na1, nsigmas, &
        & t_width, d_width, cut_start, cut_distance, order, pd, &
@@ -1242,7 +1243,7 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, nneigh1, &
         pmax1 = max(pmax1, int(maxval(x1(a,2,:nneigh1(a)))))
     enddo
 
-    inv_sigma2(:) = -1.0d0 / (sigmas(:))**2
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
 
     allocate(ksi1(na1, maxval(nneigh1)))
 
