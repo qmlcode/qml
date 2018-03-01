@@ -1,6 +1,6 @@
 ! MIT License
 !
-! Copyright (c) 2016 Anders Steen Christensen
+! Copyright (c) 2016 Anders Steen Christensen, Lars A. Bratholm, Felix A. Faber
 !
 ! Permission is hereby granted, free of charge, to any person obtaining a copy
 ! of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +19,181 @@
 ! LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 ! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ! SOFTWARE.
+
+subroutine fget_local_kernels_gaussian(q1, q2, n1, n2, sigmas, &
+        & nm1, nm2, nsigmas, kernels)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: q1
+    double precision, dimension(:,:), intent(in) :: q2
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    ! Sigma in the Gaussian kernel
+    double precision, dimension(:), intent(in) :: sigmas
+
+    ! Number of molecules
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+
+    ! Number of sigmas
+    integer, intent(in) :: nsigmas
+
+    ! -1.0 / sigma^2 for use in the kernel
+    double precision, dimension(nsigmas) :: inv_sigma2
+
+    ! Resulting alpha vector
+    double precision, dimension(nsigmas,nm1,nm2), intent(out) :: kernels
+
+    ! Internal counters
+    integer :: a, b, i, j, k, ni, nj
+
+    ! Temporary variables necessary for parallelization
+    double precision, allocatable, dimension(:,:) :: atomic_distance
+
+    integer, allocatable, dimension(:) :: i_starts
+    integer, allocatable, dimension(:) :: j_starts
+
+    allocate(i_starts(nm1))
+    allocate(j_starts(nm2))
+
+    !$OMP PARALLEL DO
+    do i = 1, nm1
+        i_starts(i) = sum(n1(:i)) - n1(i)
+    enddo
+    !$OMP END PARALLEL DO
+
+    !$OMP PARALLEL DO
+    do j = 1, nm2
+        j_starts(j) = sum(n2(:j)) - n2(j)
+    enddo
+    !$OMP END PARALLEL DO
+
+    inv_sigma2(:) = -0.5d0 / (sigmas(:))**2
+    kernels(:,:,:) = 0.0d0
+
+    allocate(atomic_distance(maxval(n1), maxval(n2)))
+    atomic_distance(:,:) = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(atomic_distance,ni,nj)
+     do a = 1, nm1
+        ni = n1(a)
+        do b = 1, nm2
+            nj = n2(b)
+
+            atomic_distance(:,:) = 0.0d0
+            do i = 1, ni
+                do j = 1, nj
+
+                    atomic_distance(i, j) = sum((q1(:,i + i_starts(a)) - q2(:,j + j_starts(b)))**2)
+
+                enddo
+            enddo
+
+            do k = 1, nsigmas
+                kernels(k, a, b) =  sum(exp(atomic_distance(:ni,:nj) * inv_sigma2(k)))
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(atomic_distance)
+    deallocate(i_starts)
+    deallocate(j_starts)
+
+end subroutine fget_local_kernels_gaussian
+
+subroutine fget_local_kernels_laplacian(q1, q2, n1, n2, sigmas, &
+        & nm1, nm2, nsigmas, kernels)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: q1
+    double precision, dimension(:,:), intent(in) :: q2
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    ! Sigma in the Gaussian kernel
+    double precision, dimension(:), intent(in) :: sigmas
+
+    ! Number of molecules
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+
+    ! Number of sigmas
+    integer, intent(in) :: nsigmas
+
+    ! -1.0 / sigma^2 for use in the kernel
+    double precision, dimension(nsigmas) :: inv_sigma2
+
+    ! Resulting alpha vector
+    double precision, dimension(nsigmas,nm1,nm2), intent(out) :: kernels
+
+    ! Internal counters
+    integer :: a, b, i, j, k, ni, nj
+
+    ! Temporary variables necessary for parallelization
+    double precision, allocatable, dimension(:,:) :: atomic_distance
+
+    integer, allocatable, dimension(:) :: i_starts
+    integer, allocatable, dimension(:) :: j_starts
+
+    allocate(i_starts(nm1))
+    allocate(j_starts(nm2))
+
+    !$OMP PARALLEL DO
+    do i = 1, nm1
+        i_starts(i) = sum(n1(:i)) - n1(i)
+    enddo
+    !$OMP END PARALLEL DO
+
+    !$OMP PARALLEL DO
+    do j = 1, nm2
+        j_starts(j) = sum(n2(:j)) - n2(j)
+    enddo
+    !$OMP END PARALLEL DO
+
+    inv_sigma2(:) = -1.0d0 / sigmas(:)
+    kernels(:,:,:) = 0.0d0
+
+    allocate(atomic_distance(maxval(n1), maxval(n2)))
+    atomic_distance(:,:) = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(atomic_distance,ni,nj)
+     do a = 1, nm1
+        ni = n1(a)
+        do b = 1, nm2
+            nj = n2(b)
+
+            atomic_distance(:,:) = 0.0d0
+            do i = 1, ni
+                do j = 1, nj
+
+                    atomic_distance(i, j) = sum(abs(q1(:,i + i_starts(a)) - q2(:,j + j_starts(b))))
+
+                enddo
+            enddo
+
+
+            do k = 1, nsigmas
+                kernels(k, a, b) =  sum(exp(atomic_distance(:ni,:nj) * inv_sigma2(k)))
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(atomic_distance)
+    deallocate(i_starts)
+    deallocate(j_starts)
+
+end subroutine fget_local_kernels_laplacian
 
 subroutine fget_vector_kernels_laplacian(q1, q2, n1, n2, sigmas, &
         & nm1, nm2, nsigmas, kernels)
@@ -223,6 +398,30 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 !$OMP END PARALLEL DO
 
 end subroutine flaplacian_kernel
+
+
+subroutine flinear_kernel(a, na, b, nb, k)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+
+    integer, intent(in) :: na, nb
+
+    double precision, dimension(:,:), intent(inout) :: k
+
+    integer :: i, j
+
+!$OMP PARALLEL DO
+    do i = 1, nb
+        do j = 1, na
+            k(j,i) = dot_product(a(:,j), b(:,i))
+        enddo
+    enddo
+!$OMP END PARALLEL DO
+
+end subroutine flinear_kernel
 
 
 subroutine fmatern_kernel_l2(a, na, b, nb, k, sigma, order)

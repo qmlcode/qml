@@ -1,4 +1,4 @@
-Examples
+xamples
 --------
 
 Generating representations using the ``Compound`` class
@@ -106,7 +106,7 @@ The easiest way to calculate the kernel matrix using an explicit, local represen
 .. code:: python
 
     import numpy as np
-    from qml.wrappers import get_atomic_kernels_gaussian
+    from qml.kernels import get_local_kernels_gaussian
 
     # Assume the QM7 dataset is loaded into a list of Compound()
     for compound in qm7:
@@ -114,11 +114,17 @@ The easiest way to calculate the kernel matrix using an explicit, local represen
         # Generate the desired representation for each compound
         compound.generate_atomic_coulomb_matrix(size=23, sort="row-norm")
 
+    # Make a big array with all the atomic representations
+    X = np.concatenate([mol.representation for mol in qm7])
+
+    # Make an array with the number of atoms in each compound
+    N = np.array([mol.natoms for mol in qm7])
+
     # List of kernel-widths
     sigmas = [50.0, 100.0, 200.0]
 
     # Calculate the kernel-matrix
-    K = get_atomic_kernels_gaussian(qm7, qm7, sigmas)
+    K = get_local_kernels_gaussian(X, X, N, N, sigmas)
 
     print(K.shape)
 

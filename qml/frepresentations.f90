@@ -1,6 +1,6 @@
 ! MIT License
 !
-! Copyright (c) 2016 Anders Steen Christensen
+! Copyright (c) 2016-2017 Anders Steen Christensen, Lars Andersen Bratholm
 !
 ! Permission is hereby granted, free of charge, to any person obtaining a copy
 ! of this software and associated documentation files (the "Software"), to deal
@@ -204,18 +204,21 @@ subroutine fgenerate_unsorted_coulomb_matrix(atomic_charges, coordinates, nmax, 
 
 end subroutine fgenerate_unsorted_coulomb_matrix
 
-subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, nmax, &
-        & cent_cutoff, cent_decay, int_cutoff, int_decay, cm)
+subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, &
+        & atomic_charges, coordinates, natoms, nmax, cent_cutoff, cent_decay, &
+        & int_cutoff, int_decay, cm)
 
     implicit none
 
+    integer, intent(in) :: central_natoms
+    integer, dimension(:), intent(in) :: central_atom_indices
     double precision, dimension(:), intent(in) :: atomic_charges
     double precision, dimension(:,:), intent(in) :: coordinates
     integer,intent(in) :: natoms
     integer, intent(in) :: nmax
     double precision, intent(inout) :: cent_cutoff, cent_decay, int_cutoff, int_decay
 
-    double precision, dimension(natoms, ((nmax + 1) * nmax) / 2), intent(out):: cm
+    double precision, dimension(central_natoms, ((nmax + 1) * nmax) / 2), intent(out):: cm
 
     integer :: idx
 
@@ -230,11 +233,11 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
 
     double precision, allocatable, dimension(:, :, :) :: pair_distance_matrix
     double precision, allocatable, dimension(:, :) :: distance_matrix
-    double precision, allocatable, dimension(:, :) :: distance_matrix_tmp
 
-    integer i, j, m, n, k
+    integer i, j, m, n, k, l
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
+
 
     if (size(coordinates, dim=1) /= size(atomic_charges, dim=1)) then
         write(*,*) "ERROR: Coulomb matrix generation"
@@ -287,25 +290,28 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
     enddo
     !$OMP END PARALLEL DO
 
-    do i = 1, natoms
-        if (cutoff_count(i) > nmax) then
+    do i = 1, central_natoms
+        j = central_atom_indices(i)
+        if (cutoff_count(j) > nmax) then
             write(*,*) "ERROR: Coulomb matrix generation"
             write(*,*) nmax, "size set, but", &
-                & cutoff_count(i), "size needed!"
+                & cutoff_count(j), "size needed!"
             stop
         endif
     enddo
 
     ! Allocate temporary
-    allocate(pair_distance_matrix(natoms, natoms, natoms))
-    allocate(row_norms(natoms, natoms))
+    allocate(pair_distance_matrix(natoms, natoms, central_natoms))
+    allocate(row_norms(natoms, central_natoms))
 
     pair_distance_matrix = 0.0d0
     row_norms = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(pair_norm, prefactor) REDUCTION(+:row_norms) COLLAPSE(2)
+
+    !$OMP PARALLEL DO PRIVATE(pair_norm, prefactor, k) REDUCTION(+:row_norms) COLLAPSE(2)
     do i = 1, natoms
-        do k = 1, natoms
+        do l = 1, central_natoms
+            k = central_atom_indices(l)
             ! self interaction
             if (distance_matrix(i,k) > cent_cutoff) then
                 cycle
@@ -318,8 +324,8 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
             endif
 
             pair_norm = prefactor * prefactor * 0.5d0 * atomic_charges(i) ** 2.4d0
-            pair_distance_matrix(i,i,k) = pair_norm
-            row_norms(i,k) = row_norms(i,k) + pair_norm * pair_norm
+            pair_distance_matrix(i,i,l) = pair_norm
+            row_norms(i,l) = row_norms(i,l) + pair_norm * pair_norm
 
             do j = i+1, natoms
                 if (distance_matrix(j,k) > cent_cutoff) then
@@ -344,32 +350,34 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
                         & * (distance_matrix(j,k) - cent_cutoff + cent_decay) / cent_decay) + 1)
                 endif
 
-                pair_distance_matrix(i, j, k) = pair_norm
-                pair_distance_matrix(j, i, k) = pair_norm
+                pair_distance_matrix(i, j, l) = pair_norm
+                pair_distance_matrix(j, i, l) = pair_norm
                 pair_norm = pair_norm * pair_norm
-                row_norms(i,k) = row_norms(i,k) + pair_norm
-                row_norms(j,k) = row_norms(j,k) + pair_norm
+                row_norms(i,l) = row_norms(i,l) + pair_norm
+                row_norms(j,l) = row_norms(j,l) + pair_norm
             enddo
         enddo
     enddo
     !$OMP END PARALLEL DO
 
     ! Allocate temporary
-    allocate(sorted_atoms_all(natoms, natoms))
+    allocate(sorted_atoms_all(natoms, central_natoms))
 
-    !$OMP PARALLEL DO
-        do k = 1, natoms
-            row_norms(k,k) = huge_double
+    !$OMP PARALLEL DO PRIVATE(k)
+        do l = 1, central_natoms
+            k = central_atom_indices(l)
+            row_norms(k,l) = huge_double
         enddo
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(j)
-        do k = 1, natoms
+    !$OMP PARALLEL DO PRIVATE(j,k)
+        do l = 1, central_natoms
+            k = central_atom_indices(l)
             !$OMP CRITICAL
                 do i = 1, cutoff_count(k)
-                    j = maxloc(row_norms(:,k), dim=1)
-                    sorted_atoms_all(i, k) = j
-                    row_norms(j,k) = 0.0d0
+                    j = maxloc(row_norms(:,l), dim=1)
+                    sorted_atoms_all(i, l) = j
+                    row_norms(j,l) = 0.0d0
                 enddo
             !$OMP END CRITICAL
         enddo
@@ -383,14 +391,15 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
     ! Fill coulomb matrix according to sorted row-2-norms
     cm = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(i, j, idx)
-        do k = 1, natoms
+    !$OMP PARALLEL DO PRIVATE(i, j, k, idx)
+        do l = 1, central_natoms
+            k = central_atom_indices(l)
             do m = 1, cutoff_count(k)
-                i = sorted_atoms_all(m, k)
+                i = sorted_atoms_all(m, l)
                 idx = (m*m+m)/2 - m
                 do n = 1, m
-                    j = sorted_atoms_all(n, k)
-                    cm(k, idx+n) = pair_distance_matrix(i,j,k)
+                    j = sorted_atoms_all(n, l)
+                    cm(l, idx+n) = pair_distance_matrix(i,j,l)
                 enddo
             enddo
         enddo
@@ -403,18 +412,20 @@ subroutine fgenerate_local_coulomb_matrix(atomic_charges, coordinates, natoms, n
 
 end subroutine fgenerate_local_coulomb_matrix
 
-subroutine fgenerate_atomic_coulomb_matrix(atomic_charges, coordinates, natoms, nmax, &
-        & cent_cutoff, cent_decay, int_cutoff, int_decay, cm)
+subroutine fgenerate_atomic_coulomb_matrix(central_atom_indices, central_natoms, atomic_charges, &
+        & coordinates, natoms, nmax, cent_cutoff, cent_decay, int_cutoff, int_decay, cm)
 
     implicit none
 
+    integer, dimension(:), intent(in) :: central_atom_indices
+    integer, intent(in) :: central_natoms
     double precision, dimension(:), intent(in) :: atomic_charges
     double precision, dimension(:,:), intent(in) :: coordinates
     integer,intent(in) :: natoms
     integer, intent(in) :: nmax
     double precision, intent(inout) :: cent_cutoff, cent_decay, int_cutoff, int_decay
 
-    double precision, dimension(natoms, ((nmax + 1) * nmax) / 2), intent(out):: cm
+    double precision, dimension(central_natoms, ((nmax + 1) * nmax) / 2), intent(out):: cm
 
     integer :: idx
 
@@ -430,7 +441,7 @@ subroutine fgenerate_atomic_coulomb_matrix(atomic_charges, coordinates, natoms, 
     double precision, allocatable, dimension(:, :) :: distance_matrix
     double precision, allocatable, dimension(:, :) :: distance_matrix_tmp
 
-    integer i, j, m, n, k
+    integer i, j, m, n, k, l
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
@@ -485,11 +496,12 @@ subroutine fgenerate_atomic_coulomb_matrix(atomic_charges, coordinates, natoms, 
     enddo
     !$OMP END PARALLEL DO
 
-    do i = 1, natoms
-        if (cutoff_count(i) > nmax) then
+    do i = 1, central_natoms
+        k = central_atom_indices(i)
+        if (cutoff_count(k) > nmax) then
             write(*,*) "ERROR: Coulomb matrix generation"
             write(*,*) nmax, "size set, but", &
-                & cutoff_count(i), "size needed!"
+                & cutoff_count(k), "size needed!"
             stop
         endif
     enddo
@@ -520,20 +532,22 @@ subroutine fgenerate_atomic_coulomb_matrix(atomic_charges, coordinates, natoms, 
     !$OMP END PARALLEL DO
 
     ! Allocate temporary
-    allocate(sorted_atoms_all(natoms, natoms))
+    allocate(distance_matrix_tmp(natoms, natoms))
+    allocate(sorted_atoms_all(natoms, central_natoms))
 
     distance_matrix_tmp = distance_matrix
     !Generate sorted list of atom ids by distance matrix
-    !$OMP PARALLEL DO PRIVATE(j)
-        do k = 1, natoms
-            !$OMP CRITICAL
-                do i = 1, cutoff_count(k)
-                    j = minloc(distance_matrix_tmp(:,k), dim=1)
-                    sorted_atoms_all(i, k) = j
-                    distance_matrix_tmp(j, k) = huge_double
-                enddo
-            !$OMP END CRITICAL
-        enddo
+    !$OMP PARALLEL DO PRIVATE(j, k)
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        !$OMP CRITICAL
+            do i = 1, cutoff_count(k)
+                j = minloc(distance_matrix_tmp(:,k), dim=1)
+                sorted_atoms_all(i, l) = j
+                distance_matrix_tmp(j, k) = huge_double
+            enddo
+        !$OMP END CRITICAL
+    enddo
     !$OMP END PARALLEL DO
 
     ! Clean up
@@ -544,34 +558,36 @@ subroutine fgenerate_atomic_coulomb_matrix(atomic_charges, coordinates, natoms, 
 
     pair_norm = 0.0d0
 
-        do k = 1, natoms
-            do m = 1, cutoff_count(k)
-                i = sorted_atoms_all(m, k)
+    !$OMP PARALLEL DO PRIVATE(i, prefactor, idx, j, pair_norm, k)
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        do m = 1, cutoff_count(k)
+            i = sorted_atoms_all(m, l)
 
-                if (distance_matrix(i,k) > cent_cutoff) then
-                    cycle
+            if (distance_matrix(i,k) > cent_cutoff) then
+                cycle
+            endif
+            prefactor = 1.0d0
+            if (distance_matrix(i,k) > cent_cutoff - cent_decay) then
+                prefactor = 0.5d0 * (cos(pi &
+                    & * (distance_matrix(i,k) - cent_cutoff + cent_decay) &
+                    & / cent_decay) + 1.0d0)
+            endif
+
+            idx = (m*m+m)/2 - m
+            do n = 1, m
+                j = sorted_atoms_all(n, l)
+
+                pair_norm = prefactor * pair_distance_matrix(i, j)
+                if (distance_matrix(j,k) > cent_cutoff - cent_decay) then
+                    pair_norm = pair_norm * 0.5d0 * (cos(pi &
+                        & * (distance_matrix(j,k) - cent_cutoff + cent_decay) &
+                        & / cent_decay) + 1)
                 endif
-                prefactor = 1.0d0
-                if (distance_matrix(i,k) > cent_cutoff - cent_decay) then
-                    prefactor = 0.5d0 * (cos(pi &
-                        & * (distance_matrix(i,k) - cent_cutoff + cent_decay) &
-                        & / cent_decay) + 1.0d0)
-                endif
-
-                idx = (m*m+m)/2 - m
-                do n = 1, m
-                    j = sorted_atoms_all(n, k)
-
-                    pair_norm = prefactor * pair_distance_matrix(i, j)
-                    if (distance_matrix(j,k) > cent_cutoff - cent_decay) then
-                        pair_norm = pair_norm * 0.5d0 * (cos(pi &
-                            & * (distance_matrix(j,k) - cent_cutoff + cent_decay) &
-                            & / cent_decay) + 1)
-                    endif
-                    cm(k, idx+n) = pair_norm
-                enddo
+                cm(l, idx+n) = pair_norm
             enddo
         enddo
+    enddo
 
     ! Clean up
     deallocate(distance_matrix)
