@@ -34,14 +34,19 @@ subroutine fcho_solve(A,y,x)
 
     call dpotrf("U", na, A, na, info)
     if (info > 0) then
-        write (*,*) "WARNING: Cholesky decomposition DPOTRF() exited with error code:", info
+        write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
+        write (*,*) "WARNING: The", info, "-th leading order is not positive definite."
+    else if (info < 0) then
+        write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPOTRF()."
+        write (*,*) "WARNING: The", -info, "-th argument had an illegal value."
     endif
 
     x(:na) = y(:na)
 
     call dpotrs("U", na, 1, A, na, x, na, info)
-    if (info > 0) then
-        write (*,*) "WARNING: Cholesky solve DPOTRS() exited with error code:", info
+    if (info < 0) then
+        write (*,*) "WARNING: Error in LAPACK Cholesky solver DPOTRS()."
+        write (*,*) "WARNING: The", -info, "-th argument had an illegal value."
     endif
 
 end subroutine fcho_solve
