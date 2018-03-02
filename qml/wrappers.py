@@ -24,6 +24,7 @@ import numpy as np
 
 from .fkernels import fget_vector_kernels_gaussian
 from .fkernels import fget_vector_kernels_laplacian
+from .fkernels import fget_local_kernels_gaussian
 
 from .arad import get_local_kernels_arad
 from .arad import get_local_symmetric_kernels_arad
@@ -54,7 +55,6 @@ def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
     # Reorder for Fortran speed
     x1 = np.swapaxes(x1, 0, 2)
     x2 = np.swapaxes(x2, 0, 2)
-
 
     sigmas = np.asarray(sigmas, dtype=np.float64)
     nsigmas = sigmas.size

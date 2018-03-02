@@ -52,6 +52,13 @@ qml\.arad module
     :members:
     :show-inheritance:
 
+qml\.fchl module
+----------------
+
+.. automodule:: qml.fchl
+    :members:
+    :show-inheritance:
+
 
 qml\.wrappers module
 --------------------
