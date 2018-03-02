@@ -5,9 +5,9 @@ from mkldiscover import mkl_exists
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
-__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
+__credits__ = ["Anders S. Christensen et al. (2016) https://github.com/qmlcode/qml"]
 __license__ = "MIT"
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 __maintainer__ = "Anders S. Christensen"
 __email__ = "andersbiceps@gmail.com"
 __status__ = "Beta"
