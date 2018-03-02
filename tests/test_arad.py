@@ -13,6 +13,9 @@ from qml.arad import generate_arad_representation
 from qml.arad import get_local_kernels_arad
 from qml.arad import get_local_symmetric_kernels_arad
 
+from qml.arad import get_global_kernels_arad
+from qml.arad import get_global_symmetric_kernels_arad
+
 from qml.arad import get_atomic_kernels_arad
 from qml.arad import get_atomic_symmetric_kernels_arad
 
@@ -70,7 +73,11 @@ def test_arad():
     assert np.allclose(K_local_symm, K_local_asymm), "Symmetry error in local kernels"
     assert np.invert(np.all(np.isnan(K_local_asymm))), "ERROR: ARAD local symmetric kernel contains NaN"
 
-    K_local_asymm = get_local_kernels_arad(X1[-4:], X1[:6], sigmas)
+    K_global_asymm = get_global_kernels_arad(X1, X1, sigmas)
+    K_global_symm = get_global_symmetric_kernels_arad(X1, sigmas)
+
+    assert np.allclose(K_global_symm, K_global_asymm), "Symmetry error in global kernels"
+    assert np.invert(np.all(np.isnan(K_global_asymm))), "ERROR: ARAD global symmetric kernel contains NaN"
 
     molid = 5
     X1 = generate_arad_representation(mols[molid].coordinates,

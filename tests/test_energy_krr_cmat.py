@@ -109,4 +109,9 @@ def test_krr_cmat():
     Yss = np.dot(Ks.transpose(), alpha)
 
     mae = np.mean(np.abs(Ys - Yss))
-    print(mae)
+
+    assert mae < 6.0, "ERROR: Too high MAE!"
+
+if __name__ == "__main__":
+
+    test_krr_cmat()
