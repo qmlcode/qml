@@ -33,7 +33,7 @@ from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
 from .representations import generate_slatm
 
-from .arad import generate_arad_representation
+from .fchl import generate_representation as generate_fchl_representation
 
 class Compound(object):
     """ The ``Compound`` class is used to store data from  
@@ -245,16 +245,15 @@ class Compound(object):
         self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
                 self.atomtypes, asize = asize)
 
-    def generate_arad_representation(self, size = 23):
-        """Generates the representation for the ARAD-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
+    def generate_fchl_representation(self, max_size = 23, cell=None, neighbors=24,cut_distance=5.0):
+        """Generates the representation for the FCHL-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
     :param size: Max number of atoms in representation.
     :type size: integer
     """
-        self.representation = generate_arad_representation(self.coordinates,
-                self.nuclear_charges, size=size)
+        self.representation = generate_fchl_representation(self.coordinates,
+                self.nuclear_charges, max_size=max_size, cell=cell, neighbors=neighbors,cut_distance=cut_distance)
 
-        assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
-        assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
+        assert (self.representation).shape[0] == max_size, "ERROR: Check FCHL descriptor size!"
 
     def generate_slatm(self, mbtypes,
         local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8, pbc='000',
