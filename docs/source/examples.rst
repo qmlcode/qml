@@ -307,8 +307,8 @@ In addition to the local kernel, the FCHL module also provides kernels for atomi
 
 .. code:: python
 
-    from qml.arad import get_atomic_kernels_arad
-    from qml.arad import get_atomic_symmetric_kernels_arad
+    from qml.fchl import get_atomic_kernels
+    from qml.fchl import get_atomic_symmetric_kernels
 
 The only difference between the local and atomic kernels is the shape of the input.
 Since the atomic kernel outputs kernels with atomic resolution, the atomic input has the shape ``(number_atoms, 5, size)``.
