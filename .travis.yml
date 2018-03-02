@@ -3,22 +3,22 @@ sudo: required
 dist: trusty
 group: edge
 deploy:
-- provider: pypi
-  user: andersx
-  password:
-    secure: mXeDkazSavPo2Cx3Drhap9VkT42pK0XCDx2vK8IVsu/3i+fNLg/RtqT/Yg1hhMNWZQ76rg8TfzGWNEDvEa7JNNVpyTrA8CtWkS5KR3Oj/bkP+n7xcQKC2npjsmrReS97mBq4Sp3fEogcsYH9jCzhhMLnlfpoVlWEFDExcqeKwvXxTqvyv2ymdx6QLu1KkOQWCzsBoa6wIqH9kbzUSjqTVKIWgNZh3UHhDDv8X5rJZUUUulnwmbsRHZSTKFRVaB4gqv3s6gqgMZzmFjHdii3O059quEu+JrpisGNJ3EHSyaDZ1hk9DWqBqXK6LhNVjtwDPgHmABXLrZCKJVudm/7fuwI7GdTSghWjhtLDlaZYSVTBD9vD/aabuM397ZLt6ci8d7AD2AoCDWtc/8EjRVjdErVYL0dO0moJAu7mtxnvPKaT0ZWWPwfUQQlPt/vh17gFWOQhF/YT226J8K/nnnBHmhgHMIR7jBr3ve/YuQGLPUcURhTUnqfUS4O4UTkbXG23rOHPRPs45+F42dNlPb0d1d67C2NOtGhuqe14sQ47rip13FtXCq6HG09WJ6tOY7TvBEu+43DzVPam4qSlS5PoVbC2DwZQKEl8YVbXLCOAzaymk+1BAIofZ201wu4M7Y4HbRIdTLM4F2maKxo52c4Dn2flRA8iX5/OTR1osDIo4qg=
-  on:
-    branch: master
-    condition: ${TRAVIS_PYTHON_VERSION} = "2.7"
-- provider: pages
-  local_dir: ${TRAVIS_BUILD_DIR}/docs/build/html
-  skip_cleanup: true
-  repo: qmlcode/qmlcode.github.io
-  target_branch: master
-  github_token: ${GH_TOKEN} # Set in travis-ci.org dashboard
-  on:
-    branch: master
-    condition: ${TRAVIS_PYTHON_VERSION} = "2.7"
+  - provider: pypi
+    user: andersx
+    password:
+      secure: mXeDkazSavPo2Cx3Drhap9VkT42pK0XCDx2vK8IVsu/3i+fNLg/RtqT/Yg1hhMNWZQ76rg8TfzGWNEDvEa7JNNVpyTrA8CtWkS5KR3Oj/bkP+n7xcQKC2npjsmrReS97mBq4Sp3fEogcsYH9jCzhhMLnlfpoVlWEFDExcqeKwvXxTqvyv2ymdx6QLu1KkOQWCzsBoa6wIqH9kbzUSjqTVKIWgNZh3UHhDDv8X5rJZUUUulnwmbsRHZSTKFRVaB4gqv3s6gqgMZzmFjHdii3O059quEu+JrpisGNJ3EHSyaDZ1hk9DWqBqXK6LhNVjtwDPgHmABXLrZCKJVudm/7fuwI7GdTSghWjhtLDlaZYSVTBD9vD/aabuM397ZLt6ci8d7AD2AoCDWtc/8EjRVjdErVYL0dO0moJAu7mtxnvPKaT0ZWWPwfUQQlPt/vh17gFWOQhF/YT226J8K/nnnBHmhgHMIR7jBr3ve/YuQGLPUcURhTUnqfUS4O4UTkbXG23rOHPRPs45+F42dNlPb0d1d67C2NOtGhuqe14sQ47rip13FtXCq6HG09WJ6tOY7TvBEu+43DzVPam4qSlS5PoVbC2DwZQKEl8YVbXLCOAzaymk+1BAIofZ201wu4M7Y4HbRIdTLM4F2maKxo52c4Dn2flRA8iX5/OTR1osDIo4qg=
+    on:
+      branch: master
+      condition: ${TRAVIS_PYTHON_VERSION} = "2.7"
+  - provider: pages
+    local_dir: ${TRAVIS_BUILD_DIR}/docs/build/html
+    skip_cleanup: true
+    repo: qmlcode/qmlcode.github.io
+    target_branch: master
+    github_token: ${GH_TOKEN} # Set in travis-ci.org dashboard
+    on:
+      branch: master
+      condition: ${TRAVIS_PYTHON_VERSION} = "2.7"
 python:
 - '2.7'
 - '3.5'
