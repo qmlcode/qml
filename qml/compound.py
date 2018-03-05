@@ -52,7 +52,7 @@ class Compound(object):
         # Information about the compound
         self.natoms = float("nan")
         self.natypes = {}
-        self.atomtypes = empty_array
+        self.atomtypes = []
         self.atomtype_indices = collections.defaultdict(list)
         self.nuclear_charges = empty_array
         self.coordinates = empty_array
@@ -305,7 +305,7 @@ class Compound(object):
         f.close()
 
         self.natoms = int(lines[0])
-        self.atomtypes = np.empty(self.natoms, dtype=str)
+        self.atomtypes = []
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
 
@@ -317,10 +317,10 @@ class Compound(object):
             if len(tokens) < 4:
                 break
 
-            self.atomtypes[i] = tokens[0]
+            self.atomtypes.append(tokens[0])
             self.atomtype_indices[tokens[0]].append(i)
             self.nuclear_charges[i] = NUCLEAR_CHARGE[tokens[0]]
     
             self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)
-    
+   
         self.natypes = dict([(key, len(value)) for key,value in self.atomtype_indices.items()])
