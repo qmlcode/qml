@@ -261,7 +261,7 @@ The neighbors keyword is the max number of atoms with the cutoff-distance
 Generating the FCHL kernel 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following example demonstrates how to calculate the local FCHL kernel elements between FCHL representations. ``X1`` and ``X2`` are numpy arrays with the shape ``(number_compounds,max_size, 5,neighbors)``, as generated in one of the previous examples. You MUST use the same cut-off distance to generate the representation and calculate the kernel.
+The following example demonstrates how to calculate the local FCHL kernel elements between FCHL representations. ``X1`` and ``X2`` are numpy arrays with the shape ``(number_compounds,max_size, 5,neighbors)``, as generated in one of the previous examples. You MUST use the same, or larger, cut-off distance to generate the representation, as to calculate the kernel.
 
 
 .. code:: python
