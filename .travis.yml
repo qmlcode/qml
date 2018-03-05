@@ -7,7 +7,8 @@ group: edge
 
 deploy:
   provider: pages
-  local_dir: ${TRAVIS_BUILD_DIR}/docs/build/html
+  # local_dir: ${TRAVIS_BUILD_DIR}/docs/build/html
+  local_dir: /docs/build/html
   skip_cleanup: true
   repo: qmlcode/qmlcode.github.io
   target_branch: master
