@@ -33,7 +33,7 @@ from .representations import generate_bob
 from .representations import generate_eigenvalue_coulomb_matrix
 from .representations import generate_slatm
 
-from .arad import generate_arad_representation
+from .fchl import generate_representation as generate_fchl_representation
 
 class Compound(object):
     """ The ``Compound`` class is used to store data from  
@@ -52,7 +52,7 @@ class Compound(object):
         # Information about the compound
         self.natoms = float("nan")
         self.natypes = {}
-        self.atomtypes = empty_array
+        self.atomtypes = []
         self.atomtype_indices = collections.defaultdict(list)
         self.nuclear_charges = empty_array
         self.coordinates = empty_array
@@ -245,16 +245,15 @@ class Compound(object):
         self.representation = generate_bob(self.nuclear_charges, self.coordinates, 
                 self.atomtypes, asize = asize)
 
-    def generate_arad_representation(self, size = 23):
-        """Generates the representation for the ARAD-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
+    def generate_fchl_representation(self, max_size = 23, cell=None, neighbors=24,cut_distance=5.0):
+        """Generates the representation for the FCHL-kernel. Note that this representation is incompatible with generic ``qml.kernel.*`` kernels.
     :param size: Max number of atoms in representation.
     :type size: integer
     """
-        self.representation = generate_arad_representation(self.coordinates,
-                self.nuclear_charges, size=size)
+        self.representation = generate_fchl_representation(self.coordinates,
+                self.nuclear_charges, max_size=max_size, cell=cell, neighbors=neighbors,cut_distance=cut_distance)
 
-        assert (self.representation).shape[0] == size, "ERROR: Check ARAD descriptor size!"
-        assert (self.representation).shape[2] == size, "ERROR: Check ARAD descriptor size!"
+        assert (self.representation).shape[0] == max_size, "ERROR: Check FCHL descriptor size!"
 
     def generate_slatm(self, mbtypes,
         local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03], rcut=4.8, pbc='000',
@@ -306,7 +305,7 @@ class Compound(object):
         f.close()
 
         self.natoms = int(lines[0])
-        self.atomtypes = np.empty(self.natoms, dtype=str)
+        self.atomtypes = []
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
 
@@ -318,10 +317,10 @@ class Compound(object):
             if len(tokens) < 4:
                 break
 
-            self.atomtypes[i] = tokens[0]
+            self.atomtypes.append(tokens[0])
             self.atomtype_indices[tokens[0]].append(i)
             self.nuclear_charges[i] = NUCLEAR_CHARGE[tokens[0]]
     
             self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)
-    
+   
         self.natypes = dict([(key, len(value)) for key,value in self.atomtype_indices.items()])

@@ -45,12 +45,12 @@ qml\.Compound class
     :undoc-members:
     :show-inheritance:
 
-qml\.arad module
-----------------
-
-.. automodule:: qml.arad
-    :members:
-    :show-inheritance:
+.. qml\.arad module
+.. ----------------
+.. 
+.. .. automodule:: qml.arad
+..     :members:
+..     :show-inheritance:
 
 qml\.fchl module
 ----------------
