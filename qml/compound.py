@@ -311,7 +311,7 @@ class Compound(object):
 
         self.name = filename
 
-        for i, line in enumerate(lines[2:]):
+        for i, line in enumerate(lines[2:self.natoms+2]):
             tokens = line.split()
 
             if len(tokens) < 4:
