@@ -43,6 +43,15 @@ def test_compound():
 
     assert compare_lists(ref_atomtypes, c.atomtypes), "Failed parsing atomtypes"
     assert compare_lists(ref_charges, c.nuclear_charges), "Failed parsing nuclear_charges"
+   
+    # Test extended xyz
+    c2 = qml.Compound(xyz=test_dir + "/data/compound_test.exyz")
+    
+    ref_atomtypes = ['C', 'Cl', 'Br', 'H', 'H']
+    ref_charges = [ 6, 17, 35,  1 , 1]
+
+    assert compare_lists(ref_atomtypes, c.atomtypes), "Failed parsing atomtypes"
+    assert compare_lists(ref_charges, c.nuclear_charges), "Failed parsing nuclear_charges"
 
 if __name__ == "__main__":
 
