@@ -239,7 +239,13 @@ def gen_custom(e_vec, emax=100):
 def get_alchemy(alchemy, emax=100, r_width=0.001, c_width=0.001, elemental_vectors={}, \
                 n_width = 0.001, m_width = 0.001, l_width = 0.001, s_width = 0.001):
 
-    if (alchemy == "off"):
+
+    if (type(alchemy) == np.ndarray):
+
+        doalchemy = True
+        return doalchemy, alchemy
+
+    elif (alchemy == "off"):
 
         pd = np.eye(emax)
         doalchemy = False
