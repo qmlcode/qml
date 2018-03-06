@@ -30,6 +30,7 @@ from .frepresentations import fgenerate_unsorted_coulomb_matrix
 from .frepresentations import fgenerate_local_coulomb_matrix
 from .frepresentations import fgenerate_atomic_coulomb_matrix
 from .frepresentations import fgenerate_eigenvalue_coulomb_matrix
+from .frepresentations import fgenerate_bob
 
 from .data import NUCLEAR_CHARGE
 
@@ -294,37 +295,6 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, size=23, asize = {"O":
         :return: 1D representation
         :rtype: numpy array
     """
-    natoms = len(nuclear_charges)
-
-    coulomb_matrix = fgenerate_unsorted_coulomb_matrix(nuclear_charges, coordinates, size)
-
-    coulomb_matrix = vector_to_matrix(coulomb_matrix)
-    descriptor = []
-    atomtypes = np.asarray(atomtypes)
-    for atom1, size1 in sorted(asize.items()):
-        pos1 = np.where(atomtypes == atom1)[0]
-        feature_vector = np.zeros(size1)
-        feature_vector[:pos1.size] = np.diag(coulomb_matrix)[pos1]
-        feature_vector.sort()
-        descriptor.append(feature_vector[:])
-        for atom2, size2 in sorted(asize.items()):
-            if atom1 > atom2:
-                continue
-            if atom1 == atom2:
-                size = size1*(size1-1)//2
-                feature_vector = np.zeros(size)
-                sub_matrix = coulomb_matrix[np.ix_(pos1,pos1)]
-                feature_vector[:pos1.size*(pos1.size-1)//2] = sub_matrix[np.triu_indices(pos1.size, 1)]
-                feature_vector.sort()
-                descriptor.append(feature_vector[:])
-            else:
-                pos2 = np.where(atomtypes == atom2)[0]
-                feature_vector = np.zeros(size1*size2)
-                feature_vector[:pos1.size*pos2.size] = coulomb_matrix[np.ix_(pos1,pos2)].ravel()
-                feature_vector.sort()
-                descriptor.append(feature_vector[:])
-
-    return np.concatenate(descriptor)
 
     n = 0
     atoms = sorted(asize, key=asize.get)
@@ -339,7 +309,6 @@ def generate_bob(nuclear_charges, coordinates, atomtypes, size=23, asize = {"O":
     n /= 2
 
     return fgenerate_bob(nuclear_charges, coordinates, nuclear_charges, ids, nmax, n)
-
 
 def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     """
