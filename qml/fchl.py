@@ -101,63 +101,6 @@ def generate_representation(coordinates, nuclear_charges,
     return M
 
 
-def dummy_fchl(A, B, sigmas,
-        two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
-        two_body_width=0.2, three_body_width=np.pi,
-        two_body_power=4.0, three_body_power=2.0,
-        cut_start=1.0, cut_distance=5.0,
-        fourier_order=1, alchemy="periodic-table",
-        alchemy_period_width=1.6, alchemy_group_width=1.6):
-    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
-
-            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
-
-        Where :math:`A_{i}` and :math:`B_{j}` are FCHL representations.
-        K is calculated analytically using an OpenMP parallel Fortran routine.
-        Note, that this kernel will ONLY work with FCHL representations as input.
-
-        :param A: Array of FCHL representation - shape=(N, maxsize, 5, maxneighbors).
-        :type A: numpy array
-        :param B: Array of FCHL representation - shape=(M, maxsize, 5, maxneighbors).
-        :type B: numpy array
-        :param sigma: List of kernel-widths.
-        :type sigma: list
-
-        :param two_body_scaling: Weight for 2-body terms.
-        :type two_body_scaling: float
-        :param three_body_scaling: Weight for 3-body terms.
-        :type three_body_scaling: float
-
-        :param two_body_width: Gaussian width for 2-body terms
-        :type two_body_width: float
-        :param three_body_width: Gaussian width for 3-body terms.
-        :type three_body_width: float
-
-        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
-        :type two_body_power: float
-        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
-        :type three_body_power: float
-
-        :param cut_start: The fraction of the cut-off radius at which cut-off damping start.
-        :type cut_start: float
-        :param cut_distance: Cut-off radius. (default=5 angstrom)
-        :type cut_distance: float
-
-        :param fourier_order: 3-body Fourier-expansion truncation order.
-        :type fourier_order: integer
-        :param alchemy: Type of alchemical interpolation ``"periodic-table"`` or ``"off"`` are possible options. Disabling alchemical interpolation can yield dramatic speedups.
-        :type alchemy: string
-
-        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
-        :type alchemy_period_width: float
-        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
-        :type alchemy_group_width: float
-
-        :return: Array of FCHL kernel matrices matrix - shape=(n_sigmas, N, M),
-        :rtype: numpy array
-    """
-
-
 def get_local_kernels(A, B, sigmas, \
         two_body_scaling=np.sqrt(8), three_body_scaling=1.6,
         two_body_width=0.2, three_body_width=np.pi,
