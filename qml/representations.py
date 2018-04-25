@@ -38,6 +38,8 @@ from .slatm import get_boa
 from .slatm import get_sbop
 from .slatm import get_sbot
 
+from .facsf import fgenerate_acsf
+
 def vector_to_matrix(v):
     """ Converts a representation from 1D vector to 2D square matrix.
     :param v: 1D input representation.
@@ -368,7 +370,6 @@ def get_slatm_mbtypes(nuclear_charges, pbc='000'):
 
     return mbtypes #, np.array(zs_ravel), np.array(nas)
 
-
 def generate_slatm(coordinates, nuclear_charges, mbtypes,
         unit_cell=None, local=False, sigmas=[0.05,0.05], dgrids=[0.03,0.03],
         rcut=4.8, alchemy=False, pbc='000', rpower=6):
@@ -547,3 +548,16 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
                     mbs = np.concatenate( (mbs, mbsi), axis=0 )
 
     return mbs
+
+def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, eta3 = 1, zeta = 1, rcut = 5, acut = 5):
+
+    Rs2 = np.linspace(0, rcut, nRs2)
+    Rs3 = np.linspace(0, acut, nRs3)
+    Ts = np.linspace(0, np.pi, nTs)
+    n_elements = len(elements)
+    natoms = len(coordinates)
+
+    descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
+
+    return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
+            Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
