@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders Steen Christensen
+# Copyright (c) 2017 Anders Steen Christensen, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,18 +58,40 @@ def test_representations():
     path = test_dir = os.path.dirname(os.path.realpath(__file__))
 
     mols = []
+    elements = []
     for xyz_file in files:
         mol = qml.Compound(xyz=path + "/" + xyz_file)
+        elements.extend(mol.nuclear_charges)
         mols.append(mol)
+
+    elements = np.unique(elements)
 
     size = max(mol.nuclear_charges.size for mol in mols) + 1
 
     asize = get_asize(mols,1)
 
+
     coulomb_matrix(mols, size, path)
     atomic_coulomb_matrix(mols, size, path)
     eigenvalue_coulomb_matrix(mols, size, path)
     bob(mols, size, asize, path)
+    acsf(mols, elements, path)
+
+def acsf(mols, elements, path):
+
+    # Generate atom centered symmetry functions representation
+    X_test = []
+    for i, mol in enumerate(mols): 
+        mol.generate_acsf(elements = elements)
+        X_test.extend(list(mol.representation))
+
+    X_test = np.asarray(X_test)
+    X_ref = np.loadtxt(path + "/data/atom_centered_symmetry_function_representation.txt")
+    for line in X_test:
+        print(line.max())
+    #print(np.max(abs(X_test-X_ref)))
+    quit()
+    assert np.allclose(X_test, X_ref), "Error in atom centered symmetry functions representation"
 
 def coulomb_matrix(mols, size, path):
 

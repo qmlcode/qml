@@ -179,8 +179,9 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     allocate(b(3))
     allocate(c(3))
 
-
-    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular) COLLAPSE(2) REDUCTION(+:descr)
+    ! Adding COLLAPSE(2) REDUCTION(+:descr) below makes that reduction misbehave
+    ! so only parallelise outer loop
+    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular) REDUCTION(+:descr)
     do i = 1, natoms
         do j = 1, natoms
             if (i .eq. j) cycle
