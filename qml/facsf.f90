@@ -39,32 +39,9 @@ function decay(r, rc, natoms) result(f)
 
     f = 0.5d0 * (cos(pi*r / rc) + 1.0d0)
 
+
 end function decay
 
-
-!function linspace(x0, x1, nx) result(xs)
-!
-!    implicit none
-!
-!    double precision, intent(in) :: x0
-!    double precision, intent(in) :: x1
-!    integer, intent(in) :: nx
-!
-!    double precision, dimension(nx) :: xs
-!
-!    integer :: i
-!    double precision :: step
-!
-!    step = (x1 - x0) / (nx - 1)
-!
-!    !$OMP PARALLEL DO
-!    do i = 1, nx
-!        xs(i) = x0 + (i - 1) * step
-!    enddo
-!    !$OMP END PARALLEL DO
-!
-!end function linspace
-!
 function calc_angle(a, b, c) result(angle)
 
     implicit none
@@ -96,31 +73,7 @@ function calc_angle(a, b, c) result(angle)
 end function calc_angle
 
 end module acsf_utils
-!
-!function calc_cos_angle(a, b, c) result(cos_angle)
-!
-!    implicit none
-!
-!    double precision, intent(in), dimension(3) :: a
-!    double precision, intent(in), dimension(3) :: b
-!    double precision, intent(in), dimension(3) :: c
-!
-!    double precision, dimension(3) :: v1
-!    double precision, dimension(3) :: v2
-!
-!    double precision :: cos_angle
-!
-!    v1 = a - b
-!    v2 = c - b
-!
-!    v1 = v1 / norm2(v1)
-!    v2 = v2 / norm2(v2)
-!
-!    cos_angle = dot_product(v1,v2)
-!
-!end function calc_cos_angle
-!
-!end module slatm_utils
+
 
 subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                           & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size, descr)
@@ -144,7 +97,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     integer, intent(in) :: descr_size
     double precision, intent(out), dimension(natoms, descr_size) :: descr
 
-    integer :: i, j, k, l, n, m, p, q, z, nelements, nbasis2, nbasis3, nabasis
+    integer :: i, j, k, l, n, m, p, q, r, z, nelements, nbasis2, nbasis3, nabasis
     integer, allocatable, dimension(:) :: element_types
     double precision :: norm, rij, rik, angle
     double precision, allocatable, dimension(:) :: radial, angular, a, b, c
@@ -207,7 +160,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
             if (norm <= rcut) then
                 radial = exp(-eta2*(norm - Rs2)**2) * rdecay(i,j)
                 descr(i, (n-1)*nbasis2 + 1:n*nbasis2) = descr(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
-                descr(j, (m-1)*nbasis2 + 1:n*nbasis2) = descr(j, (m-1)*nbasis2 + 1:n*nbasis2) + radial
+                descr(j, (m-1)*nbasis2 + 1:m*nbasis2) = descr(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
             endif
         enddo
     enddo
@@ -226,15 +179,16 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     allocate(b(3))
     allocate(c(3))
 
-    !!$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular) COLLAPSE(2) REDUCTION(+:descr)
+
+    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular) COLLAPSE(2) REDUCTION(+:descr)
     do i = 1, natoms
         do j = 1, natoms
             if (i .eq. j) cycle
             n = element_types(j)
             rij = distance_matrix(i,j)
+            if (rij > acut) cycle
             do k = j + 1, natoms
                 if (i .eq. k) cycle
-                if (rij > acut) cycle
                 m = element_types(i)
                 rik = distance_matrix(i,k)
                 if (rik > acut) cycle
@@ -255,7 +209,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
             enddo
         enddo
     enddo
-    !!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
     deallocate(element_types)
     deallocate(distance_matrix)

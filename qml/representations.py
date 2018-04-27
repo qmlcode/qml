@@ -549,7 +549,35 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
 
     return mbs
 
-def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, eta3 = 1, zeta = 1, rcut = 5, acut = 5):
+def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, eta3 = 1, zeta = 1, rcut = 5, acut = 5):
+    """
+    Generate the variant of atom-centered symmetry functions used in https://arxiv.org/pdf/1711.06385.pdf
+
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param coordinates: Input coordinates
+    :type coordinates: numpy array
+    :param elements: list of unique nuclear charges (atom types)
+    :type elements: numpy array
+    :param nRs2: Number of gaussian basis functions in the two-body terms
+    :type nRs2: integer
+    :param nRs3: Number of gaussian basis functions in the three-body radial part
+    :type nRs3: integer
+    :param nTs: Number of basis functions in the three-body angular part
+    :type nTs: integer
+    :param eta2: Precision in the gaussian basis functions in the two-body terms
+    :type eta2: float
+    :param eta3: Precision in the gaussian basis functions in the three-body radial part
+    :type eta3: float
+    :param zeta: Precision parameter of basis functions in the three-body angular part
+    :type zeta: float
+    :param rcut: Cut-off radius of the two-body terms
+    :type rcut: float
+    :param acut: Cut-off radius of the three-body terms
+    :type acut: float
+    :return: Atom-centered symmetry functions representation
+    :rtype: numpy array
+    """
 
     Rs2 = np.linspace(0, rcut, nRs2)
     Rs3 = np.linspace(0, acut, nRs3)
