@@ -100,7 +100,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     integer :: i, j, k, l, n, m, p, q, r, z, nelements, nbasis2, nbasis3, nabasis
     integer, allocatable, dimension(:) :: element_types
     double precision :: norm, rij, rik, angle
-    double precision, allocatable, dimension(:) :: radial, angular, a, b, c
+    double precision, allocatable, dimension(:) :: radial, angular, a, b, c, atom_descr
     double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
@@ -178,11 +178,11 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
+    allocate(atom_descr(descr_size))
 
-    ! Adding COLLAPSE(2) REDUCTION(+:descr) below makes that reduction misbehave
-    ! so only parallelise outer loop
-    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular) REDUCTION(+:descr)
+    !!$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular,atom_descr)
     do i = 1, natoms
+        atom_descr = 0.0d0
         do j = 1, natoms
             if (i .eq. j) cycle
             n = element_types(j)
@@ -205,12 +205,17 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                 do l = 1, nabasis
                     z = nelements * nbasis2 + nbasis3 * nabasis * (q - (p * (p + 1 - 2 * nelements)) / 2) &
                         & + (l - 1) * nbasis3 + 1
-                    descr(i, z:z + nbasis3) = descr(i, z:z + nbasis3) + angular(l) * radial
+                    atom_descr(z:z + nbasis3) = atom_descr(z:z + nbasis3) + angular(l) * radial
+                    do r = 1, nbasis3
+                        write(*,'(i3, i3, i3, i3, i3, f8.5, f6.3, f6.3, f6.3)') i, j, k, r, l, angular(l) * radial(r), &
+                        & rij, rik, angle, z+l
+                    enddo
                 enddo
             enddo
         enddo
+        descr(i,:) = atom_descr
     enddo
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     deallocate(element_types)
     deallocate(distance_matrix)
@@ -219,5 +224,6 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     deallocate(a)
     deallocate(b)
     deallocate(c)
+    deallocate(atom_descr)
 
 end subroutine fgenerate_acsf

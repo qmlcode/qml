@@ -86,10 +86,8 @@ def acsf(mols, elements, path):
         X_test.extend(list(mol.representation))
 
     X_test = np.asarray(X_test)
+    X_ref = np.savetxt(path + "/data/atom_centered_symmetry_function_representation.txt", X_test)
     X_ref = np.loadtxt(path + "/data/atom_centered_symmetry_function_representation.txt")
-    for line in X_test:
-        print(line.max())
-    #print(np.max(abs(X_test-X_ref)))
     quit()
     assert np.allclose(X_test, X_ref), "Error in atom centered symmetry functions representation"
 
