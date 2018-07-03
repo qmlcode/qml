@@ -4,17 +4,16 @@ This script shows how to set up the ARMP estimator where the descriptor is set d
 
 from qml.aglaia.aglaia import ARMP
 import numpy as np
-import joblib
 import os
 
 ## ------------- ** Loading the data ** ---------------
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-data = joblib.load(current_dir + '/../test/data/local_slatm_ch4cn_light.bz')
+data = np.load(current_dir + '/../test/data/local_slatm_ch4cn_light.npz')
 
-descriptor = data["descriptor"]
-energies = data["energies"]
-zs = data["zs"]
+descriptor = data["arr_0"]
+zs = data["arr_1"]
+energies = data["arr_2"]
 
 ## ------------- ** Setting up the estimator ** ---------------
 

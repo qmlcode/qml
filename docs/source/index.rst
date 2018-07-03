@@ -9,11 +9,11 @@ QML: A Python Toolkit for Quantum Machine Learning
 ==================================================
 
 QML is a Python2/3-compatible toolkit for representation learning of
-properties of molecules and solids. QML is not a high-level framework
-where you can do ``model.train()``, but supplies the building blocks to
+properties of molecules and solids. QML supplies the the building blocks to
 carry out efficient and accurate machine learning on chemical compounds.
-As such, the goal is to provide usable and efficient implementations of
-concepts such as representations and kernels. 
+The goal is to provide usable and efficient implementations of
+concepts such as representations and kernels as well as a high level interface
+to make it easy for computational chemists to use these for machine-learning tasks.
 
 
 Current list of contributors:
