@@ -33,6 +33,7 @@ install:
        sudo apt-get install python3-numpy
        pip3 install scipy
        pip3 install ase
+       pip3 install scikit-learn
        pip3 install tensorflow
        python3 setup.py build
        python3 setup.py install
@@ -44,6 +45,7 @@ install:
        sudo apt-get install python-numpy
        pip2 install scipy
        pip2 install ase
+       pip2 install scikit-learn
        pip2 install tensorflow
        python2 setup.py build
        python2 setup.py install
