@@ -5,7 +5,6 @@ This test checks if all the ways of setting up the estimator ARMP work.
 
 import numpy as np
 from qml.aglaia.aglaia import ARMP
-import joblib
 from qml.aglaia.utils import InputError
 import glob
 import os
@@ -66,8 +65,8 @@ def test_set_descriptor():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
     data_incorrect = np.load(test_dir + "/data/CN_isopent_light_UCM.npz")
-    data_correct = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
-    descriptor_correct = data_correct["descriptor"]
+    data_correct = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor_correct = data_correct["arr_0"]
     descriptor_incorrect = data_incorrect["arr_0"]
 
 
@@ -113,10 +112,10 @@ def test_fit_2():
     """
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
-    data = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
-    descriptor = data["descriptor"]
-    classes = data["zs"]
-    energies = data["energies"]
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
 
     estimator = ARMP()
     estimator.set_descriptors(descriptors=descriptor)
@@ -132,10 +131,10 @@ def test_fit_3():
     """
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
-    data = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
-    descriptor = data["descriptor"]
-    classes = data["zs"]
-    energies = data["energies"]
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
 
     estimator = ARMP()
     estimator.fit(x=descriptor, y=energies, classes=classes)
@@ -146,10 +145,10 @@ def test_score_3():
     """
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
-    data = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
-    descriptor = data["descriptor"]
-    classes = data["zs"]
-    energies = data["energies"]
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
 
     estimator_1 = ARMP(scoring_function='mae')
     estimator_1.fit(x=descriptor, y=energies, classes=classes)
@@ -166,10 +165,10 @@ def test_score_3():
 def test_predict_3():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
-    data = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
-    descriptor = data["descriptor"]
-    classes = data["zs"]
-    energies = data["energies"]
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
 
     estimator = ARMP()
     estimator.fit(x=descriptor, y=energies, classes=classes)
