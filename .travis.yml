@@ -32,6 +32,8 @@ install:
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
        sudo apt-get install python3-numpy
        pip3 install scipy
+       pip3 install ase
+       pip3 install tensorflow
        python3 setup.py build
        python3 setup.py install
        pip3 install sphinx
@@ -41,6 +43,8 @@ install:
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
        pip2 install scipy
+       pip3 install ase
+       pip3 install tensorflow
        python2 setup.py build
        python2 setup.py install
        pip2 install sphinx
