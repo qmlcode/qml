@@ -24,11 +24,13 @@ from __future__ import print_function
 
 import os
 import numpy as np
-import qml
-from qml.kernels import laplacian_kernel
-from qml.math import cho_solve
 
-from qml.representations import get_slatm_mbtypes
+import qml
+import qml.data
+
+from qml.ml.kernels import laplacian_kernel
+from qml.ml.math import cho_solve
+from qml.ml.representations import get_slatm_mbtypes
 
 
 def get_energies(filename):
@@ -58,13 +60,13 @@ def test_krr_bob():
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
     data = get_energies(test_dir + "/data/hof_qm7.txt")
 
-    # Generate a list of qml.Compound() objects
+    # Generate a list of qml.data.Compound() objects
     mols = []
 
     for xyz_file in sorted(data.keys())[:1000]:
 
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the qml.data.Compound() objects
+        mol = qml.data.Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]

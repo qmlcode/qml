@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import os
 
-import qml
+from qml.data import Compound
 import numpy as np
 
 def compare_lists(a, b):
@@ -36,7 +36,7 @@ def compare_lists(a, b):
 def test_compound():
 
     test_dir = os.path.dirname(os.path.realpath(__file__))
-    c = qml.Compound(xyz=test_dir + "/data/compound_test.xyz")
+    c = Compound(xyz=test_dir + "/data/compound_test.xyz")
     
     ref_atomtypes = ['C', 'Cl', 'Br', 'H', 'H']
     ref_charges = [ 6, 17, 35,  1 , 1]
@@ -45,7 +45,7 @@ def test_compound():
     assert compare_lists(ref_charges, c.nuclear_charges), "Failed parsing nuclear_charges"
    
     # Test extended xyz
-    c2 = qml.Compound(xyz=test_dir + "/data/compound_test.exyz")
+    c2 = Compound(xyz=test_dir + "/data/compound_test.exyz")
     
     ref_atomtypes = ['C', 'Cl', 'Br', 'H', 'H']
     ref_charges = [ 6, 17, 35,  1 , 1]
