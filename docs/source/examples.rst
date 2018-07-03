@@ -5,9 +5,11 @@ Generating representations using the ``Compound`` class
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following example demonstrates how to generate a representation via
-the ``qml.Compound`` class.
+the ``qml.data.Compound`` class.
 
 .. code:: python
+
+    from qml.data import Compound
 
     # Read in an xyz or cif file.
     water = Compound(xyz="water.xyz")
@@ -31,7 +33,7 @@ Generating representations via the ``qml.representations`` module
 .. code:: python
 
     import numpy as np
-    from qml.representations import *
+    from qml.ml.representations import *
 
     # Dummy coordinates for a water molecule
     coordinates = np.array([[1.464, 0.707, 1.056],
@@ -86,7 +88,7 @@ The input for most of the kernels in QML is a numpy array, where the first dimen
 .. code:: python
     
     import numpy as np
-    from qml.kernels import gaussian_kernel
+    from qml.ml.kernels import gaussian_kernel
 
     # Generate a numpy-array of the representation
     X = np.array([c.representation for c in compounds])
@@ -106,7 +108,7 @@ The easiest way to calculate the kernel matrix using an explicit, local represen
 .. code:: python
 
     import numpy as np
-    from qml.kernels import get_local_kernels_gaussian
+    from qml.ml.kernels import get_local_kernels_gaussian
 
     # Assume the QM7 dataset is loaded into a list of Compound()
     for compound in qm7:
@@ -144,7 +146,7 @@ This input (the types of many-body terms) is generate via the ``get_slatm_mbtype
 
 .. code:: python
 
-    from qml.representations import get_slatm_mbtypes
+    from qml.ml.representations import get_slatm_mbtypes
 
     # Assume 'qm7' is a list of Compound() objects.
     mbtypes = get_slatm_mbtypes([mol.nuclear_charges for compound in qm7])
@@ -155,11 +157,11 @@ This input (the types of many-body terms) is generate via the ``get_slatm_mbtype
         # Generate the desired representation for each compound
         compound.generate_slatm(mbtypes, local=True)
 
-The ``local`` keyword in this example specifies that a local representation is produced. Alternatively the SLATM representation can be generate via the ``qml.representations`` module:
+The ``local`` keyword in this example specifies that a local representation is produced. Alternatively the SLATM representation can be generate via the ``qml.ml.representations`` module:
     
 .. code:: python
 
-    from qml.representations import generate_slatm
+    from qml.ml.representations import generate_slatm
 
     # Dummy coordinates
     coordinates = ... 
@@ -178,7 +180,7 @@ Here ``coordinates`` is an Nx3 numpy array, and ``nuclear_charges`` is simply a 
 Generating the FCHL representation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The FCHL representation does not have an explicit representation in the form of a vector, and the kernel elements must be calculated analytically in a separate kernel function.
-The syntax is analogous to the explicit representations (e.g. Coulomb matrix, BoB, SLATM, etc), but is handled by kernels from the separate ``qml.fchl`` module.
+The syntax is analogous to the explicit representations (e.g. Coulomb matrix, BoB, SLATM, etc), but is handled by kernels from the separate ``qml.ml.representations.fchl`` module.
 
 The code below show three ways to create the input representations for the FHCL kernel functions.
 
@@ -199,12 +201,12 @@ First using the ``Compound`` class:
 The dimensions of the array should be ``(number_molecules, size, 5, size)``, where ``size`` is the
 size keyword used when generating the representations. 
 
-In addition to using the ``Compound`` class to generate the representations, FCHL representations can also be generated via the ``qml.fchl.generate_fchl_representation()`` function, using similar notation to the functions in the ``qml.representations.*`` functions.
+In addition to using the ``Compound`` class to generate the representations, FCHL representations can also be generated via the ``qml.ml.representations.fchl.generate_fchl_representation()`` function, using similar notation to the functions in the ``qml.ml.representations.*`` functions.
 
 
 .. code:: python
 
-    from qml.fchl import generate_representation 
+    from qml.ml.representations.fchl import generate_representation 
 
     # Dummy coordinates for a water molecule
     coordinates = np.array([[1.464, 0.707, 1.056],
@@ -221,7 +223,7 @@ To create the representation for a crystal, the notation is as follows:
 
 .. code:: python
 
-    from qml.fchl import generate_representation 
+    from qml.ml.representations.fchl import generate_representation 
 
     # Dummy fractional coordinates
     fractional_coordinates = np.array(
@@ -266,7 +268,7 @@ The following example demonstrates how to calculate the local FCHL kernel elemen
 
 .. code:: python
 
-    from qml.fchl import get_local_kernels
+    from qml.ml.representations.fchl import get_local_kernels
 
     # You can get kernels for multiple kernel-widths
     sigmas = [2.5, 5.0, 10.0]
@@ -288,7 +290,7 @@ In case ``X1`` and ``X2`` are identical, K will be symmetrical. This is handled 
 
 .. code:: python
     
-    from qml.fchl import get_local_symmetric_kernels
+    from qml.ml.representations.fchl import get_local_symmetric_kernels
 
     # You can get kernels for multiple kernel-widths
     sigmas = [2.5, 5.0, 10.0]
@@ -307,8 +309,8 @@ In addition to the local kernel, the FCHL module also provides kernels for atomi
 
 .. code:: python
 
-    from qml.fchl import get_atomic_kernels
-    from qml.fchl import get_atomic_symmetric_kernels
+    from qml.ml.representations.fchl import get_atomic_kernels
+    from qml.ml.representations.fchl import get_atomic_symmetric_kernels
 
 The only difference between the local and atomic kernels is the shape of the input.
 Since the atomic kernel outputs kernels with atomic resolution, the atomic input has the shape ``(number_atoms, 5, size)``.

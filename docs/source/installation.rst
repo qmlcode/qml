@@ -5,7 +5,7 @@ Installing prerequisite modules (for most Linux systems):
 
 .. code:: bash
 
-    sudo apt-get install python-pip gfortran libblas-dev liblapack-dev git
+    sudo apt-get install python-pip gfortran libblas-dev liblapack-dev
 
 These should already be installed on most systems. The Intel compilers
 and MKL math-libraries are supported as well (see section 1.3).
