@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen
+# Copyright (c) 2017 Silvia Amabilino, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,27 +22,10 @@
 
 
 """
-QML main module
+Aglaia main module
 ===============
 
 Provides
-  1. representations
-  2. kernels
-  3. math
+    1. NN class
+    2. wrappers
 """
-from __future__ import absolute_import
-
-from . import data
-from . import ml
-from . import models
-from . import aglaia
-
-__author__ = "Anders S. Christensen"
-__copyright__ = "Copyright 2016"
-__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
-__license__ = "MIT"
-__version__ = "0.2.1"
-__maintainer__ = "Anders S. Christensen"
-__email__ = "andersbiceps@gmail.com"
-__status__ = "Beta"
-

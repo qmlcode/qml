@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen
+# Copyright (c) 2017 Anders S. Christensen, Kristof T. Schutt, Stefan Chmiela
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import division, absolute_import, print_function
 
-"""
-QML main module
-===============
+class MLModel(object):
 
-Provides
-  1. representations
-  2. kernels
-  3. math
-"""
-from __future__ import absolute_import
+    def __init__(self, targets):
+        self._targes = targets
 
-from . import data
-from . import ml
-from . import models
-from . import aglaia
+    def train(self, data):
+        return self._train(data)
+    
+    def predict(self, data):
+        return self._predict(data)
+    
+    def save(self, path):
+        return self._save(path)
 
-__author__ = "Anders S. Christensen"
-__copyright__ = "Copyright 2016"
-__credits__ = ["Anders S. Christensen (2016) https://github.com/qmlcode/qml"]
-__license__ = "MIT"
-__version__ = "0.2.1"
-__maintainer__ = "Anders S. Christensen"
-__email__ = "andersbiceps@gmail.com"
-__status__ = "Beta"
+    def restore(self, path):
+        return self._restore(path)
 
+    def _train(self, data):
+        raise NotImplementedError
+    
+    def _predict(self, data):
+        raise NotImplementedError
+    
+    def _save(self, path):
+        raise NotImplementedError
+
+    def _restore(self, path):
+        raise NotImplementedError

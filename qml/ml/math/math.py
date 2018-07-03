@@ -24,10 +24,10 @@ import numpy as np
 
 from copy import deepcopy
 
-from .fcho_solve import fcho_solve
-from .fcho_solve import fcho_invert
-from .fcho_solve import fbkf_solve
-from .fcho_solve import fbkf_invert
+from .fsolvers import fcho_solve
+from .fsolvers import fcho_invert
+from .fsolvers import fbkf_solve
+from .fsolvers import fbkf_invert
 
 
 def cho_invert(A):
