@@ -43,8 +43,8 @@ install:
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
        pip2 install scipy
-       pip3 install ase
-       pip3 install tensorflow
+       pip2 install ase
+       pip2 install tensorflow
        python2 setup.py build
        python2 setup.py install
        pip2 install sphinx
