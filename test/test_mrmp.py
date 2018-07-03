@@ -9,6 +9,7 @@ import joblib
 from qml.aglaia.utils import InputError
 import glob
 import os
+import pickle
 
 def test_set_representation():
     """
@@ -65,9 +66,9 @@ def test_set_descriptor():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
     data_correct = np.load(test_dir + "/data/CN_isopent_light_UCM.npz")
-    data_incorrect = joblib.load(test_dir + "/data/local_slatm_ch4cn_light.bz")
+    data_incorrect = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
     descriptor_correct = data_correct["arr_0"]
-    descriptor_incorrect = data_incorrect["descriptor"]
+    descriptor_incorrect = data_incorrect["arr_0"]
 
     estimator = MRMP()
 
