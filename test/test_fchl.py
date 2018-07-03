@@ -2,19 +2,18 @@ from __future__ import print_function
 
 import os
 import numpy as np
-import qml
 
-import qml
+from qml.data import Compound
 
-from qml.math import cho_solve
+from qml.ml.math import cho_solve
 
-from qml.fchl import generate_representation
-from qml.fchl import get_local_symmetric_kernels
-from qml.fchl import get_local_kernels
-from qml.fchl import get_global_symmetric_kernels
-from qml.fchl import get_global_kernels
-from qml.fchl import get_atomic_kernels
-from qml.fchl import get_atomic_symmetric_kernels
+from qml.ml.representations.fchl import generate_representation
+from qml.ml.representations.fchl import get_local_symmetric_kernels
+from qml.ml.representations.fchl import get_local_kernels
+from qml.ml.representations.fchl import get_global_symmetric_kernels
+from qml.ml.representations.fchl import get_global_kernels
+from qml.ml.representations.fchl import get_atomic_kernels
+from qml.ml.representations.fchl import get_atomic_symmetric_kernels
 
 def get_energies(filename):
     """ Returns a dictionary with heats of formation for each xyz-file.
@@ -59,14 +58,14 @@ def test_krr_fchl_local():
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
     data = get_energies(test_dir + "/data/hof_qm7.txt")
 
-    # Generate a list of qml.Compound() objects"
+    # Generate a list of Compound() objects"
     mols = []
 
 
     for xyz_file in sorted(data.keys())[:100]:
 
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the Compound() objects
+        mol = Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
@@ -125,14 +124,14 @@ def test_krr_fchl_global():
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
     data = get_energies(test_dir + "/data/hof_qm7.txt")
 
-    # Generate a list of qml.Compound() objects"
+    # Generate a list of Compound() objects"
     mols = []
 
 
     for xyz_file in sorted(data.keys())[:100]:
 
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the Compound() objects
+        mol = Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
@@ -192,13 +191,13 @@ def test_krr_fchl_atomic():
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
     data = get_energies(test_dir + "/data/hof_qm7.txt")
 
-    # Generate a list of qml.Compound() objects"
+    # Generate a list of Compound() objects"
     mols = []
 
     for xyz_file in sorted(data.keys())[:10]:
 
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the Compound() objects
+        mol = Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
@@ -388,14 +387,14 @@ def test_krr_fchl_alchemy():
     # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenames
     data = get_energies(test_dir + "/data/hof_qm7.txt")
 
-    # Generate a list of qml.Compound() objects"
+    # Generate a list of Compound() objects"
     mols = []
 
 
     for xyz_file in sorted(data.keys())[:20]:
 
-        # Initialize the qml.Compound() objects
-        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the Compound() objects
+        mol = Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
