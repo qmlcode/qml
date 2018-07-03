@@ -26,8 +26,8 @@ from .fkernels import fget_vector_kernels_gaussian
 from .fkernels import fget_vector_kernels_laplacian
 from .fkernels import fget_local_kernels_gaussian
 
-from .arad import get_local_kernels_arad
-from .arad import get_local_symmetric_kernels_arad
+from ..arad import get_local_kernels_arad
+from ..arad import get_local_symmetric_kernels_arad
 
 
 def get_atomic_kernels_laplacian(mols1, mols2, sigmas):
