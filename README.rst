@@ -14,6 +14,7 @@ Current list of contributors:
 -  Silvia Amabilino (University of Bristol)
 -  Felix A. Faber (University of Basel)
 -  Bing Huang (University of Basel)
+-  David R. Glowacki (University of Bristol) 
 -  O. Anatole von Lilienfeld (University of Basel)
 
 1) Citing QML:
@@ -24,7 +25,7 @@ repository as:
 
 ::
 
-    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, GR Glowacki, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 2) Get help:
 ------------

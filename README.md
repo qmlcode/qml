@@ -15,7 +15,7 @@ QML is a Python2/3-compatible toolkit for representation learning of properties 
 
 Until the preprint is available from arXiv, please cite this GitHub repository as:
 
-    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, GR Glowacki, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
 ## 2) Get help:
