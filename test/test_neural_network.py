@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2018 Silvia Amabilino, Lars Andersen Bratholm
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 Tests directly related to the class _NN and it's children.
 
@@ -349,8 +371,7 @@ def test_fit1():
     X = np.reshape(x, (len(x), 1))
     y = x ** 3
 
-    estimator = MRMP(hidden_layer_sizes=(5, 5, 5), learning_rate=0.01, iterations=35000, l2_reg=0, tf_dtype=32,
-                     scoring_function="rmse")
+    estimator = MRMP(hidden_layer_sizes=(5, 5, 5), learning_rate=0.01, iterations=35000)
     estimator.fit(X, y)
 
     x_test = np.linspace(-1.5, 1.5, 15)
