@@ -9,22 +9,22 @@ QML: A Python Toolkit for Quantum Machine Learning
 ==================================================
 
 QML is a Python2/3-compatible toolkit for representation learning of
-properties of molecules and solids. QML is not a high-level framework
-where you can do ``model.train()``, but supplies the building blocks to
+properties of molecules and solids. QML supplies the the building blocks to
 carry out efficient and accurate machine learning on chemical compounds.
-As such, the goal is to provide usable and efficient implementations of
-concepts such as representations and kernels. 
+The goal is to provide usable and efficient implementations of
+concepts such as representations and kernels as well as a high level interface
+to make it easy for computational chemists to use these for machine-learning tasks.
 
 
 Current list of contributors:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  Anders S. Christensen (University of Basel)
+-  Lars A. Bratholm (University of Bristol)
+-  Silvia Amabilino (University of Bristol)
 -  Felix A. Faber (University of Basel)
 -  Bing Huang (University of Basel)
--  Lars A. Bratholm (University of Copenhagen)
--  Alexandre Tkatchenko (University of Luxembourg)
--  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
+-  David R. Glowacki (University of Bristol)
 -  O. Anatole von Lilienfeld (University of Basel)
 
 Code development
@@ -48,7 +48,7 @@ Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, FA Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, DR Glowacki, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
 For citation of the individual procedures of QML, please see the "Citing use of QML" section.

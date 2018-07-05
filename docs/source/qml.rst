@@ -8,7 +8,7 @@ Python API documentation
 qml\.representations module
 ---------------------------
 
-.. automodule:: qml.representations
+.. automodule:: qml.ml.representations.representations
     :members:
     :undoc-members:
     :show-inheritance:
@@ -16,7 +16,7 @@ qml\.representations module
 qml\.kernels module
 -------------------
 
-.. automodule:: qml.kernels
+.. automodule:: qml.ml.kernels
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +24,7 @@ qml\.kernels module
 qml\.distance module
 --------------------
 
-.. automodule:: qml.distance
+.. automodule:: qml.ml.kernels.distance
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ qml\.distance module
 qml\.math module
 ----------------
 
-.. automodule:: qml.math
+.. automodule:: qml.ml.math
     :members:
     :undoc-members:
     :show-inheritance:
@@ -40,7 +40,7 @@ qml\.math module
 qml\.Compound class
 --------------------
 
-.. autoclass:: qml.Compound
+.. autoclass:: qml.data.compound.Compound
     :members:
     :undoc-members:
     :show-inheritance:
@@ -55,7 +55,7 @@ qml\.Compound class
 qml\.fchl module
 ----------------
 
-.. automodule:: qml.fchl
+.. automodule:: qml.ml.representations.fchl
     :members:
     :show-inheritance:
 
@@ -63,7 +63,7 @@ qml\.fchl module
 qml\.wrappers module
 --------------------
 
-.. automodule:: qml.wrappers
+.. automodule:: qml.ml.kernels.wrappers
     :members:
     :undoc-members:
     :show-inheritance:
@@ -84,4 +84,12 @@ qml\.wrappers module
 ..    :members:
 ..    :undoc-members:
 ..    :show-inheritance:
+
+
+qml\.aglaia module
+------------------
+
+.. automodule:: qml.aglaia.aglaia
+   :inherited-members:
+
 
