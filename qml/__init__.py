@@ -26,15 +26,16 @@ QML main module
 ===============
 
 Provides
-  1. Compound-class
-  2. representations
-  3. kernels
-  4. math
-  5. distance
+  1. representations
+  2. kernels
+  3. math
 """
 from __future__ import absolute_import
 
-from .compound import Compound
+from . import data
+from . import ml
+from . import models
+from . import aglaia
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"

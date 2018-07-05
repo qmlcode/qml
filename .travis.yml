@@ -32,6 +32,9 @@ install:
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
        sudo apt-get install python3-numpy
        pip3 install scipy
+       pip3 install ase
+       pip3 install scikit-learn
+       pip3 install tensorflow
        python3 setup.py build
        python3 setup.py install
        pip3 install sphinx
@@ -41,6 +44,9 @@ install:
    elif [ ${TRAVIS_PYTHON_VERSION} = "2.7" ]; then
        sudo apt-get install python-numpy
        pip2 install scipy
+       pip2 install ase
+       pip2 install scikit-learn
+       pip2 install tensorflow
        python2 setup.py build
        python2 setup.py install
        pip2 install sphinx
@@ -53,10 +59,10 @@ install:
 
 
 before_script:
- - cd ${TRAVIS_BUILD_DIR}/tests/
+ - cd ${TRAVIS_BUILD_DIR}/test/
 
 script:
- - nosetests -v
+ - pytest -v
 
 notifications:
   email: false
