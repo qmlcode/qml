@@ -185,13 +185,54 @@ def test_score():
     estimator_3.fit(descriptor, energies)
     estimator_3.score(descriptor, energies)
 
+def test_save_local():
+    """
+    This function tests the saving and the loading of a trained model.
+    """
+
+    x = np.linspace(-10.0, 10.0, 2000)
+    y = x ** 2
+
+    x = np.reshape(x, (x.shape[0], 1))
+
+    estimator = MRMP()
+    estimator.fit(x=x, y=y)
+
+    score_after_training = estimator.score(x, y)
+    estimator.save_nn()
+
+    estimator.load_nn()
+    score_after_loading = estimator.score(x, y)
+
+    assert score_after_loading == score_after_training
+
+def test_load_external():
+    """
+    This function tests if a model that has been trained on a different computer can be loaded and used on a different
+    computer.
+    """
+
+    x = np.linspace(-10.0, 10.0, 2000)
+    y = x ** 2
+    x = np.reshape(x, (x.shape[0], 1))
+
+    estimator = MRMP()
+    estimator.load_nn("saved_model")
+
+    score_after_loading = estimator.score(x, y)
+    score_on_other_machine = -24.101043
+
+    assert np.isclose(score_after_loading, score_on_other_machine)
+
 
 if __name__ == "__main__":
 
-    test_set_properties()
-    test_set_descriptor()
-    test_set_representation()
-    test_fit_1()
-    test_fit_2()
-    test_fit_3()
-    test_score()
+    # test_set_properties()
+    # test_set_descriptor()
+    # test_set_representation()
+    # test_fit_1()
+    # test_fit_2()
+    # test_fit_3()
+    # test_score()
+
+    test_load_external()
