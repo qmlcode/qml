@@ -22,6 +22,11 @@ try:
 except ModuleNotFoundError:
     raise ModuleNotFoundError("The module qml is required")
 
+try:
+    import tensorflow
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("Tensorflow 1.8 is required to run neural networks.")
+
 class _NN(object):
 
     """
