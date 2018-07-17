@@ -7,7 +7,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-# import matplotlib.pyplot as plt
+from sklearn.base import BaseEstimator
 from qml.aglaia.symm_funct import generate_parkhill_acsf
 from qml.aglaia.utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
         is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, is_none, \
@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError:
     raise ModuleNotFoundError("Tensorflow 1.8 is required to run neural networks.")
 
-class _NN(object):
+class _NN(BaseEstimator):
 
     """
     Parent class for training multi-layered neural networks on molecular or atomic properties via Tensorflow
@@ -86,13 +86,6 @@ class _NN(object):
         """
 
         super(_NN,self).__init__()
-
-        # Catch unrecognised passed variables
-        # if len(kwargs) > 0:
-        #     msg = "Warning: unrecognised input variable(s): "
-        #     msg += ", ".join([str(x for x in kwargs.keys())])
-        #     print(msg)
-
 
         # Initialising the parameters
         self._set_hidden_layers_sizes(hidden_layer_sizes)

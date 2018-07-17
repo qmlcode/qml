@@ -224,6 +224,21 @@ def test_load_external():
 
     assert np.isclose(score_after_loading, score_on_other_machine)
 
+def test_get_params():
+    """
+    This test checks whether the function get_params inherited by BaseEstimator works properly.
+    """
+
+    estimator = MRMP(l1_reg=0.1, l2_reg=0.3)
+
+    parameters = estimator.get_params()
+
+    assert parameters["l1_reg"] == 0.1
+    assert parameters["l2_reg"] == 0.3
+
+    print(parameters)
+
+
 
 if __name__ == "__main__":
 
@@ -234,5 +249,5 @@ if __name__ == "__main__":
     # test_fit_2()
     # test_fit_3()
     # test_score()
-
-    test_load_external()
+    # test_load_external()
+    test_get_params()
