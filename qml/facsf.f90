@@ -117,6 +117,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     ! Allocate temporary
     allocate(element_types(natoms))
 
+    ! Store element index of every atom
     !$OMP PARALLEL DO
     do i = 1, natoms
         do j = 1, nelements
@@ -129,6 +130,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     !$OMP END PARALLEL DO
 
 
+    ! Get distance matrix
     ! Allocate temporary
     allocate(distance_matrix(natoms, natoms))
     distance_matrix = 0.0d0
@@ -180,17 +182,19 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     allocate(c(3))
     allocate(atom_descr(descr_size))
 
-    !!$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular,atom_descr)
+    ! This could probably be done more efficiently if it's a bottleneck
+    ! Also the order is a bit wobbly compared to the tensorflow implementation
+    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular,atom_descr)
     do i = 1, natoms
         atom_descr = 0.0d0
-        do j = 1, natoms
+        do j = 1, natoms - 1
             if (i .eq. j) cycle
             n = element_types(j)
             rij = distance_matrix(i,j)
             if (rij > acut) cycle
             do k = j + 1, natoms
                 if (i .eq. k) cycle
-                m = element_types(i)
+                m = element_types(k)
                 rik = distance_matrix(i,k)
                 if (rik > acut) cycle
 
@@ -198,24 +202,26 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                 b = coordinates(i,:)
                 c = coordinates(k,:)
                 angle = calc_angle(a,b,c)
-                radial = exp(-eta3*((rij+rik)/2.0d0 - Rs3)**2) * rdecay(i,j) * rdecay(i,k)
-                angular = 2.0d0 * ((1.0d0 + cos(angle - Ts)) / 2.0d0) ** zeta
+                radial = exp(-eta3*(0.5d0 * (rij+rik) - Rs3)**2) * rdecay(i,j) * rdecay(i,k)
+                angular = 2.0d0 * ((1.0d0 + cos(angle - Ts)) * 0.5d0) ** zeta
                 p = min(n,m) - 1
                 q = max(n,m) - 1
-                do l = 1, nabasis
-                    z = nelements * nbasis2 + nbasis3 * nabasis * (q - (p * (p + 1 - 2 * nelements)) / 2) &
-                        & + (l - 1) * nbasis3 + 1
-                    atom_descr(z:z + nbasis3) = atom_descr(z:z + nbasis3) + angular(l) * radial
-                    do r = 1, nbasis3
-                        write(*,'(i3, i3, i3, i3, i3, f8.5, f6.3, f6.3, f6.3)') i, j, k, r, l, angular(l) * radial(r), &
-                        & rij, rik, angle, z+l
-                    enddo
+                do l = 1, nbasis3
+                    !z = nelements * nbasis2 + nbasis3 * nabasis * (q - (p * (p + 1 - 2 * nelements)) / 2) &
+                    !    & + (l - 1) * nbasis3 + 1
+                    z = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + (l-1) * nabasis + 1
+                    atom_descr(z:z + nabasis) = atom_descr(z:z + nabasis) + angular * radial(l)
+                    !do r = 1, nabasis
+                    !    !write(*,'(i3, i3, i3, i3, i3, i3, i3, f8.5, f6.3, f6.3, f6.3, i3)') i, j, k, p, q, r, l, &
+                    !    !    angular(r) * radial(l), rij, rik, angle, z+r
+                    !    write(*,*) i, j, k, l, r, z+r-1, angular(r)*radial(l)
+                    !enddo
                 enddo
             enddo
         enddo
-        descr(i,:) = atom_descr
+        descr(i,:) = descr(i,:) + atom_descr
     enddo
-    !!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
     deallocate(element_types)
     deallocate(distance_matrix)

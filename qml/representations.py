@@ -549,7 +549,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
 
     return mbs
 
-def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, eta3 = 1, zeta = 1, rcut = 5, acut = 5):
+def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, 
+        eta3 = 1, zeta = 1, rcut = 5, acut = 5):
     """
     Generate the variant of atom-centered symmetry functions used in https://arxiv.org/pdf/1711.06385.pdf
 
