@@ -38,7 +38,7 @@ from .slatm import get_boa
 from .slatm import get_sbop
 from .slatm import get_sbot
 
-from .facsf import fgenerate_acsf
+from .facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
 
 def vector_to_matrix(v):
     """ Converts a representation from 1D vector to 2D square matrix.
@@ -550,7 +550,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
     return mbs
 
 def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 10, nRs3 = 10, nTs = 10, eta2 = 1, 
-        eta3 = 1, zeta = 1, rcut = 5, acut = 5):
+        eta3 = 1, zeta = 1, rcut = 5, acut = 5, gradients = False):
     """
     Generate the variant of atom-centered symmetry functions used in https://arxiv.org/pdf/1711.06385.pdf
 
@@ -588,5 +588,9 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
 
     descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
 
-    return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
-            Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+    if gradients == False:
+        return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+    else:
+        return fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)

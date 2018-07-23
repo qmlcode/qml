@@ -194,8 +194,7 @@ def generate_pyacsf(xyzs, Zs, elements, element_pairs, radial_cutoff, angular_cu
 
     return acsf
 
-
-if __name__ == "__main__":
+def check_acsf():
     data = np.load('data_test_acsf.npz')
     xyzs = data["arr_0"]
     zs = data["arr_1"]
@@ -227,3 +226,41 @@ if __name__ == "__main__":
             print(fort[i,j]-tf[i,j])
             print(i,j, np.max(abs(fort[i,j]-tf[i,j])))
             assert np.allclose(fort[i,j], tf[i,j], atol=1e-6)
+
+def check_gradients():
+    data = np.load('data_test_acsf.npz')
+    xyzs = data["arr_0"]
+    zs = data["arr_1"]
+    elements = [1,6,7]
+    element_pairs = [[1,1],[1,6],[1,7],[6,6],[6,7],[7,7]]
+    #pyrep = generate_pyacsf(xyzs, zs, elements, element_pairs, 4, 3, np.asarray([0.0, 2.0, 4.0]),
+    #          np.asarray([0.0, 1.0, 2.0, 3.0]), np.asarray([0, np.pi/2, np.pi]), 0.9, 1.1)
+
+
+    t = time.time()
+    reps = []
+    grads = []
+    for i in range(len(xyzs)):
+        rep, grad = generate_acsf(zs[i], xyzs[i], elements, nRs2 = 3, nRs3 = 4, nTs = 3, eta2 = 1.1, eta3 = 1.1, 
+                zeta = 0.9, rcut = 4, acut = 3, gradients = True)
+        reps.append(rep)
+        grads.append(grad)
+    print(time.time() - t)
+
+    reps = np.asarray(reps)
+    grads = np.asarray(grads)
+
+    tf_reps = np.load('rep.npz')['arr_0']
+    tf_grads = np.load('grad.npz')['arr_0']
+    for i in range(5):
+        for j in range(7):
+            for k in range(7):
+                print(i,j,k)
+                print(tf_grads[i,j,:9,k,:])
+                print(grads[i,j,:9,k,:])
+                print(tf_grads[i,j,:9,k,:] - grads[i,j,:9,k,:])
+                assert(np.allclose(tf_grads[i,j,:9,k,:], grads[i,j,:9,k,:], atol=1e-6))
+
+if __name__ == "__main__":
+    #check_acsf()
+    check_gradients()
