@@ -26,18 +26,19 @@ module acsf_utils
 
 contains
 
-function decay(r, rc, natoms) result(f)
+function decay(r, invrc, natoms) result(f)
 
     implicit none
 
     double precision, intent(in), dimension(:,:) :: r
-    double precision, intent(in) :: rc
+    double precision, intent(in) :: invrc
     integer, intent(in) :: natoms
     double precision, dimension(natoms, natoms) :: f
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
-    f = 0.5d0 * (cos(pi*r / rc) + 1.0d0)
+    ! Decaying function reaching 0 at rc
+    f = 0.5d0 * (cos(pi * r * invrc) + 1.0d0)
 
 
 end function decay
@@ -76,7 +77,7 @@ end module acsf_utils
 
 
 subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
-                          & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size, descr)
+                          & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, rep_size, rep)
 
     use acsf_utils, only: decay, calc_angle
 
@@ -94,13 +95,13 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     double precision, intent(in) :: rcut
     double precision, intent(in) :: acut
     integer, intent(in) :: natoms
-    integer, intent(in) :: descr_size
-    double precision, intent(out), dimension(natoms, descr_size) :: descr
+    integer, intent(in) :: rep_size
+    double precision, intent(out), dimension(natoms, rep_size) :: rep
 
-    integer :: i, j, k, l, n, m, p, q, r, z, nelements, nbasis2, nbasis3, nabasis
+    integer :: i, j, k, l, n, m, p, q, s, z, nelements, nbasis2, nbasis3, nabasis
     integer, allocatable, dimension(:) :: element_types
-    double precision :: norm, rij, rik, angle
-    double precision, allocatable, dimension(:) :: radial, angular, a, b, c, atom_descr
+    double precision :: rij, rik, angle, invcut
+    double precision, allocatable, dimension(:) :: radial, angular, a, b, c, atom_rep
     double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
@@ -113,6 +114,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     endif
 
 
+    ! number of element types
     nelements = size(elements)
     ! Allocate temporary
     allocate(element_types(natoms))
@@ -136,33 +138,42 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     distance_matrix = 0.0d0
 
 
-    !$OMP PARALLEL DO PRIVATE(norm)
+    !$OMP PARALLEL DO PRIVATE(rij)
     do i = 1, natoms
         do j = i+1, natoms
-            norm = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
-            distance_matrix(i, j) = norm
-            distance_matrix(j, i) = norm
+            rij = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
+            distance_matrix(i, j) = rij
+            distance_matrix(j, i) = rij
         enddo
     enddo
     !$OMP END PARALLEL DO
 
+    ! number of basis functions in the two body term
     nbasis2 = size(Rs2)
-    descr = 0.0d0
-    rdecay = decay(distance_matrix, rcut, natoms)
+    rep = 0.0d0
+
+    ! Inverse of the two body cutoff
+    invcut = 1.0d0 / rcut
+    ! pre-calculate the radial decay in the two body terms
+    rdecay = decay(distance_matrix, invcut, natoms)
 
     ! Allocate temporary
     allocate(radial(nbasis2))
 
-    !$OMP PARALLEL DO PRIVATE(n,m,norm,radial) REDUCTION(+:descr)
+    !$OMP PARALLEL DO PRIVATE(n,m,rij,radial) REDUCTION(+:rep)
     do i = 1, natoms
+        ! index of the element of atom i
         m = element_types(i)
         do j = i + 1, natoms
+            ! index of the element of atom j
             n = element_types(j)
-            norm = distance_matrix(i,j)
-            if (norm <= rcut) then
-                radial = exp(-eta2*(norm - Rs2)**2) * rdecay(i,j)
-                descr(i, (n-1)*nbasis2 + 1:n*nbasis2) = descr(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
-                descr(j, (m-1)*nbasis2 + 1:m*nbasis2) = descr(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
+            ! distance between atoms i and j
+            rij = distance_matrix(i,j)
+            if (rij <= rcut) then
+                ! two body term of the representation
+                radial = exp(-eta2*(rij - Rs2)**2) * rdecay(i,j)
+                rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
+                rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
             endif
         enddo
     enddo
@@ -170,73 +181,87 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
 
     deallocate(radial)
 
+    ! number of radial basis functions in the three body term
     nbasis3 = size(Rs3)
+    ! number of radial basis functions in the three body term
     nabasis = size(Ts)
 
-    rdecay = decay(distance_matrix, acut, natoms)
+    ! Inverse of the three body cutoff
+    invcut = 1.0d0 / acut
+    ! pre-calculate the radial decay in the three body terms
+    rdecay = decay(distance_matrix, invcut, natoms)
+
     ! Allocate temporary
-    allocate(radial(nbasis3))
-    allocate(angular(nabasis))
+    allocate(atom_rep(rep_size))
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
-    allocate(atom_descr(descr_size))
+    allocate(radial(nbasis3))
+    allocate(angular(nabasis))
 
     ! This could probably be done more efficiently if it's a bottleneck
     ! Also the order is a bit wobbly compared to the tensorflow implementation
-    !$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular,atom_descr)
+    !$OMP PARALLEL DO PRIVATE(atom_rep, rij, n, rik, m, a, b, c, angle, radial, angular, &
+    !$OMP p, q, s, z)
     do i = 1, natoms
-        atom_descr = 0.0d0
+        atom_rep = 0.0d0
         do j = 1, natoms - 1
             if (i .eq. j) cycle
-            n = element_types(j)
+            ! distance between atoms i and j
             rij = distance_matrix(i,j)
             if (rij > acut) cycle
+            ! index of the element of atom j
+            n = element_types(j)
             do k = j + 1, natoms
                 if (i .eq. k) cycle
-                m = element_types(k)
+                ! distance between atoms i and k
                 rik = distance_matrix(i,k)
                 if (rik > acut) cycle
-
+                ! index of the element of atom k
+                m = element_types(k)
+                ! coordinates of atoms j, i, k
                 a = coordinates(j,:)
                 b = coordinates(i,:)
                 c = coordinates(k,:)
+                ! angle between atoms i, j and k centered on i
                 angle = calc_angle(a,b,c)
+                ! The radial part of the three body terms including decay
                 radial = exp(-eta3*(0.5d0 * (rij+rik) - Rs3)**2) * rdecay(i,j) * rdecay(i,k)
+                ! The angular part of the three body terms
                 angular = 2.0d0 * ((1.0d0 + cos(angle - Ts)) * 0.5d0) ** zeta
+                ! The lowest of the element indices for atoms j and k
                 p = min(n,m) - 1
+                ! The highest of the element indices for atoms j and k
                 q = max(n,m) - 1
+                ! calculate the indices that the three body terms should be added to
+                s = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + 1
                 do l = 1, nbasis3
-                    !z = nelements * nbasis2 + nbasis3 * nabasis * (q - (p * (p + 1 - 2 * nelements)) / 2) &
-                    !    & + (l - 1) * nbasis3 + 1
-                    z = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + (l-1) * nabasis + 1
-                    atom_descr(z:z + nabasis) = atom_descr(z:z + nabasis) + angular * radial(l)
-                    !do r = 1, nabasis
-                    !    !write(*,'(i3, i3, i3, i3, i3, i3, i3, f8.5, f6.3, f6.3, f6.3, i3)') i, j, k, p, q, r, l, &
-                    !    !    angular(r) * radial(l), rij, rik, angle, z+r
-                    !    write(*,*) i, j, k, l, r, z+r-1, angular(r)*radial(l)
-                    !enddo
+                    ! calculate the indices that the three body terms should be added to
+                    z = s + (l-1) * nabasis
+                    ! Add the contributions from atoms i,j and k
+                    atom_rep(z:z + nabasis) = atom_rep(z:z + nabasis) + angular * radial(l)
                 enddo
             enddo
         enddo
-        descr(i,:) = descr(i,:) + atom_descr
+        rep(i,:) = rep(i,:) + atom_rep
     enddo
     !$OMP END PARALLEL DO
 
     deallocate(element_types)
+    deallocate(rdecay)
     deallocate(distance_matrix)
-    deallocate(radial)
-    deallocate(angular)
+    deallocate(atom_rep)
     deallocate(a)
     deallocate(b)
     deallocate(c)
-    deallocate(atom_descr)
+    deallocate(radial)
+    deallocate(angular)
 
 end subroutine fgenerate_acsf
 
 subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, &
                           & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, &
-                          & descr_size, descr, grad)
+                          & rep_size, rep, grad)
 
     use acsf_utils, only: decay, calc_angle
 
@@ -254,15 +279,21 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     double precision, intent(in) :: rcut
     double precision, intent(in) :: acut
     integer, intent(in) :: natoms
-    integer, intent(in) :: descr_size
-    double precision, intent(out), dimension(natoms, descr_size) :: descr
-    double precision, intent(out), dimension(natoms, descr_size, natoms, 3) :: grad
+    integer, intent(in) :: rep_size
+    double precision, intent(out), dimension(natoms, rep_size) :: rep
+    double precision, intent(out), dimension(natoms, rep_size, natoms, 3) :: grad
 
-    integer :: i, j, k, l, n, m, p, q, r, z, nelements, nbasis2, nbasis3, nabasis
+    integer :: i, j, k, l, n, m, p, q, s, t, z, nelements, nbasis2, nbasis3, nabasis
     integer, allocatable, dimension(:) :: element_types
-    double precision :: norm, rij, rik, angle
-    double precision, allocatable, dimension(:) :: radial, angular, a, b, c, atom_descr, g, part
-    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay
+    double precision :: rij, rik, angle, dot, rij2, rik2, invrij, invrik, invrij2, invrik2, invcut
+    double precision, allocatable, dimension(:) :: radial_base, radial, angular, a, b, c, atom_rep
+    double precision, allocatable, dimension(:) :: angular_base, d_radial, d_radial_d_i
+    double precision, allocatable, dimension(:) :: d_radial_d_j, d_radial_d_k, d_ijdecay, d_ikdecay
+    double precision, allocatable, dimension(:) :: d_angular, part, radial_part
+    double precision, allocatable, dimension(:) :: d_angular_d_i, d_angular_d_j, d_angular_d_k
+    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay, sq_distance_matrix
+    double precision, allocatable, dimension(:, :) :: inv_distance_matrix, inv_sq_distance_matrix
+    double precision, allocatable, dimension(:, :, :) :: atom_grad
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
@@ -274,6 +305,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     endif
 
 
+    ! Number of unique elements
     nelements = size(elements)
     ! Allocate temporary
     allocate(element_types(natoms))
@@ -291,46 +323,77 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     !$OMP END PARALLEL DO
 
 
+
     ! Get distance matrix
     ! Allocate temporary
     allocate(distance_matrix(natoms, natoms))
+    allocate(sq_distance_matrix(natoms, natoms))
+    allocate(inv_distance_matrix(natoms, natoms))
+    allocate(inv_sq_distance_matrix(natoms, natoms))
     distance_matrix = 0.0d0
+    sq_distance_matrix = 0.0d0
+    inv_distance_matrix = 0.0d0
+    inv_sq_distance_matrix = 0.0d0
 
 
-    !$OMP PARALLEL DO PRIVATE(norm)
+    !$OMP PARALLEL DO PRIVATE(rij,rij2,invrij,invrik)
     do i = 1, natoms
         do j = i+1, natoms
-            norm = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
-            distance_matrix(i, j) = norm
-            distance_matrix(j, i) = norm
+            rij = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
+            distance_matrix(i, j) = rij
+            distance_matrix(j, i) = rij
+            rij2 = rij * rij
+            sq_distance_matrix(i, j) = rij2
+            sq_distance_matrix(j, i) = rij2
+            invrij = 1.0d0 / rij
+            inv_distance_matrix(i, j) = invrij
+            inv_distance_matrix(j, i) = invrij
+            invrij2 = invrij * invrij
+            inv_sq_distance_matrix(i, j) = invrij2
+            inv_sq_distance_matrix(j, i) = invrij2
         enddo
     enddo
     !$OMP END PARALLEL DO
 
+
+    ! Number of two body basis functions
     nbasis2 = size(Rs2)
-    descr = 0.0d0
-    rdecay = decay(distance_matrix, rcut, natoms)
+    rep = 0.0d0
+
+    ! Inverse of the two body cutoff distance
+    invcut = 1.0d0 / rcut
+    ! Pre-calculate the two body decay
+    rdecay = decay(distance_matrix, invcut, natoms)
 
     ! Allocate temporary
+    allocate(radial_base(nbasis2))
     allocate(radial(nbasis2))
-    allocate(g(nbasis2))
+    allocate(radial_part(nbasis2))
     allocate(part(nbasis2))
 
-    !$OMP PARALLEL DO PRIVATE(n,m,norm,radial,g,part) REDUCTION(+:descr,grad)
+    !$OMP PARALLEL DO PRIVATE(m,n,rij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad)
     do i = 1, natoms
+        ! The element index of atom i
         m = element_types(i)
         do j = i + 1, natoms
+            ! The element index of atom j
             n = element_types(j)
-            norm = distance_matrix(i,j)
-            if (norm <= rcut) then
-                radial = exp(-eta2*(norm - Rs2)**2) 
-                g = radial * rdecay(i,j)
-                descr(i, (n-1)*nbasis2 + 1:n*nbasis2) = descr(i, (n-1)*nbasis2 + 1:n*nbasis2) + g
-                descr(j, (m-1)*nbasis2 + 1:m*nbasis2) = descr(j, (m-1)*nbasis2 + 1:m*nbasis2) + g
+            ! Distance between atoms i and j
+            rij = distance_matrix(i,j)
+            if (rij <= rcut) then
+                ! part of the two body terms
+                radial_base = exp(-eta2*(rij - Rs2)**2) 
+                ! The full two body term between atom i and j
+                radial = radial_base * rdecay(i,j)
+                ! Add the contributions from atoms i and j
+                rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
+                rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
+                ! Part of the gradients that can be reused for x,y and z coordinates
+                radial_part = - radial_base / rij * (2.0d0 * eta2 * (rij - Rs2) * rdecay(i,j) + &
+                    & 0.5d0 * pi * sin(pi*rij * invcut) * invcut)
                 do k = 1, 3
-                    part = - radial * (coordinates(i,k) - coordinates(j,k)) / norm * &
-                        & (2.0d0 * eta2 * (norm - Rs2) * rdecay(i,j) + &
-                        & 0.5d0 * pi * sin(pi*norm / rcut) / rcut)
+                    ! The gradients wrt coordinates
+                    part = radial_part * (coordinates(i,k) - coordinates(j,k))
                     grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) + part
                     grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) - part
                     grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) = grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) - part
@@ -341,71 +404,176 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     enddo
     !$OMP END PARALLEL DO
 
+    deallocate(radial_base)
     deallocate(radial)
-    deallocate(g)
+    deallocate(radial_part)
     deallocate(part)
 
+
+    ! Number of radial basis functions in the three body term
     nbasis3 = size(Rs3)
+    ! Number of angular basis functions in the three body term
     nabasis = size(Ts)
 
-    rdecay = decay(distance_matrix, acut, natoms)
+    ! Inverse of the three body cutoff distance
+    invcut = 1.0d0 / acut
+    ! Pre-calculate the three body decay
+    rdecay = decay(distance_matrix, invcut, natoms)
+
     ! Allocate temporary
-    allocate(radial(nbasis3))
-    allocate(angular(nabasis))
+    allocate(atom_rep(rep_size))
+    allocate(atom_grad(rep_size, natoms, 3))
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
-    allocate(atom_descr(descr_size))
+    allocate(radial(nbasis3))
+    allocate(angular_base(nabasis))
+    allocate(angular(nabasis))
+    allocate(d_angular(nabasis))
+    allocate(d_angular_d_i(3))
+    allocate(d_angular_d_j(3))
+    allocate(d_angular_d_k(3))
+    allocate(d_radial(nbasis3))
+    allocate(d_radial_d_i(3))
+    allocate(d_radial_d_j(3))
+    allocate(d_radial_d_k(3))
+    allocate(d_ijdecay(3))
+    allocate(d_ikdecay(3))
 
-    !! This could probably be done more efficiently if it's a bottleneck
-    !! The order is a bit wobbly compared to the tensorflow implementation
-    !! TODO test collapse(2) and reduction on descr
-    !!$OMP PARALLEL DO PRIVATE(n,m,p,q,z,rij,rik,angle,a,b,c,radial,angular,atom_descr)
-    !do i = 1, natoms
-    !    atom_descr = 0.0d0
-    !    do j = 1, natoms - 1
-    !        if (i .eq. j) cycle
-    !        n = element_types(j)
-    !        rij = distance_matrix(i,j)
-    !        if (rij > acut) cycle
-    !        do k = j + 1, natoms
-    !            if (i .eq. k) cycle
-    !            m = element_types(k)
-    !            rik = distance_matrix(i,k)
-    !            if (rik > acut) cycle
+    ! This could probably be done more efficiently if it's a bottleneck
+    ! The order is a bit wobbly compared to the tensorflow implementation
+    !$OMP PARALLEL DO PRIVATE(atom_rep,atom_grad,a,b,c,radial,angular_base, &
+    !$OMP angular,d_angular,rij,n,rij2,invrij,invrij2,d_angular_d_i, &
+    !$OMP d_angular_d_j,d_angular_d_k,rik,m,rik2,invrik,invrik2,angle, &
+    !$OMP p,q,dot,d_radial,d_radial_d_i,d_radial_d_j,d_radial_d_k,s,z, &
+    !$OMP d_ijdecay,d_ikdecay)
+    do i = 1, natoms
+        atom_rep = 0.0d0
+        atom_grad = 0.0d0
+        do j = 1, natoms - 1
+            if (i .eq. j) cycle
+            ! distance between atom i and j
+            rij = distance_matrix(i,j)
+            if (rij > acut) cycle
+            ! index of the element of atom j
+            n = element_types(j)
+            ! squared distance between atom i and j
+            rij2 = sq_distance_matrix(i,j)
+            ! inverse distance between atom i and j
+            invrij = inv_distance_matrix(i,j)
+            ! inverse squared distance between atom i and j
+            invrij2 = inv_sq_distance_matrix(i,j)
+            do k = j + 1, natoms
+                if (i .eq. k) cycle
+                ! distance between atom i and k
+                rik = distance_matrix(i,k)
+                if (rik > acut) cycle
+                ! index of the element of atom k
+                m = element_types(k)
+                ! squared distance between atom i and k
+                rik2 = sq_distance_matrix(i,k)
+                ! inverse distance between atom i and k
+                invrik = inv_distance_matrix(i,k)
+                ! inverse squared distance between atom i and k
+                invrik2 = inv_sq_distance_matrix(i,k)
+                ! coordinates of atoms j, i, k
+                a = coordinates(j,:)
+                b = coordinates(i,:)
+                c = coordinates(k,:)
+                ! angle between atom i, j and k, centered on i
+                angle = calc_angle(a,b,c)
+                ! part of the radial part of the 3body terms
+                radial = exp(-eta3*(0.5d0 * (rij+rik) - Rs3)**2)
+                ! used in the angular part of the 3body terms and in gradients
+                angular_base = ((1.0d0 + cos(angle - Ts)) * 0.5d0)
+                ! angular part of the 3body terms
+                angular = 2.0d0 * angular_base ** zeta
+                ! the lowest index of the elements of j,k
+                p = min(n,m) - 1
+                ! the highest index of the elements of j,k
+                q = max(n,m) - 1
+                ! Dot product between the vectors connecting atom i,j and i,k
+                dot = dot_product(a-b,c-b)
+                ! Part of the derivative of the angular basis functions wrt coordinates (dim(nabasis))
+                ! including decay
+                d_angular = zeta * angular * sin(angle-Ts) * rdecay(i,j) * rdecay(i,k) / &
+                    & (2.0d0 * sqrt(rij2 * rik2 - dot**2) * angular_base)
+                ! Part of the derivative of the angular basis functions wrt atom j (dim(3))
+                d_angular_d_j = c - b + dot * ((b - a) * invrij2)
+                ! Part of the derivative of the angular basis functions wrt atom k (dim(3))
+                d_angular_d_k = a - b + dot * ((b - c) * invrij2)
+                ! Part of the derivative of the angular basis functions wrt atom i (dim(3))
+                d_angular_d_i = - (d_angular_d_j + d_angular_d_k)
+                ! Part of the derivative of the radial basis functions wrt coordinates (dim(nbasis3))
+                ! including decay
+                d_radial = radial * eta3 * (0.5d0 * (rij+rik) - Rs3) * rdecay(i,j) * rdecay(i,k)
+                ! Part of the derivative of the radial basis functions wrt atom j (dim(3))
+                d_radial_d_j = (b - a) * invrij
+                ! Part of the derivative of the radial basis functions wrt atom k (dim(3))
+                d_radial_d_k = (b - c) * invrik
+                ! Part of the derivative of the radial basis functions wrt atom i (dim(3))
+                d_radial_d_i = - (d_radial_d_j + d_radial_d_k)
+                ! Part of the derivative of the i,j decay functions wrt coordinates (dim(3))
+                d_ijdecay = - pi * (b - a) * sin(pi * rij * invcut) * 0.5d0 * invrij * invcut
+                ! Part of the derivative of the i,k decay functions wrt coordinates (dim(3))
+                d_ikdecay = - pi * (b - c) * sin(pi * rik * invcut) * 0.5d0 * invrik * invcut
 
-    !            a = coordinates(j,:)
-    !            b = coordinates(i,:)
-    !            c = coordinates(k,:)
-    !            angle = calc_angle(a,b,c)
-    !            radial = exp(-eta3*(0.5d0 * (rij+rik) - Rs3)**2) * rdecay(i,j) * rdecay(i,k)
-    !            angular = 2.0d0 * ((1.0d0 + cos(angle - Ts)) * 0.5d0) ** zeta
-    !            p = min(n,m) - 1
-    !            q = max(n,m) - 1
-    !            do l = 1, nbasis3
-    !                !z = nelements * nbasis2 + nbasis3 * nabasis * (q - (p * (p + 1 - 2 * nelements)) / 2) &
-    !                !    & + (l - 1) * nbasis3 + 1
-    !                z = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + (l-1) * nabasis + 1
-    !                atom_descr(z:z + nabasis) = atom_descr(z:z + nabasis) + angular * radial(l)
-    !                !do r = 1, nabasis
-    !                !    !write(*,'(i3, i3, i3, i3, i3, i3, i3, f8.5, f6.3, f6.3, f6.3, i3)') i, j, k, p, q, r, l, &
-    !                !    !    angular(r) * radial(l), rij, rik, angle, z+r
-    !                !    write(*,*) i, j, k, l, r, z+r-1, angular(r)*radial(l)
-    !                !enddo
-    !            enddo
-    !        enddo
-    !    enddo
-    !    descr(i,:) = descr(i,:) + atom_descr
-    !enddo
-    !!$OMP END PARALLEL DO
+                ! Get index of where the contributions of atoms i,j,k should be added
+                s = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + 1
+                do l = 1, nbasis3
+                    ! Get index of where the contributions of atoms i,j,k should be added
+                    z = s + (l-1) * nabasis
+                    ! Add the contributions for atoms i,j,k
+                    atom_rep(z:z + nabasis) = atom_rep(z:z + nabasis) + angular * radial(l) * rdecay(i,j) * rdecay(i,k)
+                    do t = 1, 3
+                        ! Add up all gradient contributions wrt atom i
+                        atom_grad(z:z + nabasis, i, t) = atom_grad(z:z + nabasis, i, t) + &
+                            & d_angular * d_angular_d_i(t) * radial(l) + &
+                            & angular * d_radial(l) * d_radial_d_i(t) + &
+                            & angular * radial(l) * (d_ijdecay(t) * rdecay(i,k) + rdecay(i,j) * d_ikdecay(t))
+                        ! Add up all gradient contributions wrt atom j
+                        atom_grad(z:z + nabasis, j, t) = atom_grad(z:z + nabasis, j, t) + &
+                            & d_angular * d_angular_d_j(t) * radial(l) + &
+                            & angular * d_radial(l) * d_radial_d_j(t) + &
+                            & angular * radial(l) * d_ijdecay(t) * rdecay(i,k)
+                        ! Add up all gradient contributions wrt atom k
+                        atom_grad(z:z + nabasis, k, t) = atom_grad(z:z + nabasis, k, t) + &
+                            & d_angular * d_angular_d_k(t) * radial(l) + &
+                            & angular * d_radial(l) * d_radial_d_k(t) + &
+                            & angular * radial(l) * rdecay(i,j) * d_ikdecay(t) 
+                    enddo
+                enddo
+            enddo
+        enddo
+        rep(i,:) = rep(i,:) + atom_rep
+        grad(i,:,:,:) = grad(i,:,:,:) + atom_grad
+    enddo
+    !$OMP END PARALLEL DO
 
+    deallocate(rdecay)
     deallocate(element_types)
     deallocate(distance_matrix)
-    deallocate(radial)
-    deallocate(angular)
+    deallocate(inv_distance_matrix)
+    deallocate(sq_distance_matrix)
+    deallocate(inv_sq_distance_matrix)
+    deallocate(atom_rep)
+    deallocate(atom_grad)
     deallocate(a)
     deallocate(b)
     deallocate(c)
-    deallocate(atom_descr)
+    deallocate(radial)
+    deallocate(angular_base)
+    deallocate(angular)
+    deallocate(d_angular)
+    deallocate(d_angular_d_i)
+    deallocate(d_angular_d_j)
+    deallocate(d_angular_d_k)
+    deallocate(d_radial)
+    deallocate(d_radial_d_i)
+    deallocate(d_radial_d_j)
+    deallocate(d_radial_d_k)
+    deallocate(d_ijdecay)
+    deallocate(d_ikdecay)
+
 
 end subroutine fgenerate_acsf_and_gradients
