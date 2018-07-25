@@ -16,7 +16,7 @@ Current list of contributors:
 - Felix A. Faber (University of Basel)
 - Bing Huang (University of Basel)
 - David R. Glowacki (University of Bristol) 
-- O. Anatole von Lilienfeld (University of Basel)
+- \O. Anatole von Lilienfeld (University of Basel)
 
 1) Citing QML:
 --------------
