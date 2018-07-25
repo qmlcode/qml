@@ -134,7 +134,7 @@ def requirements():
 
 # use README.md as long description
 def readme():
-    with open('README.md') as f:
+    with open('README.rst') as f:
         return f.read()
 
 def setup_qml():
