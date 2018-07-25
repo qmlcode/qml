@@ -9,13 +9,14 @@ properties of molecules and solids.
 Current list of contributors:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  Anders S. Christensen (University of Basel)
--  Lars A. Bratholm (University of Bristol)
--  Silvia Amabilino (University of Bristol)
--  Felix A. Faber (University of Basel)
--  Bing Huang (University of Basel)
--  David R. Glowacki (University of Bristol) 
--  O. Anatole von Lilienfeld (University of Basel)
+- Anders S. Christensen (University of Basel)
+- Lars A. Bratholm (University of Bristol)
+- Silvia Amabilino (University of Bristol)
+- Jimmy C. Kromann (University of Basel)
+- Felix A. Faber (University of Basel)
+- Bing Huang (University of Basel)
+- David R. Glowacki (University of Bristol) 
+- \O. Anatole von Lilienfeld (University of Basel)
 
 1) Citing QML:
 --------------

@@ -81,6 +81,6 @@ if __name__ == "__main__":
     mkl_present = mkl_exists(verbose=False)
 
     if mkl_present:
-        print("MKL could be found")
+        print("MKL found")
     else:
         print("MKL could NOT be found")
