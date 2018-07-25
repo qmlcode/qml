@@ -12,6 +12,7 @@ Current list of contributors:
 -  Anders S. Christensen (University of Basel)
 -  Lars A. Bratholm (University of Bristol)
 -  Silvia Amabilino (University of Bristol)
+-  Jimmy C. Kromann (University of Basel)
 -  Felix A. Faber (University of Basel)
 -  Bing Huang (University of Basel)
 -  David R. Glowacki (University of Bristol) 
