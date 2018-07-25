@@ -200,33 +200,24 @@ def check_acsf():
     zs = data["arr_1"]
     elements = [1,6,7]
     element_pairs = [[1,1],[1,6],[1,7],[6,6],[6,7],[7,7]]
-    #pyrep = generate_pyacsf(xyzs, zs, elements, element_pairs, 4, 3, np.asarray([0.0, 2.0, 4.0]),
-    #          np.asarray([0.0, 1.0, 2.0, 3.0]), np.asarray([0, np.pi/2, np.pi]), 0.9, 1.1)
 
+    tf_reps = np.load('rep.npz')['arr_0']
 
     t = time.time()
-    for j in range(1):
+    for j in range(100):
         reps = []
         for i in range(len(xyzs)):
             rep = generate_acsf(zs[i], xyzs[i], elements, nRs2 = 3, nRs3 = 4, nTs = 3, eta2 = 1.1, eta3 = 1.1, 
                     zeta = 0.9, rcut = 4, acut = 3)
+            #rep = generate_acsf(zs[i], xyzs[i], elements, nRs2 = 20, nRs3 = 20, nTs = 20, eta2 = 1.1, eta3 = 1.1, 
+            #        zeta = 0.9, rcut = 5, acut = 5)
             reps.append(rep)
-    print(time.time() - t)
 
-    reps = np.asarray(reps)
+        reps = np.asarray(reps)
 
-    tf_reps = np.load('rep.npz')
-    tf = tf_reps["arr_0"]
-    fort = reps
-    for i in range(5):
-        for j in range(7):
-            try:
-                assert np.allclose(fort[i,j], tf[i,j], atol=1e-6)
-            except AssertionError:
-                print(fort[i,j])
-                print(tf[i,j])
-                print(fort[i,j]-tf[i,j])
-                print(i,j, np.max(abs(fort[i,j]-tf[i,j])))
+        assert(np.allclose(tf_reps, reps))
+    print(time.time()-t)
+    print(reps[0].shape)
 
 def check_gradients():
     data = np.load('data_test_acsf.npz')
@@ -238,48 +229,58 @@ def check_gradients():
     #          np.asarray([0.0, 1.0, 2.0, 3.0]), np.asarray([0, np.pi/2, np.pi]), 0.9, 1.1)
 
 
+
+    tf_reps = np.load('rep.npz')['arr_0']
+    tf_grads = np.load('grad.npz')['arr_0']
+
     t = time.time()
-    for j in range(1):
+    for j in range(100):
         reps = []
         grads = []
         for i in range(len(xyzs)):
             rep, grad = generate_acsf(zs[i], xyzs[i], elements, nRs2 = 3, nRs3 = 4, nTs = 3, eta2 = 1.1, eta3 = 1.1, 
                     zeta = 0.9, rcut = 4, acut = 3, gradients = True)
+            #time.sleep(0.001)
+            #rep, grad = generate_acsf(zs[i], xyzs[i], elements, nRs2 = 20, nRs3 = 20, nTs = 20, eta2 = 1.1, eta3 = 1.1, 
+            #        zeta = 0.9, rcut = 5, acut = 5, gradients = True)
             reps.append(rep)
             grads.append(grad)
 
-    reps = np.asarray(reps)
-    grads = np.asarray(grads)
+        reps = np.asarray(reps)
+        grads = np.asarray(grads)
 
-    tf_reps = np.load('rep.npz')['arr_0']
-    tf_grads = np.load('grad.npz')['arr_0']
-    # 2 body
-    for i in range(5):
-        for j in range(7):
-            for k in range(7):
-                for l in range(3):
-                    try:
-                        assert(np.allclose(tf_grads[i,j,:9,k,l], grads[i,j,:9,k,l], atol=1e-6))
-                    except:
-                        print(i,j,k,2)
-                        print(tf_grads[i,j,:9,k,l])
-                        print(grads[i,j,:9,k,l])
-                        print(tf_grads[i,j,:9,k,l] - grads[i,j,:9,k,l])
-                        quit()
-    # 3 body
-    for i in range(5):
-        for j in range(7):
-            for k in range(7):
-                for l in range(3):
-                    try:
-                        assert(np.allclose(tf_grads[i,j,9:,k,l], grads[i,j,9:,k,l], atol=1e-6))
-                    except:
-                        print(i,j,k,3)
-                        print(tf_grads[i,j,9:,k,l])
-                        print(grads[i,j,9:,k,l])
-                        print(tf_grads[i,j,9:,k,l] - grads[i,j,9:,k,l])
-                        quit()
+        assert(np.allclose(tf_grads, grads))
+        assert(np.allclose(tf_reps, reps))
+    print(time.time()-t)
+    print(reps[0].shape)
+
+    ## 2 body
+    #for i in range(5):
+    #    for j in range(7):
+    #        for k in range(7):
+    #            for l in range(3):
+    #                try:
+    #                    assert(np.allclose(tf_grads[i,j,:9,k,l], grads[i,j,:9,k,l], atol=1e-6))
+    #                except:
+    #                    print(i,j,k,l,2)
+    #                    print(tf_grads[i,j,:9,k,l])
+    #                    print(grads[i,j,:9,k,l])
+    #                    print(tf_grads[i,j,:9,k,l] - grads[i,j,:9,k,l])
+    #                    quit()
+    ## 3 body
+    #for i in range(5):
+    #    for j in range(7):
+    #        for k in range(7):
+    #            for l in range(3):
+    #                try:
+    #                    assert(np.allclose(tf_grads[i,j,9:,k,l], grads[i,j,9:,k,l], atol=1e-6))
+    #                except:
+    #                    print(i,j,k,l,3)
+    #                    print(tf_grads[i,j,9:,k,l])
+    #                    print(grads[i,j,9:,k,l])
+    #                    print(tf_grads[i,j,9:,k,l] - grads[i,j,9:,k,l])
+    #                    quit()
 
 if __name__ == "__main__":
-    #check_acsf()
+    check_acsf()
     check_gradients()

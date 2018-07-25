@@ -239,7 +239,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                     ! calculate the indices that the three body terms should be added to
                     z = s + (l-1) * nabasis
                     ! Add the contributions from atoms i,j and k
-                    atom_rep(z:z + nabasis) = atom_rep(z:z + nabasis) + angular * radial(l)
+                    atom_rep(z:z + nabasis - 1) = atom_rep(z:z + nabasis - 1) + angular * radial(l)
                 enddo
             enddo
         enddo
@@ -283,7 +283,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     double precision, intent(out), dimension(natoms, rep_size) :: rep
     double precision, intent(out), dimension(natoms, rep_size, natoms, 3) :: grad
 
-    integer :: i, j, k, l, n, m, p, q, s, t, z, nelements, nbasis2, nbasis3, nabasis
+    integer :: i, j, k, l, n, m, p, q, s, t, z, nelements, nbasis2, nbasis3, nabasis, twobody_size
     integer, allocatable, dimension(:) :: element_types
     double precision :: rij, rik, angle, dot, rij2, rik2, invrij, invrik, invrij2, invrik2, invcut
     double precision, allocatable, dimension(:) :: radial_base, radial, angular, a, b, c, atom_rep
@@ -358,8 +358,6 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
 
     ! Number of two body basis functions
     nbasis2 = size(Rs2)
-    rep = 0.0d0
-    grad = 0.0d0
 
     ! Inverse of the two body cutoff distance
     invcut = 1.0d0 / rcut
@@ -372,7 +370,10 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     allocate(radial_part(nbasis2))
     allocate(part(nbasis2))
 
-    !!$OMP PARALLEL DO PRIVATE(m,n,rij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad)
+    rep = 0.0d0
+    grad = 0.0d0
+
+    !!$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad)
     do i = 1, natoms
         ! The element index of atom i
         m = element_types(i)
@@ -382,15 +383,16 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
             ! Distance between atoms i and j
             rij = distance_matrix(i,j)
             if (rij <= rcut) then
+                invrij = inv_distance_matrix(i,j)
                 ! part of the two body terms
-                radial_base = exp(-eta2*(rij - Rs2)**2) 
+                radial_base = exp(-eta2*(rij - Rs2)**2)
                 ! The full two body term between atom i and j
                 radial = radial_base * rdecay(i,j)
                 ! Add the contributions from atoms i and j
                 rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
                 rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
                 ! Part of the gradients that can be reused for x,y and z coordinates
-                radial_part = - radial_base / rij * (2.0d0 * eta2 * (rij - Rs2) * rdecay(i,j) + &
+                radial_part = - radial_base * invrij * (2.0d0 * eta2 * (rij - Rs2) * rdecay(i,j) + &
                     & 0.5d0 * pi * sin(pi*rij * invcut) * invcut)
                 do k = 1, 3
                     ! The gradients wrt coordinates
@@ -415,6 +417,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     nbasis3 = size(Rs3)
     ! Number of angular basis functions in the three body term
     nabasis = size(Ts)
+    ! Size of two body terms
+    twobody_size = nelements * nbasis2
 
     ! Inverse of the three body cutoff distance
     invcut = 1.0d0 / acut
@@ -422,8 +426,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     rdecay = decay(distance_matrix, invcut, natoms)
 
     ! Allocate temporary
-    allocate(atom_rep(rep_size))
-    allocate(atom_grad(rep_size, natoms, 3))
+    allocate(atom_rep(rep_size - twobody_size))
+    allocate(atom_grad(rep_size - twobody_size, natoms, 3))
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
@@ -520,30 +524,25 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 d_ikdecay = - pi * (b - c) * sin(pi * rik * invcut) * 0.5d0 * invrik * invcut
 
                 ! Get index of where the contributions of atoms i,j,k should be added
-                s = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + 1
+                s = nbasis3 * nabasis * (nelements * p + q) + 1
                 do l = 1, nbasis3
                     ! Get index of where the contributions of atoms i,j,k should be added
                     z = s + (l-1) * nabasis
                     ! Add the contributions for atoms i,j,k
-                    atom_rep(z:z + nabasis) = atom_rep(z:z + nabasis) + angular * radial(l) * rdecay(i,j) * rdecay(i,k)
+                    atom_rep(z:z + nabasis - 1) = atom_rep(z:z + nabasis - 1) + angular * radial(l) * rdecay(i,j) * rdecay(i,k)
                     do t = 1, 3
                         ! Add up all gradient contributions wrt atom i
-                        atom_grad(z:z + nabasis, i, t) = atom_grad(z:z + nabasis, i, t) + &
+                        atom_grad(z:z + nabasis - 1, i, t) = atom_grad(z:z + nabasis - 1, i, t) + &
                             & d_angular * d_angular_d_i(t) * radial(l) + &
                             & angular * d_radial(l) * d_radial_d_i(t) + &
                             & angular * radial(l) * (d_ijdecay(t) * rdecay(i,k) + rdecay(i,j) * d_ikdecay(t))
-                        !if ((i .eq. 1) .and. (j .eq. 2) .and. (z .eq. 10) .and. (t .eq. 1)) then
-                        !    write(*,*) i,j,k,z,d_angular(1) * d_angular_d_j(t) * radial(l), &
-                        !        & angular(1) * d_radial(l) * d_radial_d_j(t), &
-                        !        & angular(1) * radial(l) * d_ijdecay(t) * rdecay(i,k)
-                        !endif
                         ! Add up all gradient contributions wrt atom j
-                        atom_grad(z:z + nabasis, j, t) = atom_grad(z:z + nabasis, j, t) + &
+                        atom_grad(z:z + nabasis - 1, j, t) = atom_grad(z:z + nabasis - 1, j, t) + &
                             & d_angular * d_angular_d_j(t) * radial(l) + &
                             & angular * d_radial(l) * d_radial_d_j(t) - &
                             & angular * radial(l) * d_ijdecay(t) * rdecay(i,k)
                         ! Add up all gradient contributions wrt atom k
-                        atom_grad(z:z + nabasis, k, t) = atom_grad(z:z + nabasis, k, t) + &
+                        atom_grad(z:z + nabasis - 1, k, t) = atom_grad(z:z + nabasis - 1, k, t) + &
                             & d_angular * d_angular_d_k(t) * radial(l) + &
                             & angular * d_radial(l) * d_radial_d_k(t) - &
                             & angular * radial(l) * rdecay(i,j) * d_ikdecay(t) 
@@ -551,10 +550,11 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 enddo
             enddo
         enddo
-        rep(i,:) = rep(i,:) + atom_rep
-        grad(i,:,:,:) = grad(i,:,:,:) + atom_grad
+        rep(i, twobody_size + 1:) = rep(i, twobody_size + 1:) + atom_rep
+        grad(i, twobody_size + 1:,:,:) = grad(i, twobody_size + 1:,:,:) + atom_grad
     enddo
     !!$OMP END PARALLEL DO
+
 
     deallocate(rdecay)
     deallocate(element_types)
