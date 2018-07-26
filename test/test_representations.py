@@ -22,8 +22,6 @@
 
 from __future__ import print_function
 
-import itertools
-import contextlib
 from collections import defaultdict
 import numpy as np
 import os
@@ -31,7 +29,6 @@ import os
 import qml
 
 from qml.ml.representations import *
-from qml.ml.representations.alchemy import NUCLEAR_CHARGE
 
 def get_asize(mols, pad):
 
