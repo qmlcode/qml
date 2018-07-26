@@ -61,7 +61,7 @@ For citation of the individual procedures of QML, please see the "Citing use of 
    installation
    citation
    tutorial
-   examples
+   qml_examples/examples
 
 
 .. toctree::
