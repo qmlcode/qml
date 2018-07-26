@@ -1832,7 +1832,6 @@ class ARMP(_NN):
                     break
 
         descriptor_conc = np.concatenate(descriptor_slices, axis=0)
-        print(descriptor_conc.shape)
 
         sess.close()
 

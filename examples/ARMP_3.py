@@ -4,6 +4,7 @@ This script shows how to set up the ARMP estimator where the data to be fitted i
 
 from qml.aglaia.aglaia import ARMP
 import os
+import numpy as np
 
 ## ------------- ** Loading the data ** ---------------
 
