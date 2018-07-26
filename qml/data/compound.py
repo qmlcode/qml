@@ -35,6 +35,8 @@ from ..ml.representations import generate_slatm
 
 from ..ml.representations.fchl import generate_representation as generate_fchl_representation
 
+from ..ml.representations.facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
+
 class Compound(object):
     """ The ``Compound`` class is used to store data from  
 
@@ -292,6 +294,47 @@ class Compound(object):
         if local: slatm = np.asarray(slatm)
         self.representation = slatm
 
+    def generate_acsf(self, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
+            eta3 = 1, zeta = 1, rcut = 5, acut = 5, gradients = False):
+        """
+        Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
+
+        :param elements: list of unique nuclear charges (atom types)
+        :type elements: numpy array
+        :param nRs2: Number of gaussian basis functions in the two-body terms
+        :type nRs2: integer
+        :param nRs3: Number of gaussian basis functions in the three-body radial part
+        :type nRs3: integer
+        :param nTs: Number of basis functions in the three-body angular part
+        :type nTs: integer
+        :param eta2: Precision in the gaussian basis functions in the two-body terms
+        :type eta2: float
+        :param eta3: Precision in the gaussian basis functions in the three-body radial part
+        :type eta3: float
+        :param zeta: Precision parameter of basis functions in the three-body angular part
+        :type zeta: float
+        :param rcut: Cut-off radius of the two-body terms
+        :type rcut: float
+        :param acut: Cut-off radius of the three-body terms
+        :type acut: float
+        :param gradients: To return gradients or not
+        :type gradients: boolean
+        """
+
+        Rs2 = np.linspace(0, rcut, nRs2)
+        Rs3 = np.linspace(0, acut, nRs3)
+        Ts = np.linspace(0, np.pi, nTs)
+        n_elements = len(elements)
+        natoms = len(self.coordinates)
+
+        rep_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
+
+        if gradients:
+            self.representation, self.gradients = fgenerate_acsf_and_gradients(self.coordinates, 
+                    self.nuclear_charges, elements, Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, rep_size)
+        else:
+            self.representation = fgenerate_acsf(self.coordinates, self.nuclear_charges, elements, Rs2, Rs3,
+                    Ts, eta2, eta3, zeta, rcut, acut, natoms, rep_size)
 
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.
