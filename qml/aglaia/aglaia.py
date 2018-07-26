@@ -11,14 +11,14 @@ from sklearn.base import BaseEstimator
 from qml.aglaia.symm_funct import generate_parkhill_acsf
 from qml.aglaia.utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
         is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, is_none, \
-        check_global_descriptor, check_y, check_sizes, check_dy, check_classes, is_numeric_array, is_non_zero_integer, \
-    is_positive_integer_or_zero_array, check_local_descriptor
+        check_global_representation, check_y, check_sizes, check_dy, check_classes, is_numeric_array, is_non_zero_integer, \
+    is_positive_integer_or_zero_array, check_local_representation
 
 from qml.aglaia.tf_utils import TensorBoardLogger
 
 try:
     from qml.data import Compound
-    from qml.ml import representations
+    from qml.ml import representations as qml_rep
 except ModuleNotFoundError:
     raise ModuleNotFoundError("The module qml is required")
 
@@ -114,7 +114,7 @@ class _NN(BaseEstimator):
 
         # Placholder variables for data
         self.compounds = None
-        self.descriptor = None
+        self.representation = None
         self.properties = None
         self.gradients = None
         self.classes = None
@@ -404,8 +404,8 @@ class _NN(BaseEstimator):
         self.tensorboard_logger_training = TensorBoardLogger(tensorboard_subdir + '/training')
         self.tensorboard_subdir_training = tensorboard_subdir + '/training'
 
-        self.tensorboard_logger_descriptor = TensorBoardLogger(tensorboard_subdir + '/descriptor')
-        self.tensorboard_subdir_descriptor = tensorboard_subdir + '/descriptor'
+        self.tensorboard_logger_representation = TensorBoardLogger(tensorboard_subdir + '/representation')
+        self.tensorboard_subdir_representation = tensorboard_subdir + '/representation'
 
         if not is_positive_integer(store_frequency):
             raise InputError("Expected positive integer value for variable store_frequency. Got %s" % str(store_frequency))
@@ -456,7 +456,7 @@ class _NN(BaseEstimator):
     def _generate_weights(self, n_out):
         """
         Generates the weights and the biases, by looking at the size of the hidden layers,
-        the number of features in the descriptor and the number of outputs. The weights are initialised from
+        the number of features in the representation and the number of outputs. The weights are initialised from
         a zero centered normal distribution with precision :math:`\\tau = a_{m}`, where :math:`a_{m}` is the number
         of incoming connections to a neuron. Weights larger than two standard deviations from the mean is
         redrawn.
@@ -550,7 +550,7 @@ class _NN(BaseEstimator):
 
     def _set_slatm_parameters(self, params):
         """
-        This function sets the parameters for the slatm descriptor.
+        This function sets the parameters for the slatm representation.
         :param params: dictionary
         :return: None
         """
@@ -567,7 +567,7 @@ class _NN(BaseEstimator):
 
     def _set_acsf_parameters(self, params):
         """
-        This function sets the parameters for the acsf descriptor.
+        This function sets the parameters for the acsf representation.
         :param params: dictionary
         :return: None
         """
@@ -584,11 +584,11 @@ class _NN(BaseEstimator):
 
     def score(self, x, y=None, dy=None, classes=None):
         """
-        This function calls the appropriate function to score the model. One needs to pass a descriptor and some
-        properties to it or alternatively if the compounds/descriptors and the properties are stored in the class one
+        This function calls the appropriate function to score the model. One needs to pass a representation and some
+        properties to it or alternatively if the compounds/representations and the properties are stored in the class one
         can pass indices.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -604,11 +604,11 @@ class _NN(BaseEstimator):
 
     def _score(self, x, y=None, dy=None, classes=None):
         """
-        This function calls the appropriate function to score the model. One needs to pass a descriptor and some
-        properties to it or alternatively if the compounds/descriptors and the properties are stored in the class one
+        This function calls the appropriate function to score the model. One needs to pass a representation and some
+        properties to it or alternatively if the compounds/representations and the properties are stored in the class one
         can pass indices.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -649,9 +649,9 @@ class _NN(BaseEstimator):
         for i, filename in enumerate(filenames):
             self.compounds[i] = Compound(filename)
 
-    def generate_descriptors(self, xyz=None, classes=None):
+    def generate_representation(self, xyz=None, classes=None):
         """
-        This function can generate descriptors either from the data contained in the compounds or from xyz data passed
+        This function can generate representations either from the data contained in the compounds or from xyz data passed
         through the argument. If the Compounds have already being set and xyz data is given, it complains.
 
         :param xyz: cartesian coordinates
@@ -663,19 +663,19 @@ class _NN(BaseEstimator):
 
         if is_none(self.compounds) and is_none(xyz) and is_none(classes):
             raise InputError("QML compounds need to be created in advance or Cartesian coordinates need to be passed in "
-                             "order to generate the descriptor.")
+                             "order to generate the representation.")
 
-        if not is_none(self.descriptor):
-            raise InputError("The descriptors have already been set!")
+        if not is_none(self.representation):
+            raise InputError("The representations have already been set!")
 
         if is_none(self.compounds):
 
-            self.descriptor, self.classes = self._generate_descriptors_from_data(xyz, classes)
+            self.representation, self.classes = self._generate_representations_from_data(xyz, classes)
 
         elif is_none(xyz):
-            # Make descriptors from compounds
+            # Make representations from compounds
 
-            self.descriptor, self.classes = self._generate_descriptors_from_compounds()
+            self.representation, self.classes = self._generate_representations_from_compounds()
         else:
             raise InputError("Compounds have already been set but new xyz data is being passed.")
 
@@ -695,24 +695,24 @@ class _NN(BaseEstimator):
                 raise InputError(
                     'Variable "properties" expected to be array like of dimension 1. Got %s' % str(properties))
 
-    def set_descriptors(self, descriptors):
+    def set_representations(self, representations):
         """
-        This function takes descriptors as input and stores them inside the class.
+        This function takes representations as input and stores them inside the class.
 
-        :param descriptors: global or local descriptors
-        :type descriptors: numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features)
+        :param representations: global or local representations
+        :type representations: numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features)
         """
 
-        if not is_none(self.descriptor):
-            raise InputError("The descriptors have already been set!")
+        if not is_none(self.representation):
+            raise InputError("The representations have already been set!")
 
-        if is_none(descriptors):
+        if is_none(representations):
             raise InputError("Descriptor cannot be set to none.")
         else:
-            if is_numeric_array(descriptors):
-                self._set_descriptor(descriptors)
+            if is_numeric_array(representations):
+                self._set_representation(representations)
             else:
-                raise InputError('Variable "descriptor" expected to be array like.')
+                raise InputError('Variable "representation" expected to be array like.')
 
     def set_gradients(self, gradients):
         """
@@ -752,7 +752,7 @@ class _NN(BaseEstimator):
         """
         This function calls the specific fit method of the child classes.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -887,7 +887,7 @@ class _NN(BaseEstimator):
         :rtype: list of lists
         """
 
-        return representations.get_slatm_mbtypes(arr)
+        return qml_rep.get_slatm_mbtypes(arr)
 
     def _get_xyz_from_compounds(self, indices):
         """
@@ -965,7 +965,7 @@ class _NN(BaseEstimator):
         """
         This function calls the predict function for either ARMP or MRMP.
 
-        :param x: descriptor or indices
+        :param x: representation or indices
         :type x: numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features) or an array of ints
         :param classes: the classes to use for atomic decomposition
         :type classes: numpy array of shape (n_sample, n_atoms)
@@ -991,11 +991,11 @@ class MRMP(_NN):
     """
 
     def __init__(self, hidden_layer_sizes = (5,), l1_reg = 0.0, l2_reg = 0.0001, batch_size = 'auto', learning_rate = 0.001,
-        iterations = 500, tensorboard = False, store_frequency = 200, tf_dtype = tf.float32, scoring_function = 'mae',
-        activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
-        rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
-        l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
-        tensorboard_subdir = os.getcwd() + '/tensorboard', representation='unsorted_coulomb_matrix', descriptor_params=None):
+                 iterations = 500, tensorboard = False, store_frequency = 200, tf_dtype = tf.float32, scoring_function = 'mae',
+                 activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
+                 rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
+                 l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
+                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation='unsorted_coulomb_matrix', representation_params=None):
         """
         Descriptors is used as input to a single or multi layered feed-forward neural network with a single output.
         This class inherits from the _NN class and all inputs not unique to the NN class is passed to the _NN
@@ -1009,15 +1009,15 @@ class MRMP(_NN):
                  rho, initial_accumulator_value, initial_gradient_squared_accumulator_value,
                  l1_regularization_strength,l2_regularization_strength, tensorboard_subdir)
 
-        self._set_representation(representation, descriptor_params)
+        self._initialise_representation(representation, representation_params)
 
-    def _set_representation(self, representation, parameters):
+    def _initialise_representation(self, representation, parameters):
         """
         This function sets the representation and the parameters of the representation.
 
         :param representation: the name of the representation
         :type representation: string
-        :param parameters: all the parameters of the descriptor.
+        :param parameters: all the parameters of the representation.
         :type parameters: dictionary
         :return: None
         """
@@ -1026,38 +1026,38 @@ class MRMP(_NN):
             raise InputError("Expected string for variable 'representation'. Got %s" % str(representation))
         if representation.lower() not in ['sorted_coulomb_matrix', 'unsorted_coulomb_matrix', 'bag_of_bonds', 'slatm']:
             raise InputError("Unknown representation %s" % representation)
-        self.representation = representation.lower()
+        self.representation_name = representation.lower()
 
         if not is_none(parameters):
             if not type(parameters) is dict:
-                raise InputError("The descriptor parameters passed should be either None or a dictionary.")
+                raise InputError("The representation parameters passed should be either None or a dictionary.")
 
-        if self.representation == 'slatm':
+        if self.representation_name == 'slatm':
 
             self._set_slatm_parameters(parameters)
 
         else:
 
             if not is_none(parameters):
-                raise InputError("The representation %s does not take any additional parameters." % (self.representation))
+                raise InputError("The representation %s does not take any additional parameters." % (self.representation_name))
 
-    def _set_descriptor(self, descriptor):
+    def _set_representation(self, representation):
         """
-        This function takes descriptors as input and stores them inside the class.
+        This function takes representations as input and stores them inside the class.
 
-        :param descriptors: global descriptors
-        :type descriptors: numpy array of shape (n_samples, n_features)
+        :param representations: global representations
+        :type representations: numpy array of shape (n_samples, n_features)
         return: None
         """
 
-        if len(descriptor.shape) != 2:
-            raise InputError("The descriptor should have a shape (n_samples, n_features). Got %s" % (str(descriptor.shape)))
+        if len(representation.shape) != 2:
+            raise InputError("The representation should have a shape (n_samples, n_features). Got %s" % (str(representation.shape)))
 
-        self.descriptor = descriptor
+        self.representation = representation
 
-    def _generate_descriptors_from_data(self, xyz, classes):
+    def _generate_representations_from_data(self, xyz, classes):
         """
-        This function makes the descriptor from xyz data and nuclear charges.
+        This function makes the representation from xyz data and nuclear charges.
 
         :param xyz: cartesian coordinates
         :type xyz: numpy array of shape (n_samples, n_atoms, 3)
@@ -1068,11 +1068,11 @@ class MRMP(_NN):
         # TODO implement
         raise InputError("Not implemented yet. Use compounds.")
 
-    def _generate_descriptors_from_compounds(self):
+    def _generate_representations_from_compounds(self):
         """
-        This function generates the descriptors from the compounds.
+        This function generates the representations from the compounds.
 
-        :return: the descriptor and None (in the ARMP class this would be the classes for atomic decomposition)
+        :return: the representation and None (in the ARMP class this would be the classes for atomic decomposition)
         :rtype: numpy array of shape (n_samples, n_features) and None
         """
 
@@ -1081,7 +1081,7 @@ class MRMP(_NN):
 
         n_samples = len(self.compounds)
 
-        if self.representation == 'unsorted_coulomb_matrix':
+        if self.representation_name == 'unsorted_coulomb_matrix':
 
             nmax = self._get_msize()
             representation_size = (nmax*(nmax+1))//2
@@ -1090,7 +1090,7 @@ class MRMP(_NN):
                 mol.generate_coulomb_matrix(size = nmax, sorting = "unsorted")
                 x[i] = mol.representation
 
-        elif self.representation == 'sorted_coulomb_matrix':
+        elif self.representation_name == 'sorted_coulomb_matrix':
 
             nmax = self._get_msize()
             representation_size = (nmax*(nmax+1))//2
@@ -1099,7 +1099,7 @@ class MRMP(_NN):
                 mol.generate_coulomb_matrix(size = nmax, sorting = "row-norm")
                 x[i] = mol.representation
 
-        elif self.representation == "bag_of_bonds":
+        elif self.representation_name == "bag_of_bonds":
             asize = self._get_asize()
             x = np.empty(n_samples, dtype=object)
             for i, mol in enumerate(self.compounds):
@@ -1107,7 +1107,7 @@ class MRMP(_NN):
                 x[i] = mol.representation
             x = np.asarray(list(x), dtype=float)
 
-        elif self.representation == "slatm":
+        elif self.representation_name == "slatm":
             mbtypes = self._get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
             x = np.empty(n_samples, dtype=object)
             for i, mol in enumerate(self.compounds):
@@ -1122,7 +1122,7 @@ class MRMP(_NN):
 
         else:
 
-            raise InputError("This should never happen. Unrecognised representation. Got %s." % str(self.representation))
+            raise InputError("This should never happen. Unrecognised representation. Got %s." % str(self.representation_name))
 
         return x, None
 
@@ -1131,7 +1131,7 @@ class MRMP(_NN):
         """
         This function fits a NON atomic decomposed network to the data.
 
-        :param x: either the descriptors or the indices to the data points to use
+        :param x: either the representations or the indices to the data points to use
         :type x: either a numpy array of shape (n_samples, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -1226,7 +1226,7 @@ class MRMP(_NN):
         """
         Constructs the molecular neural network.
 
-        :param x: descriptor
+        :param x: representation
         :type x: tf.placeholder of shape (n_samples, n_features)
         :param weights: Weights used in the network.
         :type weights: list of tf.Variables of length hidden_layer_sizes.size + 1
@@ -1255,7 +1255,7 @@ class MRMP(_NN):
         Calculate the coefficient of determination (R^2).
         Larger values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -1279,7 +1279,7 @@ class MRMP(_NN):
         Calculate the mean absolute error.
         Smaller values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -1305,7 +1305,7 @@ class MRMP(_NN):
         Calculate the root mean squared error.
         Smaller values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -1352,15 +1352,15 @@ class MRMP(_NN):
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.descriptor):
+            if is_none(self.representation):
                 if is_none(self.compounds):
-                    raise InputError("No descriptors or QML compounds have been set yet.")
+                    raise InputError("No representations or QML compounds have been set yet.")
                 else:
-                    self.descriptor, _ = self._generate_descriptors_from_compounds()
+                    self.representation, _ = self._generate_representations_from_compounds()
             if is_none(self.properties):
                 raise InputError("The properties need to be set in advance.")
 
-            approved_x = self.descriptor[x]
+            approved_x = self.representation[x]
             approved_y = self._get_properties(x)
             approved_dy = None
             approved_classes = None
@@ -1372,7 +1372,7 @@ class MRMP(_NN):
             if is_none(y):
                 raise InputError("y cannot be of None type.")
 
-            approved_x = check_global_descriptor(x)
+            approved_x = check_global_representation(x)
             approved_y = check_y(y)
             approved_dy = None
             approved_classes = None
@@ -1404,20 +1404,20 @@ class MRMP(_NN):
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.descriptor):
+            if is_none(self.representation):
                 if is_none(self.compounds):
-                    raise InputError("No descriptors or QML compounds have been set yet.")
+                    raise InputError("No representations or QML compounds have been set yet.")
                 else:
-                    self.descriptor, _ = self._generate_descriptors_from_compounds()
+                    self.representation, _ = self._generate_representations_from_compounds()
             if is_none(self.properties):
                 raise InputError("The properties need to be set in advance.")
 
-            approved_x = self.descriptor[x]
+            approved_x = self.representation[x]
             approved_classes = None
 
         else:
 
-            approved_x = check_global_descriptor(x)
+            approved_x = check_global_representation(x)
             approved_classes = None
 
         return approved_x, approved_classes
@@ -1477,7 +1477,7 @@ class MRMP(_NN):
             return y_pred
 
     # TODO these need to be checked if they still work
-    def save_nn(self, save_dir="saved_model"):
+    def save_nn(self, save_dir="./saved_model"):
         """
         This function saves the model to be used for later prediction.
 
@@ -1487,6 +1487,16 @@ class MRMP(_NN):
         """
         if self.session == None:
             raise InputError("Model needs to be fit before predictions can be made.")
+
+        if not os.path.exists(save_dir):
+            pass
+        else:
+            ii = 1
+            while True:
+                new_save_dir = save_dir + "_" + str(ii)
+                if not os.path.exists(new_save_dir):
+                    save_dir = new_save_dir
+                    break
 
         graph = tf.get_default_graph()
 
@@ -1518,11 +1528,11 @@ class ARMP(_NN):
     """
 
     def __init__(self, hidden_layer_sizes = (5,), l1_reg = 0.0, l2_reg = 0.0001, batch_size = 'auto', learning_rate = 0.001,
-        iterations = 500, tensorboard = False, store_frequency = 200, tf_dtype = tf.float32, scoring_function = 'mae',
-        activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
-        rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
-        l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
-        tensorboard_subdir = os.getcwd() + '/tensorboard', representation='acsf', descriptor_params=None):
+                 iterations = 500, tensorboard = False, store_frequency = 200, tf_dtype = tf.float32, scoring_function = 'mae',
+                 activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
+                 rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
+                 l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
+                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation='acsf', representation_params=None):
         """
         To see what parameters are required, look at the description of the _NN class init.
         This class inherits from the _NN class and all inputs not unique to the ARMP class are passed to the _NN
@@ -1535,15 +1545,15 @@ class ARMP(_NN):
                  rho, initial_accumulator_value, initial_gradient_squared_accumulator_value,
                  l1_regularization_strength,l2_regularization_strength, tensorboard_subdir)
 
-        self._set_representation(representation, descriptor_params)
+        self._initialise_representation(representation, representation_params)
 
-    def _set_representation(self, representation, parameters):
+    def _initialise_representation(self, representation, parameters):
         """
         This function sets the representation and the parameters of the representation.
 
         :param representation: the name of the representation
         :type representation: string
-        :param parameters: all the parameters of the descriptor.
+        :param parameters: all the parameters of the representation.
         :type parameters: dictionary
         :return: None
         """
@@ -1552,43 +1562,43 @@ class ARMP(_NN):
             raise InputError("Expected string for variable 'representation'. Got %s" % str(representation))
         if representation.lower() not in ['slatm', 'acsf']:
             raise InputError("Unknown representation %s" % representation)
-        self.representation = representation.lower()
+        self.representation_name = representation.lower()
 
         if not is_none(parameters):
             if not type(parameters) is dict:
-                raise InputError("The descriptor parameters passed should be either None or a dictionary.")
-            self._check_descriptor_parameters(parameters)
+                raise InputError("The representation parameters passed should be either None or a dictionary.")
+            self._check_representation_parameters(parameters)
 
-        if self.representation == 'slatm':
+        if self.representation_name == 'slatm':
 
             self._set_slatm_parameters(parameters)
 
-        elif self.representation == 'acsf':
+        elif self.representation_name == 'acsf':
 
             self._set_acsf_parameters(parameters)
 
         else:
 
             if not is_none(parameters):
-                raise InputError("The representation %s does not take any additional parameters." % (self.representation))
+                raise InputError("The representation %s does not take any additional parameters." % (self.representation_name))
 
-    def _set_descriptor(self, descriptor):
+    def _set_representation(self, representation):
 
-        if len(descriptor.shape) != 3:
+        if len(representation.shape) != 3:
             raise InputError(
-                "The descriptor should have a shape (n_samples, n_atoms, n_features). Got %s" % (str(descriptor.shape)))
+                "The representation should have a shape (n_samples, n_atoms, n_features). Got %s" % (str(representation.shape)))
 
-        self.descriptor = descriptor
+        self.representation = representation
 
-    def _generate_descriptors_from_data(self, xyz, classes):
+    def _generate_representations_from_data(self, xyz, classes):
         """
-        This function generates the descriptors from xyz data
+        This function generates the representations from xyz data
 
         :param xyz: the cartesian coordinates
         :type xyz: numpy array of shape (n_samples, n_atoms, 3)
         :param classes: classes to use for atomic decomposition
         :type classes: numpy array of shape (n_samples, n_atoms)
-        :return: descriptors and classes
+        :return: representations and classes
         :rtype: numpy arrays of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
@@ -1599,17 +1609,17 @@ class ARMP(_NN):
                 raise InputError("Classes should be a 2D array with shape matching the first 2 dimensions of the xyz data"
                                  ". Got shape %s" % (str(classes.shape)))
 
-        descriptor = None
+        representation = None
 
-        if self.representation == 'slatm':
+        if self.representation_name == 'slatm':
             # TODO implement
             raise InputError("Slatm from data has not been implemented yet. Use Compounds.")
 
-        elif self.representation == 'acsf':
+        elif self.representation_name == 'acsf':
 
-            descriptor = self._generate_acsf_from_data(xyz, classes)
+            representation = self._generate_acsf_from_data(xyz, classes)
 
-        return descriptor, classes
+        return representation, classes
 
     # TODO modify so that it uses the new map function
     def _generate_acsf_from_data(self, xyz, classes):
@@ -1620,10 +1630,10 @@ class ARMP(_NN):
         :type xyz: numpy array of shape (n_samples, n_atoms, 3)
         :param classes: the classes to use for atomic decomposition
         :type classes: numpy array of shape (n_samples, n_atoms)
-        :return: descriptor acsf
+        :return: representation acsf
         :rtype: numpy array of shape (n_samples, n_atoms, n_features)
         """
-        mbtypes = representations.get_slatm_mbtypes([classes[i] for i in range(classes.shape[0])])
+        mbtypes = qml_rep.get_slatm_mbtypes([classes[i] for i in range(classes.shape[0])])
 
         elements = []
         element_pairs = []
@@ -1658,7 +1668,7 @@ class ARMP(_NN):
             iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
             batch_xyz, batch_zs = iterator.get_next()
 
-        descriptor = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
+        representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
                                             radial_cutoff=self.acsf_parameters['radial_cutoff'],
                                             angular_cutoff=self.acsf_parameters['angular_cutoff'],
                                             radial_rs=self.acsf_parameters['radial_rs'],
@@ -1670,7 +1680,7 @@ class ARMP(_NN):
         sess.run(tf.global_variables_initializer())
         sess.run(iterator.make_initializer(dataset), feed_dict={xyz_tf: xyz, zs_tf: classes})
 
-        descriptor_slices = []
+        representation_slices = []
 
         if self.tensorboard:
             summary_writer = tf.summary.FileWriter(logdir="tensorboard", graph=sess.graph)
@@ -1678,65 +1688,65 @@ class ARMP(_NN):
             batch_counter = 0
             while True:
                 try:
-                    descriptor_np = sess.run(descriptor, options=options, run_metadata=run_metadata)
+                    representation_np = sess.run(representation, options=options, run_metadata=run_metadata)
                     summary_writer.add_run_metadata(run_metadata=run_metadata, tag="batch %s" % batch_counter,
                                                     global_step=None)
-                    descriptor_slices.append(descriptor_np)
+                    representation_slices.append(representation_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
-                    print("Generated all the descriptors.")
+                    print("Generated all the representations.")
                     break
         else:
             batch_counter = 0
             while True:
                 try:
-                    descriptor_np = sess.run(descriptor)
-                    descriptor_slices.append(descriptor_np)
+                    representation_np = sess.run(representation)
+                    representation_slices.append(representation_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
-                    print("Generated all the descriptors.")
+                    print("Generated all the representations.")
                     break
 
-        descriptor_conc = np.concatenate(descriptor_slices, axis=0)
-        print("The descriptor has shape %s." % (str(descriptor_conc.shape)))
+        representation_conc = np.concatenate(representation_slices, axis=0)
+        print("The representation has shape %s." % (str(representation_conc.shape)))
 
         sess.close()
 
-        return descriptor_conc
+        return representation_conc
 
-    def _generate_descriptors_from_compounds(self):
+    def _generate_representations_from_compounds(self):
         """
-        This function generates the descriptors from the compounds.
-        :return: the descriptors and the classes
+        This function generates the representations from the compounds.
+        :return: the representations and the classes
         :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
         if is_none(self.compounds):
             raise InputError("QML compounds needs to be created in advance")
 
-        if self.representation == 'slatm':
+        if self.representation_name == 'slatm':
 
-            descriptor, classes = self._generate_slatm_from_compounds()
+            representations, classes = self._generate_slatm_from_compounds()
 
-        elif self.representation == 'acsf':
+        elif self.representation_name == 'acsf':
 
-            descriptor, classes = self._generate_acsf_from_compounds()
+            representations, classes = self._generate_acsf_from_compounds()
 
         else:
-            raise InputError("This should never happen, unrecognised representation %s." % (self.representation))
+            raise InputError("This should never happen, unrecognised representation %s." % (self.representation_name))
 
-        return descriptor, classes
+        return representations, classes
 
     def _generate_acsf_from_compounds(self):
         """
         This function generates the atom centred symmetry functions.
 
-        :return: descriptor acsf and classes
+        :return: representation acsf and classes
         :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
         # Obtaining the total elements and the element pairs
-        mbtypes = representations.get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
+        mbtypes = qml_rep.get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
 
         elements = []
         element_pairs = []
@@ -1779,7 +1789,7 @@ class ARMP(_NN):
         xyzs = np.asarray(xyzs, dtype=np.float32)
 
         if self.tensorboard:
-            self.tensorboard_logger_descriptor.initialise()
+            self.tensorboard_logger_representation.initialise()
             # run_metadata = tf.RunMetadata()
             # options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
 
@@ -1793,7 +1803,7 @@ class ARMP(_NN):
             iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
             batch_xyz, batch_zs = iterator.get_next()
 
-        descriptor = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
+        representations = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
                                             radial_cutoff=self.acsf_parameters['radial_cutoff'],
                                             angular_cutoff=self.acsf_parameters['angular_cutoff'],
                                             radial_rs=self.acsf_parameters['radial_rs'],
@@ -1805,19 +1815,19 @@ class ARMP(_NN):
         sess.run(tf.global_variables_initializer())
         sess.run(iterator.make_initializer(dataset), feed_dict={xyz_tf: xyzs, zs_tf: zs})
 
-        descriptor_slices = []
+        representations_slices = []
 
         if self.tensorboard:
-            self.tensorboard_logger_descriptor.set_summary_writer(sess)
+            self.tensorboard_logger_representation.set_summary_writer(sess)
 
             batch_counter = 0
             while True:
                 try:
-                    descriptor_np = sess.run(descriptor, options=self.tensorboard_logger_descriptor.options,
-                                             run_metadata=self.tensorboard_logger_descriptor.run_metadata)
-                    self.tensorboard_logger_descriptor.write_metadata(batch_counter)
+                    representations_np = sess.run(representations, options=self.tensorboard_logger_representation.options,
+                                             run_metadata=self.tensorboard_logger_representation.run_metadata)
+                    self.tensorboard_logger_representation.write_metadata(batch_counter)
 
-                    descriptor_slices.append(descriptor_np)
+                    representations_slices.append(representations_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
                     break
@@ -1825,30 +1835,30 @@ class ARMP(_NN):
             batch_counter = 0
             while True:
                 try:
-                    descriptor_np = sess.run(descriptor)
-                    descriptor_slices.append(descriptor_np)
+                    representations_np = sess.run(representations)
+                    representations_slices.append(representations_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
                     break
 
-        descriptor_conc = np.concatenate(descriptor_slices, axis=0)
+        representation_conc = np.concatenate(representations_slices, axis=0)
 
         sess.close()
 
-        return descriptor_conc, zs
+        return representation_conc, zs
 
     def _generate_slatm_from_compounds(self):
         """
         This function generates the slatm using the data in the compounds.
 
-        :return: descriptor slatm and the classes
+        :return: representation slatm and the classes
         :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
-        mbtypes = representations.get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
-        list_descriptors = []
+        mbtypes = qml_rep.get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
+        list_representations = []
         max_n_atoms = 0
 
-        # Generating the descriptor in the shape that ARMP requires it
+        # Generating the representation in the shape that ARMP requires it
         for compound in self.compounds:
             compound.generate_slatm(mbtypes, local=True, sigmas=[self.slatm_parameters['slatm_sigma1'],
                                                                   self.slatm_parameters['slatm_sigma2']],
@@ -1857,31 +1867,31 @@ class ARMP(_NN):
                                     rcut=self.slatm_parameters['slatm_rcut'],
                                     alchemy=self.slatm_parameters['slatm_alchemy'],
                                     rpower=self.slatm_parameters['slatm_rpower'])
-            descriptor = compound.representation
-            if max_n_atoms < descriptor.shape[0]:
-                max_n_atoms = descriptor.shape[0]
-            list_descriptors.append(descriptor)
+            representation = compound.representation
+            if max_n_atoms < representation.shape[0]:
+                max_n_atoms = representation.shape[0]
+            list_representations.append(representation)
 
-        # Padding the descriptors of the molecules that have fewer atoms
-        n_samples = len(list_descriptors)
-        n_features = list_descriptors[0].shape[1]
-        padded_descriptors = np.zeros((n_samples, max_n_atoms, n_features))
-        for i, item in enumerate(list_descriptors):
-            padded_descriptors[i, :item.shape[0], :] = item
+        # Padding the representations of the molecules that have fewer atoms
+        n_samples = len(list_representations)
+        n_features = list_representations[0].shape[1]
+        padded_representations = np.zeros((n_samples, max_n_atoms, n_features))
+        for i, item in enumerate(list_representations):
+            padded_representations[i, :item.shape[0], :] = item
 
         # Generating zs in the shape that ARMP requires it
         zs = np.zeros((n_samples, max_n_atoms))
         for i, mol in enumerate(self.compounds):
             zs[i, :mol.nuclear_charges.shape[0]] = mol.nuclear_charges
 
-        return padded_descriptors, zs
+        return padded_representations, zs
 
     def _atomic_model(self, x, hidden_layer_sizes, weights, biases):
         """
         Constructs the atomic part of the network. It calculates the output for all atoms as if they all were the same
         element.
 
-        :param x: Atomic descriptor
+        :param x: Atomic representation
         :type x: tf tensor of shape (n_samples, n_atoms, n_features)
         :param weights: Weights used in the network for a particular element.
         :type weights: list of tf.Variables of length hidden_layer_sizes.size + 1
@@ -1911,7 +1921,7 @@ class ARMP(_NN):
         """
         This generates the molecular model by combining all the outputs from the atomic networks.
 
-        :param x: Atomic descriptor
+        :param x: Atomic representation
         :type x: tf tensor of shape (n_samples, n_atoms, n_features)
         :param zs: Nuclear charges of the systems
         :type zs: tf tensor of shape (n_samples, n_atoms)
@@ -1980,7 +1990,7 @@ class ARMP(_NN):
         """
         This function checks that all the needed input data is available.
 
-        :param x: either the descriptors or the indices to the data points to use
+        :param x: either the representations or the indices to the data points to use
         :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -2002,19 +2012,19 @@ class ARMP(_NN):
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.descriptor):
+            if is_none(self.representation):
 
                 if is_none(self.compounds):
-                    raise InputError("No descriptors or QML compounds have been set yet.")
+                    raise InputError("No representations or QML compounds have been set yet.")
                 else:
-                    self.descriptor, self.classes = self._generate_descriptors_from_compounds()
+                    self.representation, self.classes = self._generate_representations_from_compounds()
 
             if is_none(self.properties):
                 raise InputError("The properties need to be set in advance.")
             if is_none(self.classes):
                 raise InputError("The classes need to be set in advance.")
 
-            approved_x = self.descriptor[x]
+            approved_x = self.representation[x]
             approved_y = self._get_properties(x)
             approved_dy = None
             approved_classes = self.classes[x]
@@ -2028,7 +2038,7 @@ class ARMP(_NN):
             if is_none(classes):
                 raise InputError("ARMP estimator needs the classes to do atomic decomposition.")
 
-            approved_x = check_local_descriptor(x)
+            approved_x = check_local_representation(x)
             approved_y = check_y(y)
             approved_dy = None
             approved_classes = check_classes(classes)
@@ -2047,7 +2057,7 @@ class ARMP(_NN):
         :param classes: classes to use for the atomic decomposition or None
         :type classes: either a numpy array of shape (n_samples, n_atoms) or None
 
-        :return: the approved descriptor and classes
+        :return: the approved representation and classes
         :rtype: numpy array of shape (n_samples, n_atoms, n_features), (n_samples, n_atoms)
         """
 
@@ -2057,15 +2067,15 @@ class ARMP(_NN):
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.descriptor):
+            if is_none(self.representation):
                 if is_none(self.compounds):
-                    raise InputError("No descriptors or QML compounds have been set yet.")
+                    raise InputError("No representations or QML compounds have been set yet.")
                 else:
-                    self.descriptor, self.classes = self._generate_descriptors_from_compounds()
+                    self.representation, self.classes = self._generate_representations_from_compounds()
             if is_none(self.properties):
                 raise InputError("The properties need to be set in advance.")
 
-            approved_x = self.descriptor[x]
+            approved_x = self.representation[x]
             approved_classes = self.classes[x]
 
             check_sizes(x=approved_x, classes=approved_classes)
@@ -2075,24 +2085,24 @@ class ARMP(_NN):
             if is_none(classes):
                 raise InputError("ARMP estimator needs the classes to do atomic decomposition.")
 
-            approved_x = check_local_descriptor(x)
+            approved_x = check_local_representation(x)
             approved_classes = check_classes(classes)
 
             check_sizes(x=approved_x, classes=approved_classes)
 
         return approved_x, approved_classes
 
-    def _check_descriptor_parameters(self, parameters):
+    def _check_representation_parameters(self, parameters):
         """
-        This function checks that the dictionary passed that contains parameters of the descriptor contains the right
+        This function checks that the dictionary passed that contains parameters of the representation contains the right
         parameters.
 
-        :param parameters: all the parameters of the descriptor.
+        :param parameters: all the parameters of the representation.
         :type parameters: dictionary
         :return: None
         """
 
-        if self.representation == "slatm":
+        if self.representation_name == "slatm":
 
             slatm_parameters = {'slatm_sigma1': 0.05, 'slatm_sigma2': 0.05, 'slatm_dgrid1': 0.03, 'slatm_dgrid2': 0.03,
                                 'slatm_rcut': 4.8, 'slatm_rpower': 6, 'slatm_alchemy': False}
@@ -2101,9 +2111,9 @@ class ARMP(_NN):
                 try:
                     slatm_parameters[key]
                 except Exception:
-                    raise InputError("Unrecognised parameter for slatm descriptor: %s" % (key))
+                    raise InputError("Unrecognised parameter for slatm representation: %s" % (key))
 
-        elif self.representation == "acsf":
+        elif self.representation_name == "acsf":
 
             acsf_parameters = {'radial_cutoff': 10.0, 'angular_cutoff': 10.0, 'radial_rs': (0.0, 0.1, 0.2),
                                     'angular_rs': (0.0, 0.1, 0.2), 'theta_s': (3.0, 2.0), 'zeta': 3.0, 'eta': 2.0}
@@ -2112,7 +2122,7 @@ class ARMP(_NN):
                 try:
                     acsf_parameters[key]
                 except Exception:
-                    raise InputError("Unrecognised parameter for acsf descriptor: %s" % (key))
+                    raise InputError("Unrecognised parameter for acsf representation: %s" % (key))
 
     def _find_elements(self, zs):
         """
@@ -2134,7 +2144,7 @@ class ARMP(_NN):
         """
         This function fits an atomic decomposed network to the data.
 
-        :param x: either the descriptors or the indices to the data points to use
+        :param x: either the representations or the indices to the data points to use
         :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -2281,7 +2291,7 @@ class ARMP(_NN):
         Calculate the coefficient of determination (R^2).
         Larger values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -2305,7 +2315,7 @@ class ARMP(_NN):
         Calculate the mean absolute error.
         Smaller values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None
@@ -2334,7 +2344,7 @@ class ARMP(_NN):
         Calculate the root mean squared error.
         Smaller values corresponds to a better prediction.
 
-        :param x: either the descriptors or the indices to the descriptors
+        :param x: either the representations or the indices to the representations
         :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
         :param y: either the properties or None
         :type y: either a numpy array of shape (n_samples,) or None

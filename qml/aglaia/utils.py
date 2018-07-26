@@ -71,7 +71,7 @@ def is_positive_integer_or_zero_array(x):
 
 # ------------- ** Checking inputs ** --------------------------
 
-def check_global_descriptor(x):
+def check_global_representation(x):
     """
     This function checks that the data passed through x corresponds to the descriptor in a numpy array of shape
     (n_samples, n_features) containing floats.
@@ -90,7 +90,7 @@ def check_global_descriptor(x):
 
     return x
 
-def check_local_descriptor(x):
+def check_local_representation(x):
     """
     This function checks that the data passed through x corresponds to the descriptor in a numpy array of shape
     (n_samples, n_atoms, n_features) containing floats.
