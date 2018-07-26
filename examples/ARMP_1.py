@@ -17,13 +17,13 @@ filenames.sort()
 
 ## ------------- ** Setting up the estimator ** ---------------
 
-estimator = ARMP(iterations=100, representation='acsf', descriptor_params={"radial_rs": np.arange(0,10, 0.1), "angular_rs": np.arange(0.5, 10.5, 0.1),
-"theta_s": np.arange(0, 5, 0.1)}, tensorboard=False)
+estimator = ARMP(iterations=10, representation='acsf', representation_params={"radial_rs": np.arange(0, 10, 1), "angular_rs": np.arange(0.5, 10.5, 1),
+"theta_s": np.arange(0, 5, 1)}, tensorboard=False)
 
-estimator.generate_compounds(filenames[:100])
-estimator.set_properties(energies[:100])
+estimator.generate_compounds(filenames)
+estimator.set_properties(energies)
 
-estimator.generate_descriptors()
+estimator.generate_representation()
 
 ##  ------------- ** Fitting to the data ** ---------------
 
