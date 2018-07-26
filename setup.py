@@ -128,18 +128,19 @@ ext_fsolvers = Extension(name = '.ml.math.fsolvers',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-def requirements():
-    with open('requirements.txt') as f:
-        return [line.rstrip() for line in f]
-
-ext_facsf = Extension(name = 'facsf',
-                          sources = ['qml/facsf.f90'],
+ext_facsf = Extension(name = '.ml.representations.facsf',
+                          sources = ['qml/ml/representations/facsf.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
                           extra_link_args = LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
+
+def requirements():
+    with open('requirements.txt') as f:
+        return [line.rstrip() for line in f]
+
 
 # use README.md as long description
 def readme():
