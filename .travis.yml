@@ -38,7 +38,6 @@ install:
        pip3 install tensorflow
        python3 setup.py build
        python3 setup.py install
-       pip3 install pandoc
        pip3 install sphinx
        pip3 install nbsphinx
        pip3 install sphinx-rtd-theme
@@ -52,7 +51,6 @@ install:
        pip2 install tensorflow
        python2 setup.py build
        python2 setup.py install
-       pip2 install pandoc
        pip2 install sphinx
        pip2 install nbsphinx
        pip2 install sphinx-rtd-theme
