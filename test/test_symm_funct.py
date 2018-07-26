@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Silvia Amabilino
+# Copyright (c) 2018 Silvia Amabilino, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,133 +23,100 @@
 """
 This file contains tests for the atom centred symmetry function module.
 """
+from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
 
+import qml
+from qml.ml.representations import generate_acsf
 from qml.aglaia import symm_funct
-from qml.aglaia import np_symm_funct
-from qml.aglaia import tensormol_symm_funct
 import os
 
+def pad(size, coordinates, nuclear_charges):
 
-def test_acsf_1():
-    """
-    This test compares the atom centred symmetry functions generated with tensorflow and numpy.
-    The test system consists of 5 configurations of CH4 + CN radical.
-    """
+    n_samples = len(coordinates)
 
-    radial_cutoff = 10.0
-    angular_cutoff = 10.0
-    radial_rs = [0.0, 0.1, 0.2]
-    angular_rs = [0.0, 0.1, 0.2]
-    theta_s = [0.0, 0.1, 0.2]
-    zeta = 3.0
-    eta = 2.0
-
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    input_data = test_dir + "/data/data_test_acsf.npz"
-    data = np.load(input_data)
-
-    xyzs = data["arr_0"]
-    zs = data["arr_1"]
-    elements = data["arr_2"]
-    element_pairs = data["arr_3"]
-
-    n_samples = xyzs.shape[0]
-    n_atoms = zs.shape[1]
-
-    with tf.name_scope("Inputs"):
-        zs_tf = tf.placeholder(shape=[n_samples, n_atoms], dtype=tf.int32, name="zs")
-        xyz_tf = tf.placeholder(shape=[n_samples, n_atoms, 3], dtype=tf.float32, name="xyz")
-
-    acsf_tf_t = symm_funct.generate_parkhill_acsf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
-
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-    acsf_tf = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
-
-    acsf_np = np_symm_funct.generate_acsf(xyzs, zs, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
-
-    n_samples = xyzs.shape[0]
-    n_atoms = xyzs.shape[1]
+    padded_coordinates = np.zeros((n_samples, size, 3))
+    padded_nuclear_charges = np.zeros((n_samples, size), dtype = int)
 
     for i in range(n_samples):
-        for j in range(n_atoms):
-            acsf_np_sort = np.sort(acsf_np[i][j])
-            acsf_tf_sort = np.sort(acsf_tf[i][j])
-            np.testing.assert_array_almost_equal(acsf_np_sort, acsf_tf_sort, decimal=4)
+        natoms = coordinates[i].shape[0]
+        if natoms > size:
+            print("natoms larger than padded size")
+            quit()
+        padded_coordinates[i,:natoms] = coordinates[i]
+        padded_nuclear_charges[i,:natoms] = nuclear_charges[i]
 
-def test_acsf_2():
-    """
-    This test compares the atom centred symmetry functions generated with tensorflow and tensormol.
-    The test system consists of 4 atoms at very predictable positions.
+    return padded_coordinates, padded_nuclear_charges
 
-    :return:
-    """
+def test_acsf():
+    files = ["qm7/0101.xyz",
+             "qm7/0102.xyz",
+             "qm7/0103.xyz",
+             "qm7/0104.xyz",
+             "qm7/0105.xyz",
+             "qm7/0106.xyz",
+             "qm7/0107.xyz",
+             "qm7/0108.xyz",
+             "qm7/0109.xyz",
+             "qm7/0110.xyz"]
 
-    radial_cutoff = 10.0
-    angular_cutoff = 10.0
-    radial_rs = [0.0, 0.1, 0.2]
-    angular_rs = [0.0, 0.1, 0.2]
-    theta_s = [0.0, 0.1, 0.2]
-    zeta = 3.0
-    eta = 2.0
 
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    input_data = test_dir + "/data/data_test_acsf_01.npz"
-    data = np.load(input_data)
+    path = test_dir = os.path.dirname(os.path.realpath(__file__))
 
-    xyzs = data["arr_0"]
-    zs = data["arr_1"]
-    elements = data["arr_2"]
-    element_pairs = data["arr_3"]
+    mols = []
+    for xyz_file in files:
+        mol = qml.data.Compound(xyz=path + "/" + xyz_file)
+        mols.append(mol)
 
-    n_samples = xyzs.shape[0]
-    n_atoms = zs.shape[1]
+    elements = set()
+    for mol in mols:
+        elements = elements.union(mol.nuclear_charges)
 
-    with tf.name_scope("Inputs"):
-        zs_tf = tf.placeholder(shape=[n_samples, n_atoms], dtype=tf.int32, name="zs")
-        xyz_tf = tf.placeholder(shape=[n_samples, n_atoms, 3], dtype=tf.float32, name="xyz")
+    elements = list(elements)
 
-    acsf_tf_t = symm_funct.generate_parkhill_acsf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
-    acsf_tm_t = tensormol_symm_funct.tensormol_acsf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
+    fort_acsf(mols, path, elements)
+    fort_acsf_gradients(mols, path, elements)
+    tf_acsf(mols, path, elements)
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-    acsf_tf = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
-    acsf_tm = sess.run(acsf_tm_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
+def fort_acsf(mols, path, elements):
 
-    acsf_tf = np.reshape(acsf_tf, acsf_tm.shape)
+    # Generate atom centered symmetry functions representation
+    # using the Compound class
+    for i, mol in enumerate(mols):
+        mol.generate_acsf(elements = elements)
 
-    for i in range(acsf_tm.shape[0]):
-        acsf_tm_sort = np.sort(acsf_tm[i])
-        acsf_tf_sort = np.sort(acsf_tf[i])
-        np.testing.assert_array_almost_equal(acsf_tm_sort, acsf_tf_sort, decimal=1)
+    X_test = np.concatenate([mol.representation for mol in mols])
+    X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF representation"
 
-def test_acsf_3():
-    """
-    This test compares the atom centred symmetry functions generated with tensorflow and numpy.
-    The test system consists of 10 molecules from the QM7 data set.
+    # Generate atom centered symmetry functions representation
+    # directly from the representations module
+    rep = []
+    for i, mol in enumerate(mols):
+        rep.append(generate_acsf(coordinates = mol.coordinates,
+                nuclear_charges = mol.nuclear_charges, 
+                elements = elements))
 
-    :return: None
-    """
-    radial_cutoff = 10.0
-    angular_cutoff = 10.0
-    radial_rs = [0.0, 0.1, 0.2]
-    angular_rs = [0.0, 0.1, 0.2]
-    theta_s = [0.0, 0.1, 0.2]
-    zeta = 3.0
-    eta = 2.0
+    X_test = np.concatenate(rep)
+    X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF representation"
 
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    input_data = test_dir + "/data/qm7_testdata.npz"
-    data = np.load(input_data)
+def tf_acsf(mols, path, elements):
+    radial_cutoff = 5
+    angular_cutoff = 5
+    radial_rs = np.linspace(0, radial_cutoff, 3)
+    angular_rs = np.linspace(0, angular_cutoff, 3)
+    theta_s = np.linspace(0, np.pi, 3)
+    zeta = 1.0
+    eta = 1.0
 
-    xyzs = data["arr_0"]
-    zs = data["arr_1"]
-    elements = data["arr_2"]
-    element_pairs = data["arr_3"]
+    element_pairs = [[1,1], [6,1], [7,1], [7,7], [6,6], [7,6]]
+
+    xyzs, zs = pad(16, [mol.coordinates for mol in mols],
+            [mol.nuclear_charges for mol in mols])
+
 
     n_samples = xyzs.shape[0]
     max_n_atoms = zs.shape[1]
@@ -162,20 +129,45 @@ def test_acsf_3():
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    acsf_tf = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
 
-    acsf_np = np_symm_funct.generate_acsf(xyzs, zs, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
+    X_test = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})[zs > 0]
+    X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
+    assert np.allclose(X_test, X_ref, atol = 1e-4), "Error in ACSF representation"
 
-    for i in range(n_samples):
-        for j in range(max_n_atoms):
-            if zs[i][j] == 0:
-                continue
-            else:
-                acsf_np_sort = np.sort(acsf_np[i][j])
-                acsf_tf_sort = np.sort(acsf_tf[i][j])
-                np.testing.assert_array_almost_equal(acsf_np_sort, acsf_tf_sort, decimal=4)
+def fort_acsf_gradients(mols, path, elements):
+
+    # Generate atom centered symmetry functions representation
+    # and gradients using the Compound class
+    for i, mol in enumerate(mols):
+        mol.generate_acsf(elements = elements, gradients = True)
+
+    X_test = np.concatenate([mol.representation for mol in mols])
+    X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF representation"
+
+    Xgrad_test = np.concatenate([mol.gradients.reshape(mol.natoms**2, mol.gradients.shape[1]*3)
+        for mol in mols])
+    Xgrad_ref = np.loadtxt(path + "/data/acsf_gradients.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF gradients"
+
+    # Generate atom centered symmetry functions representation
+    # and gradients directly from the representations module
+    rep = []
+    grad = []
+    for i, mol in enumerate(mols):
+        r, g = generate_acsf(coordinates = mol.coordinates, nuclear_charges = mol.nuclear_charges,
+                elements = elements, gradients = True)
+        rep.append(r)
+        grad.append(g)
+
+    X_test = np.concatenate(rep)
+    X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF representation"
+
+    Xgrad_test = np.concatenate([mol.gradients.reshape(mol.natoms**2, mol.gradients.shape[1]*3)])
+    Xgrad_ref = np.loadtxt(path + "/data/acsf_gradients.txt")
+    assert np.allclose(X_test, X_ref), "Error in ACSF gradients"
 
 if __name__ == "__main__":
-    test_acsf_1()
-    test_acsf_2()
-    test_acsf_3()
+    test_acsf()
+
