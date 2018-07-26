@@ -12,14 +12,14 @@ import os
 current_dir = os.path.dirname(os.path.realpath(__file__))
 data = np.load(current_dir + '/../test/data/CN_isopent_light_UCM.npz')
 
-descriptor = data["arr_0"]
+representation = data["arr_0"]
 energies = data["arr_1"]
 
 ## ------------- ** Setting up the estimator ** ---------------
 
 estimator = MRMP(iterations=7000, l2_reg=0.0)
 
-estimator.set_descriptors(descriptors=descriptor)
+estimator.set_representations(representations=representation)
 estimator.set_properties(energies)
 
 ##  ------------- ** Fitting to the data ** ---------------
