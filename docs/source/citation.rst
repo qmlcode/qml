@@ -9,7 +9,6 @@ Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, DR Glowacki, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
-
+    AS Christensen, LA Bratholm, S Amabilino, JC Kromann, FA Faber, B Huang, GR Glowacki, A Tkatchenko, K.R. Muller, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
