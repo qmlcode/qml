@@ -101,8 +101,8 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     integer :: i, j, k, l, n, m, p, q, s, z, nelements, nbasis2, nbasis3, nabasis
     integer, allocatable, dimension(:) :: element_types
     double precision :: rij, rik, angle, invcut
-    double precision, allocatable, dimension(:) :: radial, angular, a, b, c, atom_rep
-    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay
+    double precision, allocatable, dimension(:) :: radial, angular, a, b, c
+    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay, rep3
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
@@ -141,7 +141,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     !$OMP PARALLEL DO PRIVATE(rij)
     do i = 1, natoms
         do j = i+1, natoms
-            rij = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
+            rij = norm2(coordinates(j,:) - coordinates(i,:))
             distance_matrix(i, j) = rij
             distance_matrix(j, i) = rij
         enddo
@@ -150,7 +150,6 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
 
     ! number of basis functions in the two body term
     nbasis2 = size(Rs2)
-    rep = 0.0d0
 
     ! Inverse of the two body cutoff
     invcut = 1.0d0 / rcut
@@ -192,19 +191,20 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     rdecay = decay(distance_matrix, invcut, natoms)
 
     ! Allocate temporary
-    allocate(atom_rep(rep_size))
+    allocate(rep3(natoms,rep_size))
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
     allocate(radial(nbasis3))
     allocate(angular(nabasis))
 
+    rep3 = 0.0d0
+
     ! This could probably be done more efficiently if it's a bottleneck
     ! Also the order is a bit wobbly compared to the tensorflow implementation
-    !$OMP PARALLEL DO PRIVATE(atom_rep, rij, n, rik, m, a, b, c, angle, radial, angular, &
-    !$OMP p, q, s, z)
+    !$OMP PARALLEL DO PRIVATE(rij, n, rik, m, a, b, c, angle, radial, angular, &
+    !$OMP p, q, s, z) REDUCTION(+:rep3) COLLAPSE(2) SCHEDULE(dynamic)
     do i = 1, natoms
-        atom_rep = 0.0d0
         do j = 1, natoms - 1
             if (i .eq. j) cycle
             ! distance between atoms i and j
@@ -239,18 +239,19 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                     ! calculate the indices that the three body terms should be added to
                     z = s + (l-1) * nabasis
                     ! Add the contributions from atoms i,j and k
-                    atom_rep(z:z + nabasis - 1) = atom_rep(z:z + nabasis - 1) + angular * radial(l)
+                    rep3(i, z:z + nabasis - 1) = rep3(i, z:z + nabasis - 1) + angular * radial(l)
                 enddo
             enddo
         enddo
-        rep(i,:) = rep(i,:) + atom_rep
     enddo
     !$OMP END PARALLEL DO
+
+    rep = rep + rep3
 
     deallocate(element_types)
     deallocate(rdecay)
     deallocate(distance_matrix)
-    deallocate(atom_rep)
+    deallocate(rep3)
     deallocate(a)
     deallocate(b)
     deallocate(c)
@@ -336,10 +337,10 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     inv_sq_distance_matrix = 0.0d0
 
 
-    !$OMP PARALLEL DO PRIVATE(rij,rij2,invrij,invrik)
+    !$OMP PARALLEL DO PRIVATE(rij,rij2,invrij,invrij2) SCHEDULE(dynamic)
     do i = 1, natoms
         do j = i+1, natoms
-            rij = sqrt(sum((coordinates(j,:) - coordinates(i,:))**2))
+            rij = norm2(coordinates(j,:) - coordinates(i,:))
             distance_matrix(i, j) = rij
             distance_matrix(j, i) = rij
             rij2 = rij * rij
@@ -370,10 +371,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     allocate(radial_part(nbasis2))
     allocate(part(nbasis2))
 
-    rep = 0.0d0
-    grad = 0.0d0
-
-    !!$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad)
+    !$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad) &
+    !$OMP SCHEDULE(dynamic)
     do i = 1, natoms
         ! The element index of atom i
         m = element_types(i)
@@ -405,7 +404,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
             endif
         enddo
     enddo
-    !!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
     deallocate(radial_base)
     deallocate(radial)
@@ -447,11 +446,11 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
 
     ! This could probably be done more efficiently if it's a bottleneck
     ! The order is a bit wobbly compared to the tensorflow implementation
-    !!$OMP PARALLEL DO PRIVATE(atom_rep,atom_grad,a,b,c,radial,angular_base, &
-    !!$OMP angular,d_angular,rij,n,rij2,invrij,invrij2,d_angular_d_i, &
-    !!$OMP d_angular_d_j,d_angular_d_k,rik,m,rik2,invrik,invrik2,angle, &
-    !!$OMP p,q,dot,d_radial,d_radial_d_i,d_radial_d_j,d_radial_d_k,s,z, &
-    !!$OMP d_ijdecay,d_ikdecay)
+    !$OMP PARALLEL DO PRIVATE(atom_rep,atom_grad,a,b,c,radial,angular_base, &
+    !$OMP angular,d_angular,rij,n,rij2,invrij,invrij2,d_angular_d_i, &
+    !$OMP d_angular_d_j,d_angular_d_k,rik,m,rik2,invrik,invrik2,angle, &
+    !$OMP p,q,dot,d_radial,d_radial_d_i,d_radial_d_j,d_radial_d_k,s,z, &
+    !$OMP d_ijdecay,d_ikdecay) SCHEDULE(dynamic)
     do i = 1, natoms
         atom_rep = 0.0d0
         atom_grad = 0.0d0
@@ -553,7 +552,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
         rep(i, twobody_size + 1:) = rep(i, twobody_size + 1:) + atom_rep
         grad(i, twobody_size + 1:,:,:) = grad(i, twobody_size + 1:,:,:) + atom_grad
     enddo
-    !!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
 
     deallocate(rdecay)
