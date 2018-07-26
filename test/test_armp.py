@@ -36,7 +36,7 @@ def test_set_representation():
     This function tests the function _set_representation.
     """
     try:
-        ARMP(representation='slatm', descriptor_params={'slatm_sigma12': 0.05})
+        ARMP(representation='slatm', representation_params={'slatm_sigma12': 0.05})
         raise Exception
     except InputError:
         pass
@@ -48,7 +48,7 @@ def test_set_representation():
         pass
 
     try:
-        ARMP(representation='slatm', descriptor_params={'slatm_alchemy': 0.05})
+        ARMP(representation='slatm', representation_params={'slatm_alchemy': 0.05})
         raise Exception
     except InputError:
         pass
@@ -56,9 +56,9 @@ def test_set_representation():
     parameters = {'slatm_sigma1': 0.07, 'slatm_sigma2': 0.04, 'slatm_dgrid1': 0.02, 'slatm_dgrid2': 0.06,
                   'slatm_rcut': 5.0, 'slatm_rpower': 7, 'slatm_alchemy': True}
 
-    estimator = ARMP(representation='slatm', descriptor_params=parameters)
+    estimator = ARMP(representation='slatm', representation_params=parameters)
 
-    assert estimator.representation == 'slatm'
+    assert estimator.representation_name == 'slatm'
     assert estimator.slatm_parameters == parameters
 
 def test_set_properties():
@@ -94,15 +94,15 @@ def test_set_descriptor():
 
     estimator = ARMP()
 
-    assert estimator.descriptor == None
+    assert estimator.representation == None
 
-    estimator.set_descriptors(descriptors=descriptor_correct)
+    estimator.set_representations(representations=descriptor_correct)
 
-    assert np.all(estimator.descriptor == descriptor_correct)
+    assert np.all(estimator.representation == descriptor_correct)
 
     # Pass a descriptor with the wrong shape
     try:
-        estimator.set_descriptors(descriptors=descriptor_incorrect)
+        estimator.set_representations(representations=descriptor_incorrect)
         raise Exception
     except InputError:
         pass
@@ -122,7 +122,7 @@ def test_fit_1():
     estimator = ARMP(representation="acsf")
     estimator.generate_compounds(filenames[:50])
     estimator.set_properties(energies[:50])
-    estimator.generate_descriptors()
+    estimator.generate_representation()
 
     idx = np.arange(0, 50)
     estimator.fit(idx)
@@ -140,7 +140,7 @@ def test_fit_2():
     energies = data["arr_2"]
 
     estimator = ARMP()
-    estimator.set_descriptors(descriptors=descriptor)
+    estimator.set_representations(representations=descriptor)
     estimator.set_classes(classes=classes)
     estimator.set_properties(energies)
 
