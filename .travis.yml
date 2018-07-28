@@ -28,6 +28,7 @@ before_install:
 install:
  - sudo apt-get install -qq gcc gfortran libblas-dev liblapack-dev
  - sudo apt-get install -qq gcc-4.8 gfortran-4.8
+ - sudo apt install pandoc
  - |
    if [ ${TRAVIS_PYTHON_VERSION:0:1} = 3 ]; then
        sudo apt-get install python3-numpy
@@ -38,6 +39,7 @@ install:
        python3 setup.py build
        python3 setup.py install
        pip3 install sphinx
+       pip3 install nbsphinx
        pip3 install sphinx-rtd-theme
        cd ${TRAVIS_BUILD_DIR}/docs
        make html
@@ -50,6 +52,7 @@ install:
        python2 setup.py build
        python2 setup.py install
        pip2 install sphinx
+       pip2 install nbsphinx
        pip2 install sphinx-rtd-theme
        cd ${TRAVIS_BUILD_DIR}/docs
        make html
