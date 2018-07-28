@@ -19,7 +19,7 @@ energies = data["arr_2"]
 
 estimator = ARMP(iterations=100, l2_reg=0.0)
 
-estimator.set_descriptors(descriptors=descriptor)
+estimator.set_representations(representations=descriptor)
 estimator.set_classes(zs)
 estimator.set_properties(energies)
 
