@@ -34,7 +34,7 @@ import os
 current_dir = os.path.dirname(os.path.realpath(__file__))
 data = np.load(current_dir + '/../test/data/CN_isopent_light_UCM.npz')
 
-descriptor = data["arr_0"]
+representation = data["arr_0"]
 energies = data["arr_1"]
 
 ## ------------- ** Setting up the estimator ** ---------------
@@ -43,12 +43,12 @@ estimator = MRMP()
 
 ##  ------------- ** Fitting to the data ** ---------------
 
-estimator.fit(descriptor, energies)
+estimator.fit(representation, energies)
 
 ##  ------------- ** Predicting and scoring ** ---------------
 
-score = estimator.score(descriptor, energies)
+score = estimator.score(representation, energies)
 
 print("The mean absolute error is %s kJ/mol." % (str(-score)))
 
-energies_predict = estimator.predict(descriptor)
+energies_predict = estimator.predict(representation)

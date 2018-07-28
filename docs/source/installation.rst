@@ -10,6 +10,10 @@ Installing prerequisite modules (for most Linux systems):
 These should already be installed on most systems. The Intel compilers
 and MKL math-libraries are supported as well (see section 1.3).
 
+**Additional note:**
+For running neural networks, TensorFlow 1.8 is required. Pip does not automatically instal TF, so one should follow
+`these <https://www.tensorflow.org/versions/r1.8/install/>` instructions.
+
 Installing via ``pip``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
