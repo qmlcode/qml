@@ -19,13 +19,17 @@ to make it easy for computational chemists to use these for machine-learning tas
 Current list of contributors:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  Anders S. Christensen (University of Basel)
--  Lars A. Bratholm (University of Bristol)
--  Silvia Amabilino (University of Bristol)
--  Felix A. Faber (University of Basel)
--  Bing Huang (University of Basel)
--  David R. Glowacki (University of Bristol)
--  O. Anatole von Lilienfeld (University of Basel)
+- Anders S. Christensen (University of Basel)
+- Lars A. Bratholm (University of Bristol)
+- Silvia Amabilino (University of Bristol)
+- Jimmy C. Kromann (University of Basel)
+- Felix A. Faber (University of Basel)
+- Bing Huang (University of Basel)
+- David R. Glowacki (University of Bristol) 
+- Alexandre Tkatchenko (University of Luxembourg)
+- Klaus-Robert Müller (Technische Universitat Berlin/Korea University)
+- \O. Anatole von Lilienfeld (University of Basel)
+
 
 Code development
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -48,7 +52,7 @@ Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, LA Bratholm, S Amabilino, FA Faber, B Huang, DR Glowacki, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, LA Bratholm, S Amabilino, JC Kromann, FA Faber, B Huang, GR Glowacki, A Tkatchenko, K.R. Muller, OA von Lilienfeld (2018) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
 For citation of the individual procedures of QML, please see the "Citing use of QML" section.
