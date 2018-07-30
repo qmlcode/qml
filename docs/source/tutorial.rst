@@ -36,12 +36,12 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
 
 .. code:: python
 
-    import qml 
+    import qml
 
     # Create the compound object mol from the file qm7/0001.xyz which happens to be methane
     mol = qml.ml.Compound(xyz="qm7/0001.xyz")
 
-    # Generate and print a coulomb matrix for compound with 5 atoms 
+    # Generate and print a coulomb matrix for compound with 5 atoms
     mol.generate_coulomb_matrix(size=5, sorting="row-norm")
     print(mol.representation)
 
@@ -50,7 +50,7 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
     print(mol.representation)
 
 The representations are simply stored as 1D-vectors.
-Note the keyword ``size`` which is the largest number of atoms in a molecule occurring in test or training set. 
+Note the keyword ``size`` which is the largest number of atoms in a molecule occurring in test or training set.
 Additionally, the coulomb matrix can take a sorting scheme as keyword, and the BoB representations requires the specifications of how many atoms of a certain type to make room for in the representations.
 
 Lastly, you can print the following properties which is read from the XYZ file:
@@ -79,7 +79,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
     from tutorial_data import compounds
 
     from qml.ml.kernels import gaussian_kernel
-    
+
     # For every compound generate a coulomb matrix or BoB
     for mol in compounds:
 
@@ -100,7 +100,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
 
     # K is also a Numpy array
     K = gaussian_kernel(X, X, sigma)
-    
+
     # Print the kernel
     print K
 
@@ -127,7 +127,7 @@ Extend your code from the previous step with the code below:
     # Assign 1000 first molecules to the training set
     X_training = X[:1000]
     Y_training = energy_pbe0[:1000]
-   
+
     sigma = 4000.0
     K = gaussian_kernel(X_training, X_training, sigma)
     print(K)
@@ -136,7 +136,7 @@ Extend your code from the previous step with the code below:
     K[np.diag_indices_from(K)] += 1e-8
 
     # Use the built-in Cholesky-decomposition to solve
-    alpha = cho_solve(K, Y_training) 
+    alpha = cho_solve(K, Y_training)
 
     print(alpha)
 
@@ -145,7 +145,7 @@ Exercise 4: Prediction
 ~~~~~~~~~~~~~~~~~~~~~~~~
 With the :math:`\boldsymbol{\alpha}` regression coefficients from the previous step, we have (successfully) trained the machine, and we are now ready to do predictions for other compounds.
 This is done using the following equation:
-    
+
     :math:`y\left(\widetilde{\mathbf{X}} \right) = \sum_i \alpha_i \  K\left( \widetilde{\mathbf{X}}, \mathbf{X}_i\right)`
 
 In this step we further divide the dataset into a training and a test set. Try using the last 1000 entries as test set.
