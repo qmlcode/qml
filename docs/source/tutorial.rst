@@ -104,7 +104,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
     K = gaussian_kernel(X, X, sigma)
 
     # Print the kernel
-    print K
+    print(K)
 
 
 Exercise 3: Regression
@@ -165,7 +165,7 @@ In this step we further divide the dataset into a training and a test set. Try u
     Y_predicted = np.dot(Ks, alpha)
 
     # Calculate mean-absolute-error (MAE):
-    print np.mean(np.abs(Y_predicted - Y_test))
+    print(np.mean(np.abs(Y_predicted - Y_test)))
 
 Exercise 5: Learning curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
