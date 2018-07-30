@@ -32,7 +32,7 @@ Exercise 1: Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In this exercise we use \qml~to generate the Coulomb matrix and Bag of bonds (BoB) representations. [#montavon]_
 In QML data can be parsed via the ``Compound`` class, which stores data and generates representations in Numpy's ndarray format.
-If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane molecule) and generate a coulomb matrix representation (sorted by row-norm) and a BoB representation.
+If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane molecule) and generate a Coulomb matrix representation (sorted by row-norm) and a BoB representation.
 
 .. code:: python
 
@@ -41,7 +41,7 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
     # Create the compound object mol from the file qm7/0001.xyz which happens to be methane
     mol = qml.ml.Compound(xyz="qm7/0001.xyz")
 
-    # Generate and print a coulomb matrix for compound with 5 atoms
+    # Generate and print a Coulomb matrix for compound with 5 atoms
     mol.generate_coulomb_matrix(size=5, sorting="row-norm")
     print(mol.representation)
 
@@ -51,7 +51,7 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
 
 The representations are simply stored as 1D-vectors.
 Note the keyword ``size`` which is the largest number of atoms in a molecule occurring in test or training set.
-Additionally, the coulomb matrix can take a sorting scheme as keyword, and the BoB representations requires the specifications of how many atoms of a certain type to make room for in the representations.
+Additionally, the Coulomb matrix can take a sorting scheme as keyword, and the BoB representations requires the specifications of how many atoms of a certain type to make room for in the representations.
 
 Lastly, you can print the following properties which is read from the XYZ file:
 
@@ -82,7 +82,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
 
     from qml.ml.kernels import gaussian_kernel
 
-    # For every compound generate a coulomb matrix or BoB
+    # For every compound generate a Coulomb matrix or BoB
     for mol in compounds:
 
         mol.generate_coulomb_matrix(size=23, sorting="row-norm")
@@ -172,7 +172,7 @@ Exercise 5: Learning curves
 Repeat the prediction from Exercise 2.4 with training set sizes of 1000, 2000, and 4000 molecules.
 Note the MAE for every training size.
 Plot a learning curve of the MAE versus the training set size.
-Generate a learning curve for the Gaussian and Laplacian kernels, as well using the coulomb matrix and bag-of-bonds representations.
+Generate a learning curve for the Gaussian and Laplacian kernels, as well using the Coulomb matrix and bag-of-bonds representations.
 Which combination gives the best learning curve? Note you will have to adjust the kernel width (sigma) underway.
 
 
