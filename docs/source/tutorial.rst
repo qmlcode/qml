@@ -75,6 +75,8 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
 
 .. code:: python
 
+    import numpy as np
+
     # Import QM7, already parsed to QML
     from tutorial_data import compounds
 
