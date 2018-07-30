@@ -126,7 +126,7 @@ Extend your code from the previous step with the code below:
     from qml.ml.math import cho_solve
     from tutorial_data import energy_pbe0
 
-    # Assign 1000 first molecules to the training set
+    # Assign first 1000 molecules to the training set
     X_training = X[:1000]
     Y_training = energy_pbe0[:1000]
 
@@ -154,7 +154,7 @@ In this step we further divide the dataset into a training and a test set. Try u
 
 .. code:: python
 
-    # Assign 1000 last molecules to the test set
+    # Assign last 1000 molecules to the test set
     X_test = X[-1000:]
     Y_test = energy_pbe0[-1000:]
 
