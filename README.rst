@@ -15,7 +15,7 @@ Current list of contributors:
 - Jimmy C. Kromann (University of Basel)
 - Felix A. Faber (University of Basel)
 - Bing Huang (University of Basel)
-- David R. Glowacki (University of Bristol) 
+- David R. Glowacki (University of Bristol)
 - Alexandre Tkatchenko (University of Luxembourg)
 - Klaus-Robert Müller (Technische Universitat Berlin/Korea University)
 - \O. Anatole von Lilienfeld (University of Basel)
