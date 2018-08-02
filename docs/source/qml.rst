@@ -47,7 +47,7 @@ qml\.Compound class
 
 .. qml\.arad module
 .. ----------------
-.. 
+..
 .. .. automodule:: qml.arad
 ..     :members:
 ..     :show-inheritance:
@@ -68,10 +68,10 @@ qml\.wrappers module
     :undoc-members:
     :show-inheritance:
 
- 
+
 .. qml\.data module
 .. ----------------
-.. 
+..
 .. .. automodule:: qml.data
 ..     :members:
 ..     :undoc-members:

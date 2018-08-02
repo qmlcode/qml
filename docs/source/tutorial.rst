@@ -32,16 +32,16 @@ Exercise 1: Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In this exercise we use \qml~to generate the Coulomb matrix and Bag of bonds (BoB) representations. [#montavon]_
 In QML data can be parsed via the ``Compound`` class, which stores data and generates representations in Numpy's ndarray format.
-If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane molecule) and generate a coulomb matrix representation (sorted by row-norm) and a BoB representation.
+If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane molecule) and generate a Coulomb matrix representation (sorted by row-norm) and a BoB representation.
 
 .. code:: python
 
-    import qml 
+    import qml
 
     # Create the compound object mol from the file qm7/0001.xyz which happens to be methane
     mol = qml.ml.Compound(xyz="qm7/0001.xyz")
 
-    # Generate and print a coulomb matrix for compound with 5 atoms 
+    # Generate and print a Coulomb matrix for compound with 5 atoms
     mol.generate_coulomb_matrix(size=5, sorting="row-norm")
     print(mol.representation)
 
@@ -50,8 +50,8 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
     print(mol.representation)
 
 The representations are simply stored as 1D-vectors.
-Note the keyword ``size`` which is the largest number of atoms in a molecule occurring in test or training set. 
-Additionally, the coulomb matrix can take a sorting scheme as keyword, and the BoB representations requires the specifications of how many atoms of a certain type to make room for in the representations.
+Note the keyword ``size`` which is the largest number of atoms in a molecule occurring in test or training set.
+Additionally, the Coulomb matrix can take a sorting scheme as keyword, and the BoB representations requires the specifications of how many atoms of a certain type to make room for in the representations.
 
 Lastly, you can print the following properties which is read from the XYZ file:
 
@@ -75,12 +75,14 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
 
 .. code:: python
 
+    import numpy as np
+
     # Import QM7, already parsed to QML
     from tutorial_data import compounds
 
     from qml.ml.kernels import gaussian_kernel
-    
-    # For every compound generate a coulomb matrix or BoB
+
+    # For every compound generate a Coulomb matrix or BoB
     for mol in compounds:
 
         mol.generate_coulomb_matrix(size=23, sorting="row-norm")
@@ -100,9 +102,9 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
 
     # K is also a Numpy array
     K = gaussian_kernel(X, X, sigma)
-    
+
     # Print the kernel
-    print K
+    print(K)
 
 
 Exercise 3: Regression
@@ -124,10 +126,10 @@ Extend your code from the previous step with the code below:
     from qml.ml.math import cho_solve
     from tutorial_data import energy_pbe0
 
-    # Assign 1000 first molecules to the training set
+    # Assign first 1000 molecules to the training set
     X_training = X[:1000]
     Y_training = energy_pbe0[:1000]
-   
+
     sigma = 4000.0
     K = gaussian_kernel(X_training, X_training, sigma)
     print(K)
@@ -136,7 +138,7 @@ Extend your code from the previous step with the code below:
     K[np.diag_indices_from(K)] += 1e-8
 
     # Use the built-in Cholesky-decomposition to solve
-    alpha = cho_solve(K, Y_training) 
+    alpha = cho_solve(K, Y_training)
 
     print(alpha)
 
@@ -145,14 +147,14 @@ Exercise 4: Prediction
 ~~~~~~~~~~~~~~~~~~~~~~~~
 With the :math:`\boldsymbol{\alpha}` regression coefficients from the previous step, we have (successfully) trained the machine, and we are now ready to do predictions for other compounds.
 This is done using the following equation:
-    
+
     :math:`y\left(\widetilde{\mathbf{X}} \right) = \sum_i \alpha_i \  K\left( \widetilde{\mathbf{X}}, \mathbf{X}_i\right)`
 
 In this step we further divide the dataset into a training and a test set. Try using the last 1000 entries as test set.
 
 .. code:: python
 
-    # Assign 1000 last molecules to the test set
+    # Assign last 1000 molecules to the test set
     X_test = X[-1000:]
     Y_test = energy_pbe0[-1000:]
 
@@ -163,14 +165,14 @@ In this step we further divide the dataset into a training and a test set. Try u
     Y_predicted = np.dot(Ks, alpha)
 
     # Calculate mean-absolute-error (MAE):
-    print np.mean(np.abs(Y_predicted - Y_test))
+    print(np.mean(np.abs(Y_predicted - Y_test)))
 
 Exercise 5: Learning curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Repeat the prediction from Exercise 2.4 with training set sizes of 1000, 2000, and 4000 molecules.
 Note the MAE for every training size.
 Plot a learning curve of the MAE versus the training set size.
-Generate a learning curve for the Gaussian and Laplacian kernels, as well using the coulomb matrix and bag-of-bonds representations.
+Generate a learning curve for the Gaussian and Laplacian kernels, as well using the Coulomb matrix and bag-of-bonds representations.
 Which combination gives the best learning curve? Note you will have to adjust the kernel width (sigma) underway.
 
 
