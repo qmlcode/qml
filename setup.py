@@ -128,9 +128,9 @@ ext_fslatm = Extension(name = 'fslatm',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-# use README.md as long description
+# use README.rst as long description
 def readme():
-    with open('README.md') as f:
+    with open('README.rst') as f:
         return f.read()
 
 def setup_pepytools():
