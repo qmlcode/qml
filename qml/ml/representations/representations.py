@@ -40,34 +40,6 @@ from .slatm import get_sbot
 
 from .facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
 
-def vector_to_matrix(v):
-    """ Converts a representation from 1D vector to 2D square matrix.
-    :param v: 1D input representation.
-    :type v: numpy array 
-    :return: Square matrix representation.
-    :rtype: numpy array 
-    """
-
-    if not (np.sqrt(8*v.shape[0]+1) == int(np.sqrt(8*v.shape[0]+1))):
-        print("ERROR: Can not make a square matrix.")
-        exit(1)
-
-    n = v.shape[0]
-    l = (-1 + int(np.sqrt(8*n+1)))//2
-    M = np.empty((l,l))
-
-    index = 0
-    for i in range(l):
-        for j in range(l):
-            if j > i:
-                continue
-
-            M[i,j] = v[index]
-            M[j,i] = M[i,j]
-
-            index += 1
-    return M
-
 def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "row-norm"):
     """ Creates a Coulomb Matrix representation of a molecule.
         Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
@@ -635,63 +607,85 @@ class AtomicRepresentations(BaseRepresentation):
 
     representation_type = "atomic"
 
-class AtomCenteredSymmetryFunctions(AtomicRepresentation):
+#class AtomCenteredSymmetryFunctions(AtomicRepresentation):
+#    """
+#    Variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
+#    """
+#
+#    def __init__(self):
+#        pass
+#
+#    def generate(self):
+#        pass
+
+class CoulombMatrix(MolecularRepresentation):
+    """ Coulomb Matrix representation of a molecule.
+        Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
+        A matrix :math:`M` is constructed with elements
+
+        .. math::
+
+            M_{ij} =
+              \\begin{cases}
+                 \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
+                 \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
+              \\end{cases},
+
+        where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
+        :math:`\\bf R` is the coordinate in euclidean space.
+        If ``sorting = 'row-norm'``, the atom indices are reordered such that
+
+            :math:`\\sum_j M_{1j}^2 \\geq \\sum_j M_{2j}^2 \\geq ... \\geq \\sum_j M_{nj}^2`
+
+        The upper triangular of M, including the diagonal, is concatenated to a 1D
+        vector representation.
+
+        If ``sorting = 'unsorted``, the elements are sorted in the same order as the input coordinates
+        and nuclear charges.
+
+        The representation is calculated using an OpenMP parallel Fortran routine.
+
     """
-    Variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
+
+    short_name = "cm"
+
+    def __init__(self, size=23, sorting="row-norm"):
+        """
+        :param size: The size of the largest molecule supported by the representation
+        :type size: integer
+        :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
+        :type sorting: string
+        """
+
+    def generate(nuclear_charges, coordinates):
+        :param nuclear_charges: Nuclear charges of the atoms in the molecule
+        :type nuclear_charges: numpy array
+        :param coordinates: 3D Coordinates of the atoms in the molecule
+        :type coordinates: numpy array
+
+        :return: 1D representation - shape (size(size+1)/2,)
+        :rtype: numpy array
+
+        # Raise warning is size too small and increase it
+        # Data options: Filenames, Data object
+
+        if (sorting == "row-norm"):
+            return fgenerate_coulomb_matrix(nuclear_charges, \
+                coordinates, size)
+
+        elif (sorting == "unsorted"):
+            return fgenerate_unsorted_coulomb_matrix(nuclear_charges, \
+                coordinates, size)
+
+        else:
+            print("ERROR: Unknown sorting scheme requested")
+            raise SystemExit
+
+class Data(object):
+    """
+    Temporary data class which should be replaced at some point
     """
 
     def __init__(self):
         pass
-
-    def generate(self):
-        pass
-
-def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1, 
-        eta3 = 1, zeta = 1, rcut = 5, acut = 5, gradients = False):
-    """
-    Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
-
-    :param nuclear_charges: List of nuclear charges.
-    :type nuclear_charges: numpy array
-    :param coordinates: Input coordinates
-    :type coordinates: numpy array
-    :param elements: list of unique nuclear charges (atom types)
-    :type elements: numpy array
-    :param nRs2: Number of gaussian basis functions in the two-body terms
-    :type nRs2: integer
-    :param nRs3: Number of gaussian basis functions in the three-body radial part
-    :type nRs3: integer
-    :param nTs: Number of basis functions in the three-body angular part
-    :type nTs: integer
-    :param eta2: Precision in the gaussian basis functions in the two-body terms
-    :type eta2: float
-    :param eta3: Precision in the gaussian basis functions in the three-body radial part
-    :type eta3: float
-    :param zeta: Precision parameter of basis functions in the three-body angular part
-    :type zeta: float
-    :param rcut: Cut-off radius of the two-body terms
-    :type rcut: float
-    :param acut: Cut-off radius of the three-body terms
-    :type acut: float
-    :param gradients: To return gradients or not
-    :type gradients: boolean
-    :return: Atom-centered symmetry functions representation
-    :rtype: numpy array
-    """
-
-    Rs2 = np.linspace(0, rcut, nRs2)
-    Rs3 = np.linspace(0, acut, nRs3)
-    Ts = np.linspace(0, np.pi, nTs)
-    n_elements = len(elements)
-    natoms = len(coordinates)
-
-    descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
-
-    if gradients:
-        return fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
-                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
-    else:
-        return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
-                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
-
 

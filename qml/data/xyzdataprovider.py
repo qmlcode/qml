@@ -40,4 +40,3 @@ class XYZDataProvider(DataProvider):
             print(i, xyz_filename, self.properties[i])
             compound = read(xyz_filename)
             self.compounds.write(compound)
- 
