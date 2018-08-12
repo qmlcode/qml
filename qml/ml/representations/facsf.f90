@@ -234,7 +234,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                 ! The highest of the element indices for atoms j and k
                 q = max(n,m) - 1
                 ! calculate the indices that the three body terms should be added to
-                s = nelements * nbasis2 + nbasis3 * nabasis * (nelements * p + q) + 1
+                s = nelements * nbasis2 + nbasis3 * nabasis * (-(p * (p + 1))/2 + q + nelements * p) + 1
                 do l = 1, nbasis3
                     ! calculate the indices that the three body terms should be added to
                     z = s + (l-1) * nabasis
@@ -523,7 +523,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 d_ikdecay = - pi * (b - c) * sin(pi * rik * invcut) * 0.5d0 * invrik * invcut
 
                 ! Get index of where the contributions of atoms i,j,k should be added
-                s = nbasis3 * nabasis * (nelements * p + q) + 1
+                s = nbasis3 * nabasis * (-(p * (p + 1))/2 + q + nelements * p) + 1
                 do l = 1, nbasis3
                     ! Get index of where the contributions of atoms i,j,k should be added
                     z = s + (l-1) * nabasis
