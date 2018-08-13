@@ -27,14 +27,6 @@ Various routines related to tensorflow
 
 import os
 import tensorflow as tf
-# Remove packages below when TF 1.10 is released
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import array_ops
-from tensorflow.python.ops import check_ops
-from tensorflow.python.ops import gradients as gradient_ops
-from tensorflow.python.ops import control_flow_ops
-from tensorflow.python.util import nest
-from tensorflow.python.ops import tensor_array_ops
 
 class TensorBoardLogger(object):
     """
