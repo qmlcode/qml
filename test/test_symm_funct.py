@@ -151,6 +151,9 @@ def fort_acsf_gradients(mols, path, elements):
     Xgrad_test = np.concatenate([mol.gradients.reshape(mol.natoms**2, mol.gradients.shape[1]*3)
         for mol in mols])
     Xgrad_ref = np.loadtxt(path + "/data/acsf_gradients.txt")
+    for i in range(10):
+        #print( Xgrad_test[1] - Xgrad_ref[1] )
+        print(i, max(abs(Xgrad_test[i] - Xgrad_ref[i])))
     assert np.allclose(Xgrad_test, Xgrad_ref), "Error in ACSF gradients"
 
     # Generate atom centered symmetry functions representation
