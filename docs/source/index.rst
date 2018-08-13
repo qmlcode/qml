@@ -24,7 +24,7 @@ Current list of contributors:
 -  Bing Huang (University of Basel)
 -  Lars A. Bratholm (University of Copenhagen)
 -  Alexandre Tkatchenko (University of Luxembourg)
--  Klaus-Robert Müller (Technische Universität Berlin/Korea University)
+-  Klaus-Robert Muller (Technische Universität Berlin/Korea University)
 -  O. Anatole von Lilienfeld (University of Basel)
 
 Code development
@@ -48,7 +48,7 @@ Until the preprint is available from arXiv, please cite use of QML as:
 
 ::
 
-    AS Christensen, FA Faber, B Huang, LA Bratholm, A Tkatchenko, KR Müller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
+    AS Christensen, FA Faber, B Huang, LA Bratholm, A Tkatchenko, KR Muller, OA von Lilienfeld (2017) "QML: A Python Toolkit for Quantum Machine Learning" https://github.com/qmlcode/qml
 
 
 For citation of the individual procedures of QML, please see the "Citing use of QML" section.
