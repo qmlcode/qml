@@ -32,7 +32,6 @@ import qml
 from qml.ml.representations import generate_acsf
 from qml.aglaia import symm_funct
 import os
-from qml.aglaia.tf_utils import partial_derivatives_batch
 
 def pad(size, coordinates, nuclear_charges):
 
