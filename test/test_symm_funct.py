@@ -76,9 +76,9 @@ def test_acsf():
 
     elements = list(elements)
 
-    fort_acsf(mols, path, elements)
     fort_acsf_gradients(mols, path, elements)
     tf_acsf(mols, path, elements)
+    fort_acsf(mols, path, elements)
 
 def fort_acsf(mols, path, elements):
 
@@ -112,11 +112,14 @@ def tf_acsf(mols, path, elements):
     zeta = 1.0
     eta = 1.0
 
-    element_pairs = [[1,1], [6,1], [7,1], [7,7], [6,6], [7,6]]
+    element_pairs = []
+    for i, ei in enumerate(elements):
+        for ej in elements[i:]:
+            element_pairs.append([ej,ei])
 
-    xyzs, zs = pad(16, [mol.coordinates for mol in mols],
+    max_atoms = max(mol.natoms for mol in mols)
+    xyzs, zs = pad(max_atoms, [mol.coordinates for mol in mols],
             [mol.nuclear_charges for mol in mols])
-
 
     n_samples = xyzs.shape[0]
     max_n_atoms = zs.shape[1]
