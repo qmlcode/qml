@@ -32,6 +32,7 @@ import qml
 from qml.ml.representations import generate_acsf
 from qml.aglaia import symm_funct
 import os
+from qml.aglaia.tf_utils import partial_derivatives_batch
 
 def pad(size, coordinates, nuclear_charges):
 
@@ -117,9 +118,9 @@ def tf_acsf(mols, path, elements):
         for ej in elements[i:]:
             element_pairs.append([ej,ei])
 
-    xyzs, zs = pad(16, [mol.coordinates for mol in mols],
+    max_atoms = max(mol.natoms for mol in mols)
+    xyzs, zs = pad(max_atoms, [mol.coordinates for mol in mols],
             [mol.nuclear_charges for mol in mols])
-
 
     n_samples = xyzs.shape[0]
     max_n_atoms = zs.shape[1]
@@ -151,9 +152,6 @@ def fort_acsf_gradients(mols, path, elements):
     Xgrad_test = np.concatenate([mol.gradients.reshape(mol.natoms**2, mol.gradients.shape[1]*3)
         for mol in mols])
     Xgrad_ref = np.loadtxt(path + "/data/acsf_gradients.txt")
-    for i in range(10):
-        #print( Xgrad_test[1] - Xgrad_ref[1] )
-        print(i, max(abs(Xgrad_test[i] - Xgrad_ref[i])))
     assert np.allclose(Xgrad_test, Xgrad_ref), "Error in ACSF gradients"
 
     # Generate atom centered symmetry functions representation
