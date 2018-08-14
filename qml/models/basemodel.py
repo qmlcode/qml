@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders S. Christensen, Kristof T. Schutt, Stefan Chmiela
+# Copyright (c) 2018 Lars A. Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,12 @@
 
 from __future__ import division, absolute_import, print_function
 
-class MLModel(object):
+class BaseModel(object):
 
-    def __init__(self, targets):
-        self._targes = targets
+    _estimator_type = "regressor"
 
-    def train(self, data):
-        return self._train(data)
-    
-    def predict(self, data):
-        return self._predict(data)
-    
-    def save(self, path):
-        return self._save(path)
-
-    def restore(self, path):
-        return self._restore(path)
-
-    def _train(self, data):
-        raise NotImplementedError
-    
-    def _predict(self, data):
-        raise NotImplementedError
-    
-    def _save(self, path):
+    def fit(self, X):
         raise NotImplementedError
 
-    def _restore(self, path):
-        raise NotImplementedError
+    def predict(self, X):
+        return NotImplementedError

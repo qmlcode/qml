@@ -24,7 +24,10 @@ from __future__ import print_function
 
 import numpy as np
 
-from .fkernels import fgaussian_kernel
+from qml.utils import is_none
+from qml.data import Data
+
+from .fkernels import fgaussian_kernel, fgaussian_kernel_symmetric
 from .fkernels import flaplacian_kernel
 from .fkernels import flinear_kernel
 from .fkernels import fsargan_kernel
@@ -250,7 +253,7 @@ def get_local_kernels_gaussian(A, B, na, nb, sigmas):
 
     nma = len(na)
     nmb = len(nb)
-     
+
     sigmas = np.asarray(sigmas)
     nsigmas = len(sigmas)
 
@@ -296,3 +299,101 @@ def get_local_kernels_laplacian(A, B, na, nb, sigmas):
     nsigmas = len(sigmas)
 
     return fget_local_kernels_laplacian(A.T, B.T, na, nb, sigmas, nma, nmb, nsigmas)
+
+
+class BaseKernel(object):
+    """
+    Base class for kernels
+    """
+
+    def fit(self, X):
+        """
+        The fit routine is needed for scikit-learn pipelines.
+        This is actually never used but has to be here.
+        """
+        raise NotImplementedError
+
+    def transform(self, X, y = None):
+        """
+        The transform routine is needed for scikit-learn pipelines.
+        """
+        raise NotImplementedError
+
+    def generate(self, **params):
+        raise NotImplementedError
+
+    def _check_data_object(self, X):
+        # Check that we have a data object
+        if not isinstance(X, Data):
+            print("Error: Expected Data object as input in %s" % self.__class__.__name__)
+            raise SystemExit
+
+
+class GaussianKernel(BaseKernel):
+    """
+    Gaussian kernel
+    """
+
+    def __init__(self, sigma=1):
+        self.sigma = sigma
+
+        self.representations = None
+
+    def _set_representations(self, rep):
+        self.representations = rep
+
+    def transform(self, X):
+
+        self._check_data_object(X)
+
+        # Kernel between representation stored in fit and representation
+        # given in data object. The order matters
+        kernel = self.generate(X.representations, self.representations)
+
+        X.kernel = kernel
+
+        return X
+
+    def fit_transform(self, X, y=None):
+
+        self._check_data_object(X)
+
+        # Store representation for future transform calls
+        self._set_representations(X.representations)
+
+        kernel = self.generate(X.representations)
+
+        X.kernel = kernel
+
+        return X
+
+
+    # TODO atomic
+    def generate(self, X, Y=None):
+        """
+        Create a gaussian kernel from representations `X`. Optionally
+        an asymmetric kernel can be constructed between representations
+        `X` and `Y`.
+
+        :param X: representations of shape (n_samplesX, representationX_size)
+        :type X: array
+        :param X: representations of shape (n_samplesY, representationY_size)
+
+        :return: Gaussian kernel matrix of shape (n_samplesX, n_samplesX) if \
+                 Y=None else (n_samplesX, n_samplesY)
+        :rtype: array
+        """
+
+        # Note: Transposed for Fortran
+        n = X.shape[0]
+
+        if is_none(Y):
+            # Do symmetric matrix
+            K = np.empty((n, n), order='F')
+            fgaussian_kernel_symmetric(X.T, n, K, self.sigma)
+        else:
+            m = Y.shape[0]
+            K = np.empty((n, m), order='F')
+            fgaussian_kernel(X.T, n, Y.T, m, K, self.sigma)
+
+        return K

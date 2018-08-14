@@ -162,6 +162,7 @@ def setup_qml():
             'qml.ml.math',
             'qml.ml.representations',
             'qml.models',
+            'qml.utils'
             ],
 
         # metadata

@@ -36,6 +36,7 @@ from . import data
 from . import ml
 from . import models
 from . import aglaia
+from . import utils
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"

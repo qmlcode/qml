@@ -33,7 +33,7 @@ from .farad_kernels import fget_local_symmetric_kernels_arad
 from .farad_kernels import fget_atomic_kernels_arad
 from .farad_kernels import fget_atomic_symmetric_kernels_arad
 
-from ..representations.alchemy import PTP
+from qml.utils.alchemy import PTP
 
 def getAngle(sp,norms):
     epsilon = 10.* np.finfo(float).eps

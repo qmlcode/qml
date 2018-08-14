@@ -30,13 +30,13 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.base import BaseEstimator
-from qml.aglaia.symm_funct import generate_parkhill_acsf
-from qml.aglaia.utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
+from .symm_funct import generate_parkhill_acsf
+from ..utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
         is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, is_none, \
         check_global_representation, check_y, check_sizes, check_dy, check_classes, is_numeric_array, is_non_zero_integer, \
     is_positive_integer_or_zero_array, check_local_representation
 
-from qml.aglaia.tf_utils import TensorBoardLogger
+from .tf_utils import TensorBoardLogger
 
 try:
     from qml.data import Compound

@@ -358,18 +358,57 @@ subroutine fgaussian_kernel(a, na, b, nb, k, sigma)
 
     allocate(temp(size(a, dim=1)))
 
-!$OMP PARALLEL DO PRIVATE(temp)
+    !$OMP PARALLEL DO PRIVATE(temp) COLLAPSE(2)
     do i = 1, nb
         do j = 1, na
             temp(:) = a(:,j) - b(:,i)
-            k(j,i) = exp(inv_sigma * sum(temp*temp))
+            k(j,i) = exp(inv_sigma * dot_product(temp,temp))
         enddo
     enddo
-!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
     deallocate(temp)
 
 end subroutine fgaussian_kernel
+
+subroutine fgaussian_kernel_symmetric(x, n, k, sigma)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: x
+
+    integer, intent(in) :: n
+
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, intent(in) :: sigma
+
+    double precision, allocatable, dimension(:) :: temp
+    double precision :: val
+
+    double precision :: inv_sigma
+    integer :: i, j
+
+    inv_sigma = -0.5d0 / (sigma*sigma)
+
+    k = 1.0d0
+
+    allocate(temp(n))
+
+    !$OMP PARALLEL DO PRIVATE(temp, val) SCHEDULE(dynamic)
+    do i = 1, n
+        do j = i+1, n
+            temp = x(:,j) - x(:,i)
+            val = exp(inv_sigma * dot_product(temp,temp))
+            k(j,i) = val
+            k(i,j) = val
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(temp)
+
+
+end subroutine fgaussian_kernel_symmetric
 
 subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 
@@ -389,13 +428,13 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 
     inv_sigma = -1.0d0 / sigma
 
-!$OMP PARALLEL DO
+    !$OMP PARALLEL DO
     do i = 1, nb
         do j = 1, na
             k(j,i) = exp(inv_sigma * sum(abs(a(:,j) - b(:,i))))
         enddo
     enddo
-!$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
 end subroutine flaplacian_kernel
 

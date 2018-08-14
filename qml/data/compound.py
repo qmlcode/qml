@@ -25,7 +25,7 @@ from __future__ import print_function
 import numpy as np
 import collections
 
-from ..ml.representations.alchemy import NUCLEAR_CHARGE
+from ..utils.alchemy import NUCLEAR_CHARGE
 
 from ..ml.representations import generate_coulomb_matrix
 from ..ml.representations import generate_atomic_coulomb_matrix
