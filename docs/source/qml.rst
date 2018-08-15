@@ -8,7 +8,7 @@ Python API documentation
 qml\.representations module
 ---------------------------
 
-.. automodule:: qml.representations.representations
+.. automodule:: qml.representations
     :members:
     :undoc-members:
     :show-inheritance:
