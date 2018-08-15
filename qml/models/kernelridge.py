@@ -28,9 +28,9 @@ import numpy as np
 
 import ase
 
-from ..ml.representations import generate_coulomb_matrix
-from ..ml.kernels import gaussian_kernel
-from ..ml.math import cho_solve
+from ..representations import generate_coulomb_matrix
+from ..kernels import gaussian_kernel
+from ..math import cho_solve
 from .mlmodel import MLModel
 
 class GenericKRR(MLModel):
