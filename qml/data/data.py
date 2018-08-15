@@ -5,6 +5,7 @@ import glob
 import numpy as np
 from ..utils.alchemy import NUCLEAR_CHARGE
 
+
 class Data(object):
     """
     Temporary data class which should be replaced at some point by the ASE-interface.
@@ -31,6 +32,43 @@ class Data(object):
             filenames = sorted(glob.glob(filenames))
         if isinstance(filenames, list):
             self._parse_xyz_files(filenames)
+
+        # Hack for sklearn CV
+        self.shape = (self.ncompounds,)
+    #    # Hack for sklearn CV
+    #    self.iloc = self.iloc_override(self)
+
+    #class iloc_override(object):
+    #    """
+    #    Hack for sklearn CV.
+    #    """
+
+    #    def __init__(self, parent):
+    #        self.parent = parent
+
+    #    def __getitem__(self, i):
+    #        self.parent.indices = i
+    #        return self.parent
+
+    def take(self, i, axis=None):
+        self.indices = i
+        return self
+
+
+
+    def __getitem__(self, i):
+        """
+        Hack for sklearn CV
+        """
+        return i
+
+    def __len__(self):
+        """
+        Hack for sklearn CV
+        """
+        return self.ncompounds
+
+
 
     def set_energies(self, energies):
         self.energies = energies

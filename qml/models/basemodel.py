@@ -22,12 +22,35 @@
 
 from __future__ import division, absolute_import, print_function
 
-class BaseModel(object):
+from sklearn.base import BaseEstimator
+
+class BaseModel(BaseEstimator):
 
     _estimator_type = "regressor"
+
+    def __init__(self, scoring='mae'):
+        self.scoring = 'mae'
 
     def fit(self, X):
         raise NotImplementedError
 
     def predict(self, X):
         return NotImplementedError
+
+    def score(self, X, y=None):
+
+        return 1
+
+        y_pred = self.predict(X)
+
+        if isinstance(X, Data):
+            try:
+                K, y = X.kernel, X.energies[X.indices]
+            except:
+                print("No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                raise SystemExit
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and not is_none(y):
+            K = X
+        else:
+            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            raise SystemExit

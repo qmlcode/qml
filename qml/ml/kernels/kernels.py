@@ -24,6 +24,8 @@ from __future__ import print_function
 
 import numpy as np
 
+from sklearn.base import BaseEstimator
+
 from qml.utils import is_none
 from qml.data import Data
 
@@ -301,7 +303,7 @@ def get_local_kernels_laplacian(A, B, na, nb, sigmas):
     return fget_local_kernels_laplacian(A.T, B.T, na, nb, sigmas, nma, nmb, nsigmas)
 
 
-class BaseKernel(object):
+class BaseKernel(BaseEstimator):
     """
     Base class for kernels
     """

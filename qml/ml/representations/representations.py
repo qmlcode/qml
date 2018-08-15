@@ -28,6 +28,8 @@ import itertools as itl
 import glob
 import copy
 
+from sklearn.base import BaseEstimator
+
 from qml.data import Data
 
 from qml.utils import is_none, is_positive_integer_or_zero_array
@@ -577,7 +579,7 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
 
 
-class BaseRepresentation(object):
+class BaseRepresentation(BaseEstimator):
     """
     Base class for representations
     """
@@ -586,7 +588,6 @@ class BaseRepresentation(object):
         """
         The fit routine is needed for scikit-learn pipelines.
         """
-        print("rep, fit")
         raise NotImplementedError
 
     def transform(self, X):
@@ -613,7 +614,7 @@ class BaseRepresentation(object):
             self._set_data(X)
             self.data.indices = np.arange(self.data.natoms.size)
         elif self.data and is_positive_integer_or_zero_array(X) \
-                and X.max() <= self.data.natoms.size:
+                and max(X) <= self.data.natoms.size:
             self.data.indices = X
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
@@ -624,11 +625,11 @@ class BaseRepresentation(object):
             print("Error: Empty Data object passed to %s representation" % self.__class__.__name__)
             raise SystemExit
         # Shallow copy should be fine
+        #TODO solve clone issue
         self.data = copy.copy(data)
 
-    def _set_representation_type(self, X):
-        X.representation_type = self._representation_type
-
+    def _set_representation_type(self):
+        self.data.representation_type = self._representation_type
 
 class MolecularRepresentation(BaseRepresentation):
     """
@@ -690,7 +691,6 @@ class CoulombMatrix(MolecularRepresentation):
         self.sorting = sorting
         self._set_data(data)
 
-
     def fit(self, X, y=None):
         """
         :param X: Data object or indices to use from the \
@@ -703,7 +703,7 @@ class CoulombMatrix(MolecularRepresentation):
         """
 
         self._preprocess_input(X)
-        self._set_representation_type(X)
+        self._set_representation_type()
 
         natoms = self.data.natoms[self.data.indices]
 
