@@ -27,7 +27,7 @@ import numpy as np
 from copy import deepcopy
 
 import qml
-import qml.ml.math
+import qml.math
 
 def test_cho_solve():
 
@@ -38,7 +38,7 @@ def test_cho_solve():
 
     A = deepcopy(A_ref) 
     y = deepcopy(y_ref) 
-    x_qml   = qml.ml.math.cho_solve(A,y)
+    x_qml   = qml.math.cho_solve(A,y)
 
     # Check arrays are unchanged
     assert np.allclose(y, y_ref)
@@ -58,7 +58,7 @@ def test_cho_invert():
     A_ref = np.loadtxt(test_dir + "/data/K_local_gaussian.txt")
 
     A = deepcopy(A_ref) 
-    Ai_qml = qml.ml.math.cho_invert(A)
+    Ai_qml = qml.math.cho_invert(A)
 
     # Check A is unchanged
     assert np.allclose(A, A_ref)
@@ -77,7 +77,7 @@ def test_bkf_invert():
     A_ref = np.loadtxt(test_dir + "/data/K_local_gaussian.txt")
 
     A = deepcopy(A_ref) 
-    Ai_qml = qml.ml.math.bkf_invert(A)
+    Ai_qml = qml.math.bkf_invert(A)
 
     # Check A is unchanged
     assert np.allclose(A, A_ref)
@@ -98,7 +98,7 @@ def test_bkf_solve():
 
     A = deepcopy(A_ref) 
     y = deepcopy(y_ref)
-    x_qml   = qml.ml.math.bkf_solve(A,y)
+    x_qml   = qml.math.bkf_solve(A,y)
 
     # Check arrays are unchanged
     assert np.allclose(y, y_ref)

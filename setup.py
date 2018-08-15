@@ -24,9 +24,9 @@ LINKER_FLAGS = ["-lgomp"]
 MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
-# if mkl_exists(verbose=True):
-#     LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
-#     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+if mkl_exists(verbose=True):
+    LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+    MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
 if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
@@ -44,8 +44,8 @@ if any(["intelem" in arg for arg in sys.argv]):
 
 
 
-ext_fkernels = Extension(name = '.ml.kernels.fkernels',
-                          sources = ['qml/ml/kernels/fkernels.f90'],
+ext_fkernels = Extension(name = '.kernels.fkernels',
+                          sources = ['qml/kernels/fkernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -53,10 +53,10 @@ ext_fkernels = Extension(name = '.ml.kernels.fkernels',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_ffchl_module = Extension(name = '.ml.representations.ffchl_module',
+ext_ffchl_module = Extension(name = '.fchl.ffchl_module',
                           sources = [
-                              'qml/ml/representations/ffchl_module.f90',
-                              'qml/ml/representations/ffchl_scalar_kernels.f90'
+                              'qml/fchl/ffchl_module.f90',
+                              'qml/fchl/ffchl_scalar_kernels.f90'
                               ],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
@@ -65,26 +65,8 @@ ext_ffchl_module = Extension(name = '.ml.representations.ffchl_module',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-#ext_ffchl_scalar_kernels = Extension(name = 'ffchl_scalar_kernels',
-#                          sources = ['qml/ml/representations/ffchl_scalar_kernels.f90'],
-#                          extra_f90_compile_args = COMPILER_FLAGS,
-#                          extra_f77_compile_args = COMPILER_FLAGS,
-#                          extra_compile_args = COMPILER_FLAGS,
-#                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
-#                          language = FORTRAN,
-#                          f2py_options=['--quiet'])
-#
-#ext_ffchl_vector_kernels = Extension(name = 'ffchl_vector_kernels',
-#                          sources = ['qml/ml/representations/ffchl_vector_kernels.f90'],
-#                          extra_f90_compile_args = COMPILER_FLAGS,
-#                          extra_f77_compile_args = COMPILER_FLAGS,
-#                          extra_compile_args = COMPILER_FLAGS,
-#                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
-#                          language = FORTRAN,
-#                          f2py_options=['--quiet'])
-
-ext_farad_kernels = Extension(name = '.ml.arad.farad_kernels',
-                          sources = ['qml/ml/arad/farad_kernels.f90'],
+ext_farad_kernels = Extension(name = '.arad.farad_kernels',
+                          sources = ['qml/arad/farad_kernels.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -92,8 +74,8 @@ ext_farad_kernels = Extension(name = '.ml.arad.farad_kernels',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_frepresentations = Extension(name = '.ml.representations.frepresentations',
-                          sources = ['qml/ml/representations/frepresentations.f90'],
+ext_frepresentations = Extension(name = '.representations.frepresentations',
+                          sources = ['qml/representations/frepresentations.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -101,8 +83,8 @@ ext_frepresentations = Extension(name = '.ml.representations.frepresentations',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_fdistance = Extension(name = '.ml.kernels.fdistance',
-                          sources = ['qml/ml/kernels/fdistance.f90'],
+ext_fdistance = Extension(name = '.kernels.fdistance',
+                          sources = ['qml/kernels/fdistance.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -110,8 +92,8 @@ ext_fdistance = Extension(name = '.ml.kernels.fdistance',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_fslatm = Extension(name = '.ml.representations.fslatm',
-                          sources = ['qml/ml/representations/fslatm.f90'],
+ext_fslatm = Extension(name = '.representations.fslatm',
+                          sources = ['qml/representations/fslatm.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -119,8 +101,8 @@ ext_fslatm = Extension(name = '.ml.representations.fslatm',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_fsolvers = Extension(name = '.ml.math.fsolvers',
-                          sources = ['qml/ml/math/fsolvers.f90'],
+ext_fsolvers = Extension(name = '.math.fsolvers',
+                          sources = ['qml/math/fsolvers.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -128,8 +110,8 @@ ext_fsolvers = Extension(name = '.ml.math.fsolvers',
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
-ext_facsf = Extension(name = '.ml.representations.facsf',
-                          sources = ['qml/ml/representations/facsf.f90'],
+ext_facsf = Extension(name = '.representations.facsf',
+                          sources = ['qml/representations/facsf.f90'],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
@@ -156,11 +138,11 @@ def setup_qml():
             'qml',
             'qml.data',
             'qml.aglaia',
-            'qml.ml',
-            'qml.ml.arad',
-            'qml.ml.kernels',
-            'qml.ml.math',
-            'qml.ml.representations',
+            'qml.arad',
+            'qml.fchl',
+            'qml.kernels',
+            'qml.math',
+            'qml.representations',
             'qml.models',
             ],
 

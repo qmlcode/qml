@@ -30,7 +30,7 @@ from .ffchl_module import fget_global_symmetric_kernels_fchl
 from .ffchl_module import fget_atomic_kernels_fchl
 from .ffchl_module import fget_atomic_symmetric_kernels_fchl
 
-from .alchemy import get_alchemy
+from ..representations.alchemy import get_alchemy
 
 def generate_representation(coordinates, nuclear_charges,
         max_size=23, neighbors=23, cut_distance = 5.0, cell=None):

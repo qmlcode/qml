@@ -25,17 +25,17 @@ from __future__ import print_function
 import numpy as np
 import collections
 
-from ..ml.representations.alchemy import NUCLEAR_CHARGE
+from ..representations.alchemy import NUCLEAR_CHARGE
 
-from ..ml.representations import generate_coulomb_matrix
-from ..ml.representations import generate_atomic_coulomb_matrix
-from ..ml.representations import generate_bob
-from ..ml.representations import generate_eigenvalue_coulomb_matrix
-from ..ml.representations import generate_slatm
+from ..representations import generate_coulomb_matrix
+from ..representations import generate_atomic_coulomb_matrix
+from ..representations import generate_bob
+from ..representations import generate_eigenvalue_coulomb_matrix
+from ..representations import generate_slatm
 
-from ..ml.representations.fchl import generate_representation as generate_fchl_representation
+from ..fchl import generate_representation as generate_fchl_representation
 
-from ..ml.representations.facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
+from ..representations.facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
 
 class Compound(object):
     """ The ``Compound`` class is used to store data from  
