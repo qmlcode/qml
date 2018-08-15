@@ -39,7 +39,7 @@ If you run the code below, you will read in the file ``qm7/0001.xyz`` (a methane
     import qml
 
     # Create the compound object mol from the file qm7/0001.xyz which happens to be methane
-    mol = qml.ml.Compound(xyz="qm7/0001.xyz")
+    mol = qml.Compound(xyz="qm7/0001.xyz")
 
     # Generate and print a Coulomb matrix for compound with 5 atoms
     mol.generate_coulomb_matrix(size=5, sorting="row-norm")
@@ -80,7 +80,7 @@ In order to save time you can import the entire QM7 dataset as ``Compound`` obje
     # Import QM7, already parsed to QML
     from tutorial_data import compounds
 
-    from qml.ml.kernels import gaussian_kernel
+    from qml.kernels import gaussian_kernel
 
     # For every compound generate a Coulomb matrix or BoB
     for mol in compounds:
@@ -114,7 +114,7 @@ With the kernel matrix and representations sorted out in the previous two exerci
     :math:`\boldsymbol{\alpha} = (\mathbf{K} + \lambda \mathbf{I})^{-1} \mathbf{y}\label{eq:inv}`
 
 One of the most efficient ways of solving this equation is using a Cholesky-decomposition.
-QML includes a function named ``cho_solve()`` to do this via the math module ``qml.ml.math``.
+QML includes a function named ``cho_solve()`` to do this via the math module ``qml.math``.
 In this step it is convenient to only use a subset of the full dataset as training data (see below).
 The following builds on the code from the previous step.
 To save time, you can import the PBE0/def2-TZVP atomization energies for the QM7 dataset from the file ``tutorial_data.py``.
@@ -123,7 +123,7 @@ Extend your code from the previous step with the code below:
 
 .. code:: python
 
-    from qml.ml.math import cho_solve
+    from qml.math import cho_solve
     from tutorial_data import energy_pbe0
 
     # Assign first 1000 molecules to the training set

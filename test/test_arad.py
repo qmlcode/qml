@@ -28,17 +28,17 @@ import time
 import numpy as np
 import qml
 
-from qml.ml.math import cho_solve
-from qml.ml.arad import generate_arad_representation
+from qml.math import cho_solve
+from qml.arad import generate_arad_representation
 
-from qml.ml.arad import get_local_kernels_arad
-from qml.ml.arad import get_local_symmetric_kernels_arad
+from qml.arad import get_local_kernels_arad
+from qml.arad import get_local_symmetric_kernels_arad
 
-from qml.ml.arad import get_global_kernels_arad
-from qml.ml.arad import get_global_symmetric_kernels_arad
+from qml.arad import get_global_kernels_arad
+from qml.arad import get_global_symmetric_kernels_arad
 
-from qml.ml.arad import get_atomic_kernels_arad
-from qml.ml.arad import get_atomic_symmetric_kernels_arad
+from qml.arad import get_atomic_kernels_arad
+from qml.arad import get_atomic_symmetric_kernels_arad
 
 def get_energies(filename):
     """ Returns a dictionary with heats of formation for each xyz-file.

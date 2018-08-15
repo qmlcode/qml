@@ -28,15 +28,15 @@ import numpy as np
 
 from qml.data import Compound
 
-from qml.ml.math import cho_solve
+from qml.math import cho_solve
 
-from qml.ml.representations.fchl import generate_representation
-from qml.ml.representations.fchl import get_local_symmetric_kernels
-from qml.ml.representations.fchl import get_local_kernels
-from qml.ml.representations.fchl import get_global_symmetric_kernels
-from qml.ml.representations.fchl import get_global_kernels
-from qml.ml.representations.fchl import get_atomic_kernels
-from qml.ml.representations.fchl import get_atomic_symmetric_kernels
+from qml.fchl import generate_representation
+from qml.fchl import get_local_symmetric_kernels
+from qml.fchl import get_local_kernels
+from qml.fchl import get_global_symmetric_kernels
+from qml.fchl import get_global_kernels
+from qml.fchl import get_atomic_kernels
+from qml.fchl import get_atomic_symmetric_kernels
 
 def get_energies(filename):
     """ Returns a dictionary with heats of formation for each xyz-file.

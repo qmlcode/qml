@@ -40,14 +40,14 @@ from qml.aglaia.tf_utils import TensorBoardLogger
 
 try:
     from qml.data import Compound
-    from qml.ml import representations as qml_rep
-except ModuleNotFoundError:
-    raise ModuleNotFoundError("The module qml is required")
+    from qml import representations as qml_rep
+except ImportError:
+    raise ImportError("The module qml is required")
 
 try:
     import tensorflow
-except ModuleNotFoundError:
-    raise ModuleNotFoundError("Tensorflow 1.8 is required to run neural networks.")
+except ImportError:
+    raise ImportError("Tensorflow 1.8 is required to run neural networks.")
 
 class _NN(BaseEstimator):
 

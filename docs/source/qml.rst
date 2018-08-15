@@ -8,7 +8,7 @@ Python API documentation
 qml\.representations module
 ---------------------------
 
-.. automodule:: qml.ml.representations.representations
+.. automodule:: qml.representations
     :members:
     :undoc-members:
     :show-inheritance:
@@ -16,7 +16,7 @@ qml\.representations module
 qml\.kernels module
 -------------------
 
-.. automodule:: qml.ml.kernels
+.. automodule:: qml.kernels
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +24,7 @@ qml\.kernels module
 qml\.distance module
 --------------------
 
-.. automodule:: qml.ml.kernels.distance
+.. automodule:: qml.kernels.distance
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ qml\.distance module
 qml\.math module
 ----------------
 
-.. automodule:: qml.ml.math
+.. automodule:: qml.math
     :members:
     :undoc-members:
     :show-inheritance:
@@ -55,7 +55,7 @@ qml\.Compound class
 qml\.fchl module
 ----------------
 
-.. automodule:: qml.ml.representations.fchl
+.. automodule:: qml.representations.fchl
     :members:
     :show-inheritance:
 
@@ -63,7 +63,7 @@ qml\.fchl module
 qml\.wrappers module
 --------------------
 
-.. automodule:: qml.ml.kernels.wrappers
+.. automodule:: qml.kernels.wrappers
     :members:
     :undoc-members:
     :show-inheritance:

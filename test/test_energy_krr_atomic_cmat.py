@@ -28,15 +28,15 @@ import numpy as np
 import qml
 import qml.data
 
-from qml.ml.kernels import laplacian_kernel
-from qml.ml.math import cho_solve
+from qml.kernels import laplacian_kernel
+from qml.math import cho_solve
 
-from qml.ml.representations import get_slatm_mbtypes
+from qml.representations import get_slatm_mbtypes
 
-from qml.ml.kernels import get_local_kernels_gaussian
-from qml.ml.kernels import get_local_kernels_laplacian
+from qml.kernels import get_local_kernels_gaussian
+from qml.kernels import get_local_kernels_laplacian
 
-from qml.ml.kernels.wrappers import get_atomic_kernels_gaussian, get_atomic_kernels_laplacian
+from qml.kernels.wrappers import get_atomic_kernels_gaussian, get_atomic_kernels_laplacian
 
 def get_energies(filename):
     """ Returns a dictionary with heats of formation for each xyz-file.
