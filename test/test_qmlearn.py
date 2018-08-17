@@ -7,35 +7,23 @@ from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
 import copy
 
-class Test(object):
-
-    def fit(self, X, y=None):
-        print(X)
-        print("test,fit")
-
-    def predict(self, X):
-        print("test, predict")
-
-class Rep(object):
-
-    def fit(self, X, y=None):
-        print("rep, fit")
-        return self
-
-    def transform(self, X):
-        print("rep, trans")
-
-    def fit_transform(self, X, y=None):
-        print("rep, fit_trans")
-        return 1, 2, 3
+# TODO
+# other representations
+# other kernels
+# other models
+# atomic properties
+# molecular properties
 
 if __name__ == "__main__":
-    train_data = Data(filenames="qm7/00*.xyz")
+    train_data = Data(filenames="qm7/*.xyz")
     train_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:train_data.ncompounds]
     train_data.set_energies(train_energies)
-    test_data = Data(filenames="qm7/1*.xyz")
-    test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
-    test_data.set_energies(test_energies)
+    #test_data = Data(filenames="qm7/1*.xyz")
+    #test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
+    #test_data.set_energies(test_energies)
+
+    rep = AtomicCoulombMatrix().generate(train_data)
+    kernel = GaussianKernel().generate(rep[:100], representation_type='atomic')
 
     ## Generate the representations
     #rep = CoulombMatrix().generate(train_data)
@@ -59,24 +47,37 @@ if __name__ == "__main__":
     #predictions = model.predict(test_kernel)
     #print(predictions.shape)
 
-    # Fit and predict KRR from pipeline
-    model = make_pipeline(CoulombMatrix(size=23, data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(llambda=1e-6))
+    quit()
+    ## Fit and predict KRR from pipeline
+    model = make_pipeline(CoulombMatrix(size=23, data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6))
     #model.fit(train_data)
     #predictions = model.predict(test_data)
     #print(predictions.shape)
 
     # Gridsearch CV of hyperparams
-    params = {'gaussiankernel__sigma': [1, 3, 10, 30, 100, 300],
-              'kernelridgeregression__llambda': [1e-10,1e-8,1e-6,1e-4]
+    params = {'gaussiankernel__sigma': [30, 77, 100, 300],
+              'kernelridgeregression__l2_reg': [1.7e-7, 1e-6,1e-4]
              }
 
-    grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
+    #grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
     #grid.fit(train_data)
-    #print(grid.cv_results_)
-    #print(grid.best_params_)
-    grid.fit(range(20))
-    print(grid.cv_results_)
-    print(grid.best_params_)
+    #print(grid.best_params_, grid.best_score_)
+
+    ## Alternate procedure when Data object is passed in advance and
+    ## indices are passed at fit/predict time
+    #model = make_pipeline(CoulombMatrix(size=23, data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6))
+    #model.fit(np.arange(50))
+    #predictions = model.predict(np.arange(50,80))
+    #print(predictions.shape)
+
+    # Gridsearch CV of hyperparams
+    grid = GridSearchCV(model, cv=3, refit=False, param_grid = params, verbose=2)
+
+    idx = np.arange(len(train_data))
+    np.random.shuffle(idx)
+
+    grid.fit(idx[:(3*1000)//2])
+    print(grid.best_params_, grid.best_score_)
 
 
 

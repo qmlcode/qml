@@ -21,4 +21,4 @@
 # SOFTWARE.
 
 from .data import Data
-from .compound import Compound
+#from .compound import Compound

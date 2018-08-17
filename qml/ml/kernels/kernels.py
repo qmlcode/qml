@@ -35,7 +35,7 @@ from .fkernels import flinear_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
 
-from .fkernels import fget_local_kernels_gaussian
+from .fkernels import fget_local_kernels_gaussian, fget_local_kernels_gaussian_symmetric
 from .fkernels import fget_local_kernels_laplacian
 
 def laplacian_kernel(A, B, sigma):
@@ -67,34 +67,34 @@ def laplacian_kernel(A, B, sigma):
 
     return K
 
-def gaussian_kernel(A, B, sigma):
-    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
-
-            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
-
-        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
-        K is calculated using an OpenMP parallel Fortran routine.
-
-        :param A: 2D array of representations - shape (N, representation size).
-        :type A: numpy array
-        :param B: 2D array of representations - shape (M, representation size).
-        :type B: numpy array
-        :param sigma: The value of sigma in the kernel matrix.
-        :type sigma: float
-
-        :return: The Gaussian kernel matrix - shape (N, M)
-        :rtype: numpy array
-    """
-
-    na = A.shape[0]
-    nb = B.shape[0]
-
-    K = np.empty((na, nb), order='F')
-
-    # Note: Transposed for Fortran
-    fgaussian_kernel(A.T, na, B.T, nb, K, sigma)
-
-    return K
+#def gaussian_kernel(A, B, sigma):
+#    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+#
+#            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
+#
+#        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+#        K is calculated using an OpenMP parallel Fortran routine.
+#
+#        :param A: 2D array of representations - shape (N, representation size).
+#        :type A: numpy array
+#        :param B: 2D array of representations - shape (M, representation size).
+#        :type B: numpy array
+#        :param sigma: The value of sigma in the kernel matrix.
+#        :type sigma: float
+#
+#        :return: The Gaussian kernel matrix - shape (N, M)
+#        :rtype: numpy array
+#    """
+#
+#    na = A.shape[0]
+#    nb = B.shape[0]
+#
+#    K = np.empty((na, nb), order='F')
+#
+#    # Note: Transposed for Fortran
+#    fgaussian_kernel(A.T, na, B.T, nb, K, sigma)
+#
+#    return K
 
 def linear_kernel(A, B):
     """ Calculates the linear kernel matrix K, where :math:`K_{ij}`:
@@ -330,7 +330,6 @@ class BaseKernel(BaseEstimator):
             print("Error: Expected Data object as input in %s" % self.__class__.__name__)
             raise SystemExit
 
-
 class GaussianKernel(BaseKernel):
     """
     Gaussian kernel
@@ -350,7 +349,7 @@ class GaussianKernel(BaseKernel):
 
         # Kernel between representation stored in fit and representation
         # given in data object. The order matters
-        kernel = self.generate(X.representations, self.representations)
+        kernel = self.generate(X.representations, self.representations, X.property_type)
 
         X.kernel = kernel
 
@@ -363,28 +362,43 @@ class GaussianKernel(BaseKernel):
         # Store representation for future transform calls
         self._set_representations(X.representations)
 
-        kernel = self.generate(X.representations)
+        kernel = self.generate(X.representations, representation_type=X.representation_type)
 
         X.kernel = kernel
 
         return X
 
-
-    # TODO atomic
-    def generate(self, X, Y=None):
+    def generate(self, X, Y=None, representation_type='molecular'):
         """
         Create a gaussian kernel from representations `X`. Optionally
         an asymmetric kernel can be constructed between representations
         `X` and `Y`.
+        If `representation_type=='molecular` it is assumed that the representations
+        are molecular and of shape (n_samples, representation_size).
+        If `representation_type=='atomic` the representations are assumed to be atomic
+        and the kernel will be computed as an atomic decomposition.
 
-        :param X: representations of shape (n_samplesX, representationX_size)
+        :param X: representations
         :type X: array
-        :param X: representations of shape (n_samplesY, representationY_size)
+        :param Y: (Optional) representations
+        :type Y: array
 
         :return: Gaussian kernel matrix of shape (n_samplesX, n_samplesX) if \
                  Y=None else (n_samplesX, n_samplesY)
         :rtype: array
         """
+
+        if representation_type == 'molecular':
+            return self._generate_molecular(X,Y)
+        elif representation_type == 'atomic':
+            return self._generate_atomic(X,Y)
+        else:
+            # Should never get here for users
+            print("Error: property_type needs to equal 'molecular' \
+                    or 'atomic'")
+            raise SystemExit
+
+    def _generate_molecular(self, X, Y=None):
 
         # Note: Transposed for Fortran
         n = X.shape[0]
@@ -394,8 +408,48 @@ class GaussianKernel(BaseKernel):
             K = np.empty((n, n), order='F')
             fgaussian_kernel_symmetric(X.T, n, K, self.sigma)
         else:
+            # Do asymmetric matrix
             m = Y.shape[0]
             K = np.empty((n, m), order='F')
             fgaussian_kernel(X.T, n, Y.T, m, K, self.sigma)
 
         return K
+
+    def _generate_atomic(self, X, Y=None):
+
+        n1 = np.array([len(x) for x in X], dtype=np.int32)
+
+        max1 = np.max(n1)
+
+        nm1 = n1.size
+
+        rep_size = X[0].shape[1]
+
+        x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
+
+        for i in range(nm1):
+            x1[i,:n1[i]] = X[i]
+
+
+        # Reorder for Fortran speed
+        x1 = np.swapaxes(x1, 0, 2)
+
+        sigmas = np.array([self.sigma], dtype=np.float64)
+        nsigmas = sigmas.size
+
+        if is_none(Y):
+            # Do symmetric matrix
+            return fget_vector_kernels_gaussian_symmetric(x1, n1, [self.sigma],
+                nm1, nsigmas)
+        else:
+            # Do asymmetric matrix
+            n2 = np.array([len(y) for y in Y], dtype=np.int32)
+            max2 = np.max(n2)
+            nm2 = n2.size
+            x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
+            for i in range(nm2):
+                x2[i,:n2[i]] = Y[i]
+            x2 = np.swapaxes(x2, 0, 2)
+            return fget_vector_kernels_gaussian(x1, x2, n1, n2, [self.sigma],
+                nm1, nm2, nsigmas)
+

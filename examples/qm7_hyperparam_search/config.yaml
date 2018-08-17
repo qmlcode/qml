@@ -2,44 +2,23 @@ estimator:
   pickle: model.pickle
 
 strategy:
-  name: random
+  name: sobol
   #params:
-  #  seeds: 5
+  #  seeds: 30
 
 search_space:
-  hl1:
+  gaussiankernel__sigma:
     min: 1
-    max: 100
-    type: int
-
-  hl2:
-    min: 0
-    max: 100
-    type: int
-
-  hl3:
-    min: 0
-    max: 100
-    type: int
-  
-  l1_reg:
-    min: 1e-9
-    max: 1e0
+    max: 1000
     type: float
     warp: log
 
-  l2_reg:
-    min: 1e-9
-    max: 1e0
+  kernelridgeregression__l2_reg:
+    min: 1e-10
+    max: 1e-2
     type: float
     warp: log
 
-  learning_rate:
-    min: 1e-9
-    max: 1e0
-    type: float
-    warp: log
-  
 cv:
   name: kfold
   params:

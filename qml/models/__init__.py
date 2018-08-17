@@ -20,5 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .basemodel import BaseModel
+from .basemodel import _BaseModel
 from .kernelridge import KernelRidgeRegression

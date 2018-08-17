@@ -49,57 +49,57 @@ from .slatm import get_sbot
 
 from .facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
 
-def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "row-norm"):
-    """ Creates a Coulomb Matrix representation of a molecule.
-        Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
-        A matrix :math:`M` is constructed with elements
-
-        .. math::
-
-            M_{ij} =
-              \\begin{cases}
-                 \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
-                 \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
-              \\end{cases},
-
-        where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
-        :math:`\\bf R` is the coordinate in euclidean space.
-        If ``sorting = 'row-norm'``, the atom indices are reordered such that
-
-            :math:`\\sum_j M_{1j}^2 \\geq \\sum_j M_{2j}^2 \\geq ... \\geq \\sum_j M_{nj}^2`
-
-        The upper triangular of M, including the diagonal, is concatenated to a 1D
-        vector representation.
-
-        If ``sorting = 'unsorted``, the elements are sorted in the same order as the input coordinates
-        and nuclear charges.
-
-        The representation is calculated using an OpenMP parallel Fortran routine.
-
-        :param nuclear_charges: Nuclear charges of the atoms in the molecule
-        :type nuclear_charges: numpy array
-        :param coordinates: 3D Coordinates of the atoms in the molecule
-        :type coordinates: numpy array
-        :param size: The size of the largest molecule supported by the representation
-        :type size: integer
-        :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
-        :type sorting: string
-
-        :return: 1D representation - shape (size(size+1)/2,)
-        :rtype: numpy array
-    """
-
-    if (sorting == "row-norm"):
-        return fgenerate_coulomb_matrix(nuclear_charges, \
-            coordinates, size)
-
-    elif (sorting == "unsorted"):
-        return fgenerate_unsorted_coulomb_matrix(nuclear_charges, \
-            coordinates, size)
-
-    else:
-        print("ERROR: Unknown sorting scheme requested")
-        raise SystemExit
+#def generate_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "row-norm"):
+#    """ Creates a Coulomb Matrix representation of a molecule.
+#        Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
+#        A matrix :math:`M` is constructed with elements
+#
+#        .. math::
+#
+#            M_{ij} =
+#              \\begin{cases}
+#                 \\tfrac{1}{2} Z_{i}^{2.4} & \\text{if } i = j \\\\
+#                 \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|}       & \\text{if } i \\neq j
+#              \\end{cases},
+#
+#        where :math:`i` and :math:`j` are atom indices, :math:`Z` is nuclear charge and
+#        :math:`\\bf R` is the coordinate in euclidean space.
+#        If ``sorting = 'row-norm'``, the atom indices are reordered such that
+#
+#            :math:`\\sum_j M_{1j}^2 \\geq \\sum_j M_{2j}^2 \\geq ... \\geq \\sum_j M_{nj}^2`
+#
+#        The upper triangular of M, including the diagonal, is concatenated to a 1D
+#        vector representation.
+#
+#        If ``sorting = 'unsorted``, the elements are sorted in the same order as the input coordinates
+#        and nuclear charges.
+#
+#        The representation is calculated using an OpenMP parallel Fortran routine.
+#
+#        :param nuclear_charges: Nuclear charges of the atoms in the molecule
+#        :type nuclear_charges: numpy array
+#        :param coordinates: 3D Coordinates of the atoms in the molecule
+#        :type coordinates: numpy array
+#        :param size: The size of the largest molecule supported by the representation
+#        :type size: integer
+#        :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
+#        :type sorting: string
+#
+#        :return: 1D representation - shape (size(size+1)/2,)
+#        :rtype: numpy array
+#    """
+#
+#    if (sorting == "row-norm"):
+#        return fgenerate_coulomb_matrix(nuclear_charges, \
+#            coordinates, size)
+#
+#    elif (sorting == "unsorted"):
+#        return fgenerate_unsorted_coulomb_matrix(nuclear_charges, \
+#            coordinates, size)
+#
+#    else:
+#        print("ERROR: Unknown sorting scheme requested")
+#        raise SystemExit
 
 def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sorting = "distance",
             central_cutoff = 1e6, central_decay = -1, interaction_cutoff = 1e6, interaction_decay = -1,
@@ -579,7 +579,7 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
 
 
-class BaseRepresentation(BaseEstimator):
+class _BaseRepresentation(BaseEstimator):
     """
     Base class for representations
     """
@@ -587,17 +587,31 @@ class BaseRepresentation(BaseEstimator):
     def fit(self, X, y=None):
         """
         The fit routine is needed for scikit-learn pipelines.
+        Must return self.
         """
         raise NotImplementedError
 
     def transform(self, X):
         """
         The transform routine is needed for scikit-learn pipelines.
+        Needs to store the representations in self.data.representations
+        and return self.data.
         """
         raise NotImplementedError
 
-    def generate(self, X, y=None):
-        raise NotImplementedError
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
+
 
     def _preprocess_input(self, X):
         """
@@ -612,10 +626,15 @@ class BaseRepresentation(BaseEstimator):
 
         if isinstance(X, Data):
             self._set_data(X)
-            self.data.indices = np.arange(self.data.natoms.size)
+            # Part of the sklearn CV hack.
+            if not hasattr(self.data, 'indices'):
+                self.data.indices = np.arange(len(self.data))
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
-            self.data.indices = X
+            # This forces a copy to be made, which is helpful when
+            # using scikit-learn.
+            self._set_data(self.data)
+            self.data.indices = np.asarray(X, dtype=int).ravel()
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
@@ -625,28 +644,36 @@ class BaseRepresentation(BaseEstimator):
             print("Error: Empty Data object passed to %s representation" % self.__class__.__name__)
             raise SystemExit
         # Shallow copy should be fine
-        #TODO solve clone issue
         self.data = copy.copy(data)
 
     def _set_representation_type(self):
         self.data.representation_type = self._representation_type
 
-class MolecularRepresentation(BaseRepresentation):
+class _MolecularRepresentation(_BaseRepresentation):
     """
     Base class for molecular representations
     """
 
     _representation_type = "molecular"
 
-class AtomicRepresentations(BaseRepresentation):
+class _AtomicRepresentation(_BaseRepresentation):
     """
     Base class for molecular representations
     """
 
     _representation_type = "atomic"
 
-class CoulombMatrix(MolecularRepresentation):
-    """ Coulomb Matrix representation of a molecule.
+class CoulombMatrix(_MolecularRepresentation):
+    """
+    Coulomb Matrix representation as described in 10.1103/PhysRevLett.108.058301
+
+    """
+
+    _representation_short_name = "cm"
+
+    def __init__(self, data=None, size=23, sorting="row-norm"):
+        """
+        Coulomb Matrix representation of a molecule.
         Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
         A matrix :math:`M` is constructed with elements
 
@@ -672,12 +699,6 @@ class CoulombMatrix(MolecularRepresentation):
 
         The representation is calculated using an OpenMP parallel Fortran routine.
 
-    """
-
-    _representation_short_name = "cm"
-
-    def __init__(self, size=23, sorting="row-norm", data=False):
-        """
         :param size: The size of the largest molecule supported by the representation
         :type size: integer
         :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
@@ -689,7 +710,7 @@ class CoulombMatrix(MolecularRepresentation):
 
         self.size = size
         self.sorting = sorting
-        self._set_data(data)
+        self.data = data
 
     def fit(self, X, y=None):
         """
@@ -701,7 +722,6 @@ class CoulombMatrix(MolecularRepresentation):
         :return: self
         :rtype: object
         """
-
         self._preprocess_input(X)
         self._set_representation_type()
 
@@ -752,16 +772,151 @@ class CoulombMatrix(MolecularRepresentation):
 
         return self.data
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
+# TODO add reference
+# TODO add support for atomic properties
+#        The representation can be calculated for a subset by either specifying
+#        ``indices = [0,1,...]``, where :math:`[0,1,...]` are the requested atom indices,
+#        or by specifying ``indices = 'C'`` to only calculate central carbon atoms.
+
+class AtomicCoulombMatrix(_AtomicRepresentation):
+    """
+    Atomic Coulomb Matrix representation as described in 
+
+    """
+
+    _representation_short_name = "acm"
+
+    def __init__(self, data=None, size=23, sorting="distance", central_cutoff=10.0,
+            central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1):
+        """
+        Creates a Coulomb Matrix representation of the local environment of a central atom.
+        For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
+
+        .. math::
+
+            M_{ij}(k) =
+              \\begin{cases}
+                 \\tfrac{1}{2} Z_{i}^{2.4} \\cdot f_{ik}^2 & \\text{if } i = j \\\\
+                 \\frac{Z_{i}Z_{j}}{\\| {\\bf R}_{i} - {\\bf R}_{j}\\|} \\cdot f_{ik}f_{jk}f_{ij} & \\text{if } i \\neq j
+              \\end{cases},
+
+        where :math:`i`, :math:`j` and :math:`k` are atom indices, :math:`Z` is nuclear charge and
+        :math:`\\bf R` is the coordinate in euclidean space.
+
+        :math:`f_{ij}` is a function that masks long range effects:
+
+        .. math::
+
+            f_{ij} =
+              \\begin{cases}
+                 1 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                 \\tfrac{1}{2} \\big(1 + \\cos\\big(\\pi \\tfrac{\\|{\\bf R}_{i} - {\\bf R}_{j} \\|
+                    - r + \Delta r}{\Delta r} \\big)\\big)     
+                    & \\text{if } r - \Delta r < \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                 0 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| > r
+              \\end{cases},
+
+        where the parameters ``central_cutoff`` and ``central_decay`` corresponds to the variables
+        :math:`r` and :math:`\Delta r` respectively for interactions involving the central atom,
+        and ``interaction_cutoff`` and ``interaction_decay`` corresponds to the variables
+        :math:`r` and :math:`\Delta r` respectively for interactions not involving the central atom.
+
+        if ``sorting = 'row-norm'``, the atom indices are ordered such that
+
+            :math:`\\sum_j M_{1j}(k)^2 \\geq \\sum_j M_{2j}(k)^2 \\geq ... \\geq \\sum_j M_{nj}(k)^2`
+
+        if ``sorting = 'distance'``, the atom indices are ordered such that
+
+        .. math::
+
+            \\|{\\bf R}_{1} - {\\bf R}_{k}\\| \\leq \\|{\\bf R}_{2} - {\\bf R}_{k}\\|
+                \\leq ... \\leq \\|{\\bf R}_{n} - {\\bf R}_{k}\\|
+
+        The upper triangular of M, including the diagonal, is concatenated to a 1D
+        vector representation.
+
+        The representation is calculated using an OpenMP parallel Fortran routine.
+
+        :param data: Optional Data object containing all molecules used in training \
+                and/or prediction
+        :type data: Data object
+        :param size: The maximum number of atoms within the cutoff radius supported by the representation
+        :type size: integer
+        :param sorting: How the atom indices are sorted ('row-norm', 'distance')
+        :type sorting: string
+        :param central_cutoff: The distance from the central atom, where the coulomb interaction
+            element will be zero
+        :type central_cutoff: float
+        :param central_decay: The distance over which the the coulomb interaction decays from full to none
+        :type central_decay: float
+        :param interaction_cutoff: The distance between two non-central atom, where the coulomb interaction
+            element will be zero
+        :type interaction_cutoff: float
+        :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
+        :type interaction_decay: float
+        """
+
+        self.data = data
+        self.size = size
+        self.sorting = sorting
+        self.central_cutoff = central_cutoff
+        self.central_decay = central_decay
+        self.interaction_cutoff = interaction_cutoff
+        self.interaction_decay = interaction_decay
+
+    def fit(self, X, y=None):
         """
         :param X: Data object or indices to use from the \
                 Data object passed at initialization
         :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+        self._preprocess_input(X)
+        self._set_representation_type()
+
+        ## Giving indices doesn't make sense when predicting energies
+        #if self.data.property_type == 'energies' and not is_none(self.indices):
+        #    print("Error: Specifying variable 'indices' in representation %s \
+        #            is not compatiple with 'property_type' specified in the \
+        #            Data object" % self.__class__.__name__)
+
+        return self
+
+    def transform(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Data object
+        :rtype: Data object
         """
 
-        return self.fit(X).transform(X).representations
+        self._preprocess_input(X)
 
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+        coordinates = self.data.coordinates[self.data.indices]
+        natoms = self.data.natoms[self.data.indices]
+
+        representations = []
+        if (self.sorting == "row-norm"):
+            for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
+                representations.append(fgenerate_local_coulomb_matrix(np.arange(n)+1, n, charge,
+                    xyz, n, self.size, self.central_cutoff,
+                    self.central_decay, self.interaction_cutoff, self.interaction_decay))
+
+        elif (self.sorting == "distance"):
+            for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
+                representations.append(fgenerate_atomic_coulomb_matrix(np.arange(1,n+1), n, charge,
+                    xyz, n, self.size, self.central_cutoff,
+                    self.central_decay, self.interaction_cutoff, self.interaction_decay))
+
+        else:
+            print("ERROR: Unknown sorting scheme requested")
+            raise SystemExit
+
+        self.data.representations = representations
+
+        return self.data

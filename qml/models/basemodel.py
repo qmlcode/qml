@@ -23,13 +23,17 @@
 from __future__ import division, absolute_import, print_function
 
 from sklearn.base import BaseEstimator
+from sklearn.metrics import mean_absolute_error
 
-class BaseModel(BaseEstimator):
+from ..utils import is_numeric_array
+from ..data import Data
+
+class _BaseModel(BaseEstimator):
+    """
+    Base class for all regression models
+    """
 
     _estimator_type = "regressor"
-
-    def __init__(self, scoring='mae'):
-        self.scoring = 'mae'
 
     def fit(self, X):
         raise NotImplementedError
@@ -37,20 +41,54 @@ class BaseModel(BaseEstimator):
     def predict(self, X):
         return NotImplementedError
 
-    def score(self, X, y=None):
+    def score(self, X, y=None, multioutput = False):
+        """
+        Make predictions on `X` and return a score
 
-        return 1
+        :param X: Data object
+        :type X: object
+        :param y: Energies
+        :type y: array
+        :param multioutput: Return the score for each sample or an averaged score.
+        :type multioutput: bool
+        :return: score
+        :rtype: float
+        """
 
+        # Make predictions
         y_pred = self.predict(X)
 
-        if isinstance(X, Data):
+        # Get the true values
+        if is_numeric_array(y):
+            pass
+
+        elif isinstance(X, Data):
             try:
-                K, y = X.kernel, X.energies[X.indices]
+                y = X.energies[X.indices]
             except:
-                print("No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                print("No kernel energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
-        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and not is_none(y):
-            K = X
+
         else:
-            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
+
+        # Translate bool to string for sklearn
+        if multioutput:
+            multioutput = 'uniform_average'
+        else:
+            multioutput = 'raw_values'
+
+        # Return the score
+        if self.scoring == 'mae':
+            return mean_absolute_error(y, y_pred, multioutput=multioutput)
+        elif self.scoring == 'neg_mae':
+            return - mean_absolute_error(y, y_pred, multioutput=multioutput)
+        elif self.scoring == 'rmsd':
+            return np.sqrt(mean_squared_error(y, y_pred, multioutput=multioutput))
+        elif self.scoring == 'neg_rmsd':
+            return - np.sqrt(mean_squared_error(y, y_pred, multioutput=multioutput))
+        elif self.scoring == 'neg_log_mae':
+            return - np.log(mean_absolute_error(y, y_pred, multioutput=multioutput))
+
+

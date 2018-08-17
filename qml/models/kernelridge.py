@@ -24,9 +24,9 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 
-from ..ml.kernels import gaussian_kernel
+#from ..ml.kernels import gaussian_kernel
 from ..ml.math import cho_solve
-from . import BaseModel
+from . import _BaseModel
 from ..data import Data
 from ..utils import is_numeric_array, is_none
 
@@ -107,12 +107,32 @@ from ..utils import is_numeric_array, is_none
 #        if save_kernel:
 #            np.save(path + "/K.npy")
 
-class KernelRidgeRegression(BaseModel):
+class KernelRidgeRegression(_BaseModel):
+    """
+    Standard Kernel Ridge Regression using a cholesky solver
+    """
 
-    def __init__(self, llambda=1e-10):
-        self.llambda = llambda
+    def __init__(self, l2_reg=1e-10, scoring = 'neg_mae'):
+        """
+        :param llambda: l2 regularization
+        :type llambda: float
+        :param scoring: Metric used for scoring ('mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae')
+        :type scoring: string
+        """
+        self.l2_reg = l2_reg
+        self.scoring = scoring
+
+        self.alpha = None
 
     def fit(self, X, y=None):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object
+        :type X: object
+        :param y: Energies
+        :type y: array
+        """
 
         if isinstance(X, Data):
             try:
@@ -127,11 +147,24 @@ class KernelRidgeRegression(BaseModel):
             raise SystemExit
 
 
-        K[np.diag_indices_from(K)] += self.llambda
+        K[np.diag_indices_from(K)] += self.l2_reg
 
         self.alpha = cho_solve(K, y)
 
     def predict(self, X):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object
+        :type X: object
+        :param y: Energies
+        :type y: array
+        """
+
+        # Check if model has been fit
+        if is_none(self.alpha):
+            print("Error: The %s model has not been trained yet" % self.__class__.__name__)
+            raise SystemExit
 
         if isinstance(X, Data):
             try:

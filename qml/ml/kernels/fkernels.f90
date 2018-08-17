@@ -270,7 +270,7 @@ subroutine fget_vector_kernels_gaussian(q1, q2, n1, n2, sigmas, &
 
     implicit none
 
-    ! ARAD descriptors for the training set, format (i,j_1,5,m_1)
+    ! Representations (n_samples, n_max_atoms, rep_size)
     double precision, dimension(:,:,:), intent(in) :: q1
     double precision, dimension(:,:,:), intent(in) :: q2
 
@@ -336,6 +336,77 @@ subroutine fget_vector_kernels_gaussian(q1, q2, n1, n2, sigmas, &
 
 end subroutine fget_vector_kernels_gaussian
 
+subroutine fget_vector_kernels_gaussian_symmetric(q, n, sigmas, &
+        & nm, nsigmas, kernels)
+
+    implicit none
+
+    ! Representations (rep_size, n_samples, n_max_atoms)
+    double precision, dimension(:,:,:), intent(in) :: q
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: n
+
+    ! Sigma in the Gaussian kernel
+    double precision, dimension(:), intent(in) :: sigmas
+
+    ! Number of molecules
+    integer, intent(in) :: nm
+
+    ! Number of sigmas
+    integer, intent(in) :: nsigmas
+
+    ! Resulting kernels
+    double precision, dimension(nsigmas,nm,nm), intent(out) :: kernels
+
+    ! Temporary variables necessary for parallelization
+    double precision, allocatable, dimension(:,:) :: atomic_distance
+    double precision, allocatable, dimension(:) :: inv_sigma2
+
+    ! Internal counters
+    integer :: i, j, k, ni, nj, ia, ja
+    double precision :: val
+
+    allocate(inv_sigma2(nsigmas))
+
+    inv_sigma2 = -0.5d0 / (sigmas)**2
+
+    kernels = 1.0d0
+
+    i = size(q, dim=3)
+    allocate(atomic_distance(i,i))
+    atomic_distance(:,:) = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(atomic_distance,ni,nj,ja,ia,val) SCHEDULE(dynamic)
+    do j = 1, nm
+        nj = n(j)
+        do i = j, nm
+            ni = n(i)
+
+            atomic_distance(:,:) = 0.0d0
+
+            do ja = 1, nj
+                do ia = 1, ni
+
+                    atomic_distance(ia,ja) = sum((q(:,ia,i) - q(:,ja,j))**2)
+
+                enddo
+            enddo
+
+            do k = 1, nsigmas
+                val = sum(exp(atomic_distance(:ni,:nj) * inv_sigma2(k)))
+                kernels(k, i, j) = val
+                kernels(k, j, i) = val
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(atomic_distance)
+    deallocate(inv_sigma2)
+
+end subroutine fget_vector_kernels_gaussian_symmetric
 
 subroutine fgaussian_kernel(a, na, b, nb, k, sigma)
 
