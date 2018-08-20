@@ -22,8 +22,8 @@ if __name__ == "__main__":
     #test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
     #test_data.set_energies(test_energies)
 
-    rep = AtomicCoulombMatrix().generate(train_data)
-    kernel = GaussianKernel().generate(rep[:100], representation_type='atomic')
+    #rep = AtomicCoulombMatrix().generate(train_data)
+    #kernel = GaussianKernel().generate(rep[:100], rep[:50], representation_type='atomic')
 
     ## Generate the representations
     #rep = CoulombMatrix().generate(train_data)
@@ -47,15 +47,16 @@ if __name__ == "__main__":
     #predictions = model.predict(test_kernel)
     #print(predictions.shape)
 
-    quit()
     ## Fit and predict KRR from pipeline
-    model = make_pipeline(CoulombMatrix(size=23, data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6))
+    model = make_pipeline(AtomicCoulombMatrix(size=max(train_data.natoms), data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
     #model.fit(train_data)
     #predictions = model.predict(test_data)
     #print(predictions.shape)
 
     # Gridsearch CV of hyperparams
-    params = {'gaussiankernel__sigma': [30, 77, 100, 300],
+    params = {
+              'atomiccoulombmatrix__sorting': ['distance', 'row-norm'],
+              'gaussiankernel__sigma': [30, 77, 100, 300],
               'kernelridgeregression__l2_reg': [1.7e-7, 1e-6,1e-4]
              }
 
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
 
-    grid.fit(idx[:(3*1000)//2])
+    grid.fit(idx[:(3*500)//2])
     print(grid.best_params_, grid.best_score_)
 
 
