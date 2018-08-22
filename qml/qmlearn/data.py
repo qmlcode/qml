@@ -28,6 +28,7 @@ class Data(object):
         self.coordinates = None
         self.nuclear_charges = None
         self.natoms = None
+        self.energies = None
 
         if isinstance(filenames, str):
             filenames = sorted(glob.glob(filenames))
@@ -122,3 +123,14 @@ class Data(object):
 
                 self.nuclear_charges[i][j] = NUCLEAR_CHARGE[tokens[0]]
                 self.coordinates[i][j] = np.asarray(tokens[1:4], dtype=float)
+
+        # Try to convert dtype to int/float in cases where you have the
+        # same molecule, just different conformers
+
+        try:
+            self.nuclear_charges = np.asarray([self.nuclear_charges[i] for i in range(self.ncompounds)], 
+                    dtype=int)
+            self.coordinates = np.asarray([self.coordinates[i] for i in range(self.ncompounds)],
+                    dtype=float)
+        except ValueError:
+            pass

@@ -1,7 +1,7 @@
 import glob
-from qml.ml.representations import *
-from qml.ml.kernels import *
-from qml.models import *
+from qml.qmlearn.representations import *
+from qml.qmlearn.kernels import *
+from qml.qmlearn.models import *
 import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
@@ -15,13 +15,18 @@ import copy
 # molecular properties
 
 if __name__ == "__main__":
-    train_data = Data(filenames="qm7/*.xyz")
+    train_data = Data(filenames="qm7/0*.xyz")
     train_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:train_data.ncompounds]
     train_data.set_energies(train_energies)
-    #test_data = Data(filenames="qm7/1*.xyz")
+    test_data = Data(filenames="qm7/1*.xyz")
     #test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
     #test_data.set_energies(test_energies)
 
+    model = make_pipeline(GlobalSLATM(), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6))#, memory='/dev/shm')
+    model.fit(train_data)
+    y = model.predict(test_data)
+    print(y.shape)
+    quit()
     #rep = AtomicCoulombMatrix().generate(train_data)
     #kernel = GaussianKernel().generate(rep[:100], rep[:50], representation_type='atomic')
 
@@ -48,7 +53,7 @@ if __name__ == "__main__":
     #print(predictions.shape)
 
     ## Fit and predict KRR from pipeline
-    model = make_pipeline(AtomicCoulombMatrix(size=max(train_data.natoms), data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
+    #model = make_pipeline(AtomicCoulombMatrix(size=max(train_data.natoms), data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
     #model.fit(train_data)
     #predictions = model.predict(test_data)
     #print(predictions.shape)
@@ -56,8 +61,8 @@ if __name__ == "__main__":
     # Gridsearch CV of hyperparams
     params = {
               'atomiccoulombmatrix__sorting': ['distance', 'row-norm'],
-              'gaussiankernel__sigma': [30, 77, 100, 300],
-              'kernelridgeregression__l2_reg': [1.7e-7, 1e-6,1e-4]
+              'gaussiankernel__sigma': [77, 100, 300],
+              'kernelridgeregression__l2_reg': [1e-6,1e-4]
              }
 
     #grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
@@ -77,7 +82,7 @@ if __name__ == "__main__":
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
 
-    grid.fit(idx[:(3*500)//2])
+    grid.fit(idx[:(3*200)//2])
     print(grid.best_params_, grid.best_score_)
 
 
