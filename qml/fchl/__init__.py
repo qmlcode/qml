@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders S. Christensen and Felix A. Faber
+# Copyright (c) 2017 Anders S. Christensen, Felix A. Faber
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,4 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .fchl import *
+from .fchl_representations import *
+from .fchl_scalar_kernels import *
+from .fchl_force_kernels import *
+from .fchl_electric_field_kernels import *
