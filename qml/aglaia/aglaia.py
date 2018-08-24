@@ -2094,8 +2094,6 @@ class ARMP(_NN):
                     raise InputError("No representations or QML compounds have been set yet.")
                 else:
                     self.representation, self.classes = self._generate_representations_from_compounds()
-            if is_none(self.properties):
-                raise InputError("The properties need to be set in advance.")
 
             approved_x = self.representation[x]
             approved_classes = self.classes[x]
