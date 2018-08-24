@@ -141,6 +141,9 @@ class _NN(BaseEstimator):
         self.gradients = None
         self.classes = None
 
+        # To enable restart model
+        self.loaded_model = False
+
     def _set_activation_function(self, activation_function):
         """
         This function sets which activation function will be used in the model.
@@ -2162,6 +2165,27 @@ class ARMP(_NN):
 
     def _fit(self, x, y, dy, classes):
         """
+        This function calls either fit_from_scratch or fit_from_loaded depending on if a model has been loaded or not.
+
+        :param x: either the representations or the indices to the data points to use
+        :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
+        :param y: either the properties or None
+        :type y: either a numpy array of shape (n_samples,) or None
+        :param dy: None
+        :type dy: None
+        :param classes: classes to use for the atomic decomposition or None
+        :type classes: either a numpy array of shape (n_samples, n_atoms) or None
+
+        :return: None
+        """
+
+        if not self.loaded_model:
+            self._fit_from_scratch(x, y, classes, dy)
+        else:
+            self._fit_from_loaded(x, y, classes, dy)
+
+    def _fit_from_scratch(self, x, y, dy, classes):
+        """
         This function fits an atomic decomposed network to the data.
 
         :param x: either the representations or the indices to the data points to use
@@ -2199,9 +2223,9 @@ class ARMP(_NN):
 
         # Initial set up of the NN
         with tf.name_scope("Data"):
-            x_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms, self.n_features])
-            zs_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms])
-            y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1])
+            x_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms, self.n_features], name="Descriptors")
+            zs_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms], name="Atomic-numbers")
+            y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1], name="Properties")
 
             dataset = tf.data.Dataset.from_tensor_slices((x_ph, zs_ph, y_ph))
             dataset = dataset.shuffle(buffer_size=self.n_samples)
@@ -2210,9 +2234,9 @@ class ARMP(_NN):
 
             iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
             tf_x, tf_zs, tf_y = iterator.get_next()
-            tf_x = tf.identity(tf_x, name="Descriptors")
-            tf_zs = tf.identity(tf_zs, name="Atomic-numbers")
-            tf_y = tf.identity(tf_y, name="Properties")
+            # tf_x = tf.identity(tf_x, name="Descriptors")
+            # tf_zs = tf.identity(tf_zs, name="Atomic-numbers")
+            # tf_y = tf.identity(tf_y, name="Properties")
 
         # Creating dictionaries of the weights and biases for each element
         element_weights = {}
@@ -2233,16 +2257,17 @@ class ARMP(_NN):
 
         with tf.name_scope("Cost_func"):
             cost = self._cost(molecular_energies, tf_y, element_weights)
+            print(cost)
 
         if self.tensorboard:
             cost_summary = self.tensorboard_logger_training.write_cost_summary(cost)
 
         optimiser = self._set_optimiser()
-        optimisation_op = optimiser.minimize(cost)
+        optimisation_op = optimiser.minimize(cost, name="optimisation_op")
 
         # Initialisation of the variables
         init = tf.global_variables_initializer()
-        iterator_init = iterator.make_initializer(dataset)
+        iterator_init = iterator.make_initializer(dataset, name="dataset_init")
 
         self.session = tf.Session()
 
@@ -2275,6 +2300,68 @@ class ARMP(_NN):
                     self.tensorboard_logger_training.write_summary(self.session, i)
 
             self.training_cost.append(avg_cost/n_batches)
+
+    def _fit_from_loaded(self, x, y, dy, classes):
+        """
+       This function carries on fitting an atomic decomposed network to the data after it has been loaded.
+
+       :param x: either the representations or the indices to the data points to use
+       :type x: either a numpy array of shape (n_samples, n_atoms, n_features) or a numpy array of ints
+       :param y: either the properties or None
+       :type y: either a numpy array of shape (n_samples,) or None
+       :param dy: None
+       :type dy: None
+       :param classes: classes to use for the atomic decomposition or None
+       :type classes: either a numpy array of shape (n_samples, n_atoms) or None
+
+       :return: None
+       """
+
+        x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
+
+        self.elements = self._find_elements(classes_approved)
+
+        if self.tensorboard:
+            self.tensorboard_logger_training.initialise()
+            self.tensorboard_logger_training.set_summary_writer(self.session)
+
+        self.n_samples = x_approved.shape[0]
+        self.n_atoms = x_approved.shape[1]
+        self.n_features = x_approved.shape[2]
+
+        batch_size = self._get_batch_size()
+        n_batches = ceil(self.n_samples, batch_size)
+
+        graph = tf.get_default_graph()
+
+        with graph.as_default():
+            # Reloading all the needed operations and tensors
+            tf_x = graph.get_tensor_by_name("Data/Descriptors:0")
+            tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
+            tf_ene = graph.get_tensor_by_name("Data/Properties:0")
+            cost = graph.get_tensor_by_name("Cost_func/add_13:0")
+
+            optimisation_op = graph.get_operation_by_name("optimisation_op")
+            dataset_init_op = graph.get_operation_by_name("dataset_init")
+
+        if self.tensorboard:
+            cost_summary = self.tensorboard_logger_training.write_cost_summary(cost)
+
+        for i in range(self.iterations):
+            self.session.run(dataset_init_op, feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved})
+
+            for j in range(n_batches):
+                if self.tensorboard:
+                    self.session.run(optimisation_op, options=self.tensorboard_logger_training.options,
+                                     run_metadata=self.tensorboard_logger_training.run_metadata)
+                else:
+                    self.session.run(optimisation_op)
+
+            if self.tensorboard:
+                if i % self.tensorboard_logger_training.store_frequency == 0:
+                    self.session.run(dataset_init_op,
+                                     feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved})
+                    self.tensorboard_logger_training.write_summary(self.session, i)
 
     def _predict(self, x, classes):
         """
@@ -2401,10 +2488,12 @@ class ARMP(_NN):
         with graph.as_default():
             tf_x = graph.get_tensor_by_name("Data/Descriptors:0")
             tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
+            true_ene = graph.get_tensor_by_name("Data/Properties:0")
             model = graph.get_tensor_by_name("Model/output:0")
 
         tf.saved_model.simple_save(self.session, export_dir=save_dir,
-                                   inputs={"Data/Descriptors:0": tf_x, "Data/Atomic-numbers:0": tf_zs},
+                                   inputs={"Data/Descriptors:0": tf_x, "Data/Atomic-numbers:0": tf_zs,
+                                           "Data/Properties:0": true_ene},
                                    outputs={"Model/output:0": model})
 
     def load_nn(self, save_dir="saved_model"):
@@ -2418,3 +2507,5 @@ class ARMP(_NN):
 
         self.session = tf.Session(graph=tf.get_default_graph())
         tf.saved_model.loader.load(self.session, [tf.saved_model.tag_constants.SERVING], save_dir)
+
+        self.loaded_model = True
