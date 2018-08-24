@@ -20,5 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from .xyzdataprovider import XYZDataProvider
 from .compound import Compound
+from .alchemy import ELEMENT_NAME, NUCLEAR_CHARGE

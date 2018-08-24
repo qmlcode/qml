@@ -56,7 +56,10 @@ ext_fkernels = Extension(name = '.kernels.fkernels',
 ext_ffchl_module = Extension(name = '.fchl.ffchl_module',
                           sources = [
                               'qml/fchl/ffchl_module.f90',
-                              'qml/fchl/ffchl_scalar_kernels.f90'
+                              'qml/fchl/ffchl_kernels.f90',
+                              'qml/fchl/ffchl_scalar_kernels.f90',
+                              'qml/fchl/ffchl_force_kernels.f90',
+                              'qml/fchl/ffchl_electric_field_kernels.f90',
                               ],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
