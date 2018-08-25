@@ -8,7 +8,7 @@ Python API documentation
 qml\.representations module
 ---------------------------
 
-.. automodule:: qml.representations
+.. automodule:: qml.representations.representations
     :members:
     :undoc-members:
     :show-inheritance:
@@ -16,7 +16,7 @@ qml\.representations module
 qml\.kernels module
 -------------------
 
-.. automodule:: qml.kernels
+.. automodule:: qml.kernels.kernels
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ qml\.distance module
 qml\.math module
 ----------------
 
-.. automodule:: qml.math
+.. automodule:: qml.math.math
     :members:
     :undoc-members:
     :show-inheritance:
@@ -45,28 +45,42 @@ qml\.Compound class
     :undoc-members:
     :show-inheritance:
 
-.. qml\.arad module
-.. ----------------
-..
-.. .. automodule:: qml.arad
-..     :members:
-..     :show-inheritance:
 
-qml\.fchl module
+qml\.fchl module, representations
 ----------------
 
-.. automodule:: qml.representations.fchl
+ .. automodule:: qml.fchl.fchl_representations
+    :members:
+    :show-inheritance:
+
+qml\.fchl module, scalar kernels
+----------------
+ .. automodule:: qml.fchl.fchl_scalar_kernels
+    :members:
+    :show-inheritance:
+
+qml\.fchl module, force kernels 
+----------------
+ 
+ .. automodule:: qml.fchl.fchl_force_kernels
+    :members:
+    :show-inheritance:
+
+qml\.fchl module, electric-field kernels
+----------------
+ 
+ .. automodule:: qml.fchl.fchl_electric_field_kernels
     :members:
     :show-inheritance:
 
 
-qml\.wrappers module
---------------------
-
-.. automodule:: qml.kernels.wrappers
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. qml\.wrappers module
+.. --------------------
+.. 
+.. .. automodule:: qml.kernels.wrappers
+..     :members:
+..     :undoc-members:
+..     :show-inheritance:
 
 
 .. qml\.data module
@@ -85,6 +99,12 @@ qml\.wrappers module
 ..    :undoc-members:
 ..    :show-inheritance:
 
+qml\.arad module
+----------------
+
+.. automodule:: qml.arad.arad
+    :members:
+    :show-inheritance:
 
 qml\.aglaia module
 ------------------

@@ -1,30 +1,116 @@
-! MIT License
-!
-! Copyright (c) 2018 Anders Steen Christensen
-!
-! Permission is hereby granted, free of charge, to any person obtaining a copy
-! of this software and associated documentation files (the "Software"), to deal
-! in the Software without restriction, including without limitation the rights
-! to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-! copies of the Software, and to permit persons to whom the Software is
-! furnished to do so, subject to the following conditions:
-!
-! The above copyright notice and this permission notice shall be included in all
-! copies or substantial portions of the Software.
-!
-! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-! AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-! LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-! SOFTWARE.
-
 module ffchl_module
 
     implicit none
 
+    ! For polarization
+    ! double precision, parameter, dimension(19, 3) :: field_displacement =  reshape( &
+    !      &    (/  -1,  -1,   0,      &  !  1  x-  y- 
+    !      &        -1,   0,  -1,      &  !  2  x-      z-
+    !      &        -1,   0,   0,      &  !  3  x-
+    !      &        -1,   0,   1,      &  !  4  x-      z+
+    !      &        -1,   1,   0,      &  !  5  x-  y+
+    !      &         0,  -1,  -1,      &  !  6      y-  z- 
+    !      &         0,  -1,   0,      &  !  7      y-
+    !      &         0,  -1,   1,      &  !  8      y-  z+
+    !      &         0,   0,  -1,      &  !  9          z- 
+    !      &         0,   0,   0,      &  ! 10              unperturbed = 10
+    !      &         0,   0,   1,      &  ! 11          z+ 
+    !      &         0,   1,  -1,      &  ! 12      y+  z-
+    !      &         0,   1,   0,      &  ! 13      y+
+    !      &         0,   1,   1,      &  ! 14      y+  z+
+    !      &         1,  -1,   0,      &  ! 15  x+  y-
+    !      &         1,   0,  -1,      &  ! 16  x+      z-
+    !      &         1,   0,   0,      &  ! 17  x+
+    !      &         1,   0,   1,      &  ! 18  x+      z+
+    !      &         1,   1,   0      &  ! 19  x+  y+
+    !      &/), (/ 19, 3 /))
+
+
+
 contains
+
+
+function get_pmax(x, na) result(pmax)
+
+    implicit none
+
+    ! FCHL descriptors for the set, format (nm1,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Internal counter
+    integer :: a
+
+    ! Max nuclear charge
+    integer :: pmax
+
+    pmax = 0
+
+    do a = 1, size(na, dim=1)
+        pmax = max(pmax, int(maxval(x(a,1,2,:na(a)))))
+    enddo
+
+end function get_pmax
+
+
+function get_pmax_atomic(x, nneigh) result(pmax)
+
+    implicit none
+
+    ! FCHL descriptors for the set, format (nm1,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: nneigh
+
+    ! Internal counter
+    integer :: a
+
+    ! Max nuclear charge
+    integer :: pmax
+
+    pmax = 0
+
+    do a = 1, size(nneigh, dim=1)
+        pmax = max(pmax, int(maxval(x(a,2,:nneigh(a)))))
+    enddo
+
+end function get_pmax_atomic
+
+
+function get_pmax_displaced(x, na) result(pmax)
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (nm1,3,2,maxatoms,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Internal counter
+    integer :: a, b, i, xyz, pm
+
+    ! Max nuclear charge
+    integer :: pmax
+
+    pmax = 0
+
+    do a = 1, size(na, dim=1)
+        b = na(a)
+        do xyz = 1, 3
+            do pm = 1, size(x, dim=3)
+                do i = 1, b
+                    pmax = max(pmax, int(maxval(x(a,xyz,pm,i,1,2,:na(a)))))
+                enddo
+            enddo
+        enddo
+    enddo
+
+end function get_pmax_displaced
+
 
 pure function cut_function(r, cut_start, cut_distance) result(f)
 
@@ -96,6 +182,7 @@ pure function get_angular_norm2(t_width) result(ang_norm2)
     ang_norm2 = sqrt(ang_norm2 * pi) * 2.0d0
 
 end function
+
 
 function get_twobody_weights(x, neighbors, power, cut_start, cut_distance, dim1) result(ksi)
 
@@ -629,4 +716,1394 @@ pure function scalar_alchemy(X1, X2, N1, N2, ksi1, ksi2, sin1, sin2, cos1, cos2,
 end function scalar_alchemy
 
 
+function get_ksi(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: two_body_power
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Pre-computed two-body weights
+    double precision, allocatable, dimension(:,:,:) :: ksi
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, nm, a, ni, i
+    
+    double precision :: t_start, t_end
+
+
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    allocate(ksi(nm, maxatoms, maxneigh))
+    
+    ksi = 0.0d0
+    
+    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    !$OMP PARALLEL DO PRIVATE(ni)
+    do a = 1, nm
+        ni = na(a)
+        do i = 1, ni
+            ksi(a, i, :) = get_twobody_weights(x(a,i,:,:), nneigh(a, i), &
+                & two_body_power, cut_start, cut_distance, maxneigh)
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+
+end function get_ksi
+
+
+function get_ksi_displaced(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:,:,:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: two_body_power
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Pre-computed two-body weights
+    double precision, allocatable, dimension(:,:,:,:,:,:) :: ksi
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, nm, a, ni, i, j, pm, xyz, ndisp
+    
+    double precision :: t_start, t_end
+
+    if (verbose) write (*,"(A)", advance="no") "TWO-BODY GRADIENT"
+    t_start = omp_get_wtime()
+
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+    ndisp = size(x, dim=3)
+    
+    allocate(ksi(nm,3,ndisp,maxatoms,maxatoms,maxneigh))
+
+    ksi = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni)
+    do a = 1, nm
+        ni = na(a)
+        do xyz = 1, 3
+            do pm = 1, ndisp
+                do i = 1, ni
+                    do j = 1, ni
+                        ksi(a, xyz, pm, i, j, :) = get_twobody_weights( &
+                & x(a,xyz,pm,i,j,:,:), nneigh(a, xyz, pm, i, j), &
+                & two_body_power, cut_start, cut_distance, maxneigh)
+                    enddo
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
+
+end function get_ksi_displaced
+
+
+function get_ksi_atomic(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms
+    integer, intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: two_body_power
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Pre-computed two-body weights
+    double precision, allocatable, dimension(:,:) :: ksi
+
+    ! Internal counters
+    integer :: maxneigh, nm, i
+    
+    double precision :: t_start, t_end
+
+    maxneigh = maxval(nneigh)
+    nm = size(x, dim=1)
+
+    allocate(ksi(na, maxneigh))
+
+    ksi = 0.0d0
+    
+    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    !$OMP PARALLEL DO
+    do i = 1, na
+        ksi(i, :) = get_twobody_weights(x(i,:,:), nneigh(i), &
+            & two_body_power, cut_start, cut_distance, maxneigh)
+    enddo
+    !$OMP END PARALLEL do
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
+
+end function get_ksi_atomic
+
+
+subroutine init_cosp_sinp(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: three_body_power
+    
+    integer, intent(in) :: order
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:), intent(out) :: cosp
+    double precision, dimension(:,:,:,:,:), intent(out) :: sinp
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, pmax, nm, a, ni, i
+
+    double precision, allocatable, dimension(:,:,:,:) :: fourier
+    
+    double precision :: t_start, t_end
+
+    
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    pmax = get_pmax(x, na)
+
+    cosp = 0.0d0
+    sinp = 0.0d0
+    
+    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    !$OMP PARALLEL DO PRIVATE(ni, fourier) schedule(dynamic)
+    do a = 1, nm
+        ni = na(a)
+        do i = 1, ni
+
+            fourier = get_threebody_fourier(x(a,i,:,:), &
+                & nneigh(a, i), order, three_body_power, cut_start, cut_distance, pmax, order, maxneigh)
+
+            cosp(a,i,:,:,:) = fourier(1,:,:,:)
+            sinp(a,i,:,:,:) = fourier(2,:,:,:)
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
+
+end subroutine init_cosp_sinp
+
+
+subroutine init_cosp_sinp_displaced(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:,:,:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: three_body_power
+    
+    integer, intent(in) :: order
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:,:,:) :: sinp
+    double precision, dimension(:,:,:,:,:,:,:) :: cosp
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, pmax, nm, a, ni, i, j, xyz, pm, xyz_pm
+
+    double precision, allocatable, dimension(:,:,:,:) :: fourier
+    
+    double precision :: t_start, t_end
+
+    integer :: ndisp
+
+
+    if (verbose) write (*,"(A)", advance="no") "THREE-BODY GRADIENT"
+    t_start = omp_get_wtime()
+    
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    ndisp = size(x, dim=3)
+
+    pmax = get_pmax_displaced(x, na)
+
+    cosp = 0.0d0
+    sinp = 0.0d0
+    
+    !$OMP PARALLEL DO PRIVATE(ni, fourier, xyz_pm) schedule(dynamic)
+    do a = 1, nm
+        ni = na(a)
+        do xyz = 1, 3
+        do pm = 1, ndisp
+        do i = 1, ni
+            do j = 1, ni
+
+                xyz_pm = ndisp*(xyz - 1) + pm
+
+                fourier = get_threebody_fourier(x(a,xyz,pm,i,j,:,:), &
+                    & nneigh(a, xyz, pm, i, j), &
+                    & order, three_body_power, cut_start, cut_distance, &
+                    & pmax, order, maxneigh)
+
+            cosp(a,xyz_pm,i,j,:,:,:) = fourier(1,:,:,:)
+            sinp(a,xyz_pm,i,j,:,:,:) = fourier(2,:,:,:)
+
+            enddo
+        enddo
+        enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                     Time = ", t_end - t_start, " s"
+
+end subroutine init_cosp_sinp_displaced
+
+
+subroutine init_cosp_sinp_atomic(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:), intent(in) :: x
+
+    ! List of numbers of atom
+    integer, intent(in) :: na
+
+    ! Number of neighbors for each atom
+    integer, dimension(:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: three_body_power
+   
+    ! Fourier truncation order 
+    integer, intent(in) :: order
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:), intent(out) :: cosp
+    double precision, dimension(:,:,:,:), intent(out) :: sinp
+
+    ! Internal counters
+    integer :: maxneigh, pmax, nm, i
+    
+    ! Internal temporary variable
+    double precision, allocatable, dimension(:,:,:,:) :: fourier
+    
+    double precision :: t_start, t_end
+    
+    maxneigh = maxval(nneigh)
+    nm = size(x, dim=1)
+
+    pmax = get_pmax_atomic(x, nneigh) 
+
+    cosp = 0.0d0
+    sinp = 0.0d0
+    
+    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    !$OMP PARALLEL DO PRIVATE(fourier)
+    do i = 1, na
+
+        fourier = get_threebody_fourier(x(i,:,:), &
+            & nneigh(i), order, three_body_power, cut_start, cut_distance, pmax, order, maxneigh)
+
+        cosp(i,:,:,:) = fourier(1,:,:,:)
+        sinp(i,:,:,:) = fourier(2,:,:,:)
+
+    enddo
+    !$OMP END PARALLEL DO
+
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                     Time = ", t_end - t_start, " s"
+
+end subroutine init_cosp_sinp_atomic
+
+
+function get_selfscalar(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
+        & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose) result(self_scalar)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+    
+    ! Number of molecules molecule
+    integer, intent(in) :: nm
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+    
+    ! Pre-computed two-body weights
+    double precision, dimension(:,:,:), intent(in) :: ksi
+    
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:), intent(in) :: sinp
+    double precision, dimension(:,:,:,:,:), intent(in) :: cosp
+    
+    ! Angular Gaussian width
+    double precision, intent(in) :: t_width
+
+    ! Distance Gaussian width
+    double precision, intent(in) :: d_width
+
+    double precision, intent(in) :: cut_distance
+    
+    ! Truncation order for Fourier terms
+    integer, intent(in) :: order
+
+    ! Periodic table distance matrix
+    double precision, dimension(:,:), intent(in) :: pd
+    
+    ! Angular normalization constant
+    double precision, intent(in) :: ang_norm2
+    
+    ! Scaling for angular and distance terms
+    double precision, intent(in) :: distance_scale
+    double precision, intent(in) :: angular_scale
+
+    ! Switch alchemy on or off
+    logical, intent(in) :: alchemy
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    double precision, allocatable, dimension(:,:) :: self_scalar
+
+    ! Internal counters
+    integer :: a, ni, i
+    
+    double precision :: t_start, t_end
+    
+    if (verbose) write (*,"(A)", advance="no") "SELF-SCALAR TERMS"
+    t_start = omp_get_wtime()
+    
+    allocate(self_scalar(nm, maxval(na)))
+
+    !$OMP PARALLEL DO PRIVATE(ni)
+    do a = 1, nm
+        ni = na(a)
+        do i = 1, ni
+            self_scalar(a,i) = scalar(x(a,i,:,:), x(a,i,:,:), &
+                & nneigh(a,i), nneigh(a,i), ksi(a,i,:), ksi(a,i,:), &
+                & sinp(a,i,:,:,:), sinp(a,i,:,:,:), &
+                & cosp(a,i,:,:,:), cosp(a,i,:,:,:), &
+                & t_width, d_width, cut_distance, order, &
+                & pd, ang_norm2,distance_scale, angular_scale, alchemy)
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
+
+end function get_selfscalar
+
+
+function get_selfscalar_displaced(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
+        & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose) result(self_scalar)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: x
+    
+    ! Number of molecules molecule
+    integer, intent(in) :: nm
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:,:,:,:), intent(in) :: nneigh
+    
+    ! Pre-computed two-body weights
+    double precision, dimension(:,:,:,:,:,:), intent(in) :: ksi
+    
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: sinp
+    double precision, dimension(:,:,:,:,:,:,:), intent(in) :: cosp
+    
+    ! Angular Gaussian width
+    double precision, intent(in) :: t_width
+
+    ! Distance Gaussian width
+    double precision, intent(in) :: d_width
+
+    double precision, intent(in) :: cut_distance
+    
+    ! Truncation order for Fourier terms
+    integer, intent(in) :: order
+
+    ! Periodic table distance matrix
+    double precision, dimension(:,:), intent(in) :: pd
+    
+    ! Angular normalization constant
+    double precision, intent(in) :: ang_norm2
+    
+    ! Scaling for angular and distance terms
+    double precision, intent(in) :: distance_scale
+    double precision, intent(in) :: angular_scale
+
+    ! Switch alchemy on or off
+    logical, intent(in) :: alchemy
+
+    ! Whether to be verbose with output
+    logical, intent(in) :: verbose
+
+    double precision, allocatable, dimension(:,:,:,:,:) :: self_scalar
+
+    ! Internal counters
+    integer :: a, ni, i, j, pm, xyz, xyz_pm, ndisp
+    
+    double precision :: t_start, t_end
+    
+    if (verbose) write (*,"(A)", advance="no") "SELF-SCALAR GRADIENT"
+    t_start = omp_get_wtime()
+ 
+    ndisp = size(x, dim=3)
+    allocate(self_scalar(nm, 3, ndisp, maxval(na), maxval(na)))
+    self_scalar = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni, xyz_pm) schedule(dynamic)
+    do a = 1, nm
+        ni = na(a)
+        do xyz = 1, 3
+        do pm = 1, ndisp
+        do i = 1, ni
+            do j = 1, ni
+                
+            ! z_pm = 2*xyz + pm - 2
+            xyz_pm = ndisp*(xyz - 1) + pm
+
+            self_scalar(a,xyz,pm,i,j) = scalar(x(a,xyz,pm,i,j,:,:), x(a,xyz,pm,i,j,:,:), &
+                & nneigh(a,xyz,pm,i,j), nneigh(a,xyz,pm,i,j), &
+                & ksi(a,xyz,pm,i,j,:), ksi(a,xyz,pm,i,j,:), &
+                & sinp(a,xyz_pm,i,j,:,:,:), sinp(a,xyz_pm,i,j,:,:,:), &
+                & cosp(a,xyz_pm,i,j,:,:,:), cosp(a,xyz_pm,i,j,:,:,:), &
+                & t_width, d_width, cut_distance, order, &
+                & pd, ang_norm2,distance_scale, angular_scale, alchemy)
+            enddo
+        enddo
+        enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+   
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
+
+end function get_selfscalar_displaced
+
+
+
+function get_ksi_ef(x, na, nneigh, two_body_power, cut_start, cut_distance, ef_scale, df, verbose) result(ksi)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: two_body_power
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    
+    ! Electric field displacement
+    double precision, intent(in) :: ef_scale
+    double precision, intent(in) :: df
+
+    ! Display output
+    logical, intent(in) :: verbose
+
+    ! Pre-computed two-body weights
+    double precision, allocatable, dimension(:,:,:,:,:) :: ksi
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, nm, a, ni, i, xyz, pm
+
+    ! Electric field
+    double precision, dimension(3) :: field
+    
+    double precision :: t_start, t_end
+
+    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    allocate(ksi(nm, 3, 2, maxatoms, maxneigh))
+    
+    ksi = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni, field)
+    do a = 1, nm
+        ni = na(a)
+        do xyz = 1, 3
+            do pm = 1, 2
+               
+                field = 0.0d0
+                field(xyz) = (pm - 1.5d0)*2.0d0  * df
+
+                ! write(*,*) xyz, pm, field
+
+                do i = 1, ni
+
+                    ksi(a, xyz, pm, i, :) = get_twobody_weights_ef(x(a,i,:,:), field, nneigh(a, i), &
+                        & two_body_power, cut_start, cut_distance, maxneigh, ef_scale)
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+
+end function get_ksi_ef
+
+
+function get_ksi_ef_field(x, na, nneigh, two_body_power, cut_start, cut_distance, fields, ef_scale, verbose) result(ksi)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: two_body_power
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    
+    ! Electric fields for each representation
+    double precision, dimension(:,:), intent(in) :: fields
+
+    ! Display output
+    logical, intent(in) :: verbose
+
+    ! Pre-computed two-body weights
+    double precision, allocatable, dimension(:,:,:) :: ksi
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, nm, a, ni, i
+    
+    double precision :: t_start, t_end
+    
+    double precision, intent(in) :: ef_scale
+    
+    ! Electric field displacement
+    ! double precision, intent(in) :: df
+
+    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
+    t_start = omp_get_wtime()
+
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    allocate(ksi(nm, maxatoms, maxneigh))
+    
+    ksi = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni)
+    do a = 1, nm
+        ni = na(a)
+                
+        do i = 1, ni
+
+            ksi(a, i, :) = get_twobody_weights_ef(x(a,i,:,:), fields(a,:), nneigh(a, i), &
+                & two_body_power, cut_start, cut_distance, maxneigh, ef_scale)
+        enddo
+
+    enddo
+    !$OMP END PARALLEL do
+    
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+
+end function get_ksi_ef_field
+
+subroutine init_cosp_sinp_ef(x, na, nneigh, three_body_power, order, cut_start, cut_distance, &
+       & cosp, sinp, ef_scale, df, verbose)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: three_body_power
+    
+    integer, intent(in) :: order
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    double precision, intent(in) :: ef_scale
+    
+    ! Electric field displacement
+    double precision, intent(in) :: df
+
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:,:,:), intent(out) :: cosp
+    double precision, dimension(:,:,:,:,:,:,:), intent(out) :: sinp
+
+    ! Display output
+    logical, intent(in) :: verbose
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, pmax, nm, a, ni, i
+
+    double precision, allocatable, dimension(:,:,:,:) :: fourier
+    
+    double precision :: t_start, t_end
+    
+    ! Internal counters
+    integer :: xyz, pm
+
+    ! Electric field
+    double precision, dimension(3) :: field
+    
+    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
+    t_start = omp_get_wtime()
+    
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    pmax = get_pmax(x, na)
+
+    cosp = 0.0d0
+    sinp = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni, fourier, field) schedule(dynamic)
+    do a = 1, nm
+        ni = na(a)
+        do xyz = 1, 3
+            do pm = 1, 2
+               
+                field = 0.0d0
+                field(xyz) = (pm - 1.5d0) * 2.0d0  * df
+
+                do i = 1, ni
+
+                    fourier = get_threebody_fourier_ef(x(a,i,:,:), field, &
+                    & nneigh(a, i), order, three_body_power, cut_start, cut_distance, pmax, order, maxneigh, ef_scale)
+
+                    cosp(a,xyz,pm,i,:,:,:) = fourier(1,:,:,:)
+                    sinp(a,xyz,pm,i,:,:,:) = fourier(2,:,:,:)
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
+
+end subroutine init_cosp_sinp_ef
+
+
+subroutine init_cosp_sinp_ef_field(x, na, nneigh, three_body_power, &
+        & order, cut_start, cut_distance, cosp, sinp, fields, ef_scale, verbose)
+
+    use omp_lib, only: omp_get_wtime
+
+    implicit none
+
+    ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+    double precision, dimension(:,:,:,:), intent(in) :: x
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: na
+
+    ! Number of neighbors for each atom in each compound
+    integer, dimension(:,:), intent(in) :: nneigh
+
+    ! Decaying powerlaws for two-body term
+    double precision, intent(in) :: three_body_power
+    
+    integer, intent(in) :: order
+
+    ! Fraction of cut_distance at which cut-off starts
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    double precision, intent(in) :: ef_scale
+    
+    ! Electric field displacement
+    ! double precision, intent(in) :: df
+
+    ! Display output
+    logical, intent(in) :: verbose
+
+    ! Cosine and sine terms for each atomtype
+    double precision, dimension(:,:,:,:,:), intent(out) :: cosp
+    double precision, dimension(:,:,:,:,:), intent(out) :: sinp
+
+    ! Electric fields for each representation
+    double precision, dimension(:,:), intent(in) :: fields
+
+    ! Internal counters
+    integer :: maxneigh, maxatoms, pmax, nm, a, ni, i
+
+    double precision, allocatable, dimension(:,:,:,:) :: fourier
+    
+    double precision :: t_start, t_end
+
+    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
+    t_start = omp_get_wtime()
+    
+    maxneigh = maxval(nneigh)
+    maxatoms = maxval(na)
+    nm = size(x, dim=1)
+
+    pmax = get_pmax(x, na)
+
+    cosp = 0.0d0
+    sinp = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(ni, fourier) schedule(dynamic)
+    do a = 1, nm
+
+        ni = na(a)
+
+        do i = 1, ni
+
+            fourier = get_threebody_fourier_ef(x(a,i,:,:), fields(a,:), &
+            & nneigh(a, i), order, three_body_power, cut_start, cut_distance, pmax, order, maxneigh, ef_scale)
+
+            cosp(a,i,:,:,:) = fourier(1,:,:,:)
+            sinp(a,i,:,:,:) = fourier(2,:,:,:)
+        enddo
+
+    enddo
+    !$OMP END PARALLEL DO
+
+    t_end = omp_get_wtime()
+    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
+
+end subroutine init_cosp_sinp_ef_field
+
+
+! Calculate the Fourier terms for the FCHL three-body expansion
+function get_threebody_fourier_ef(x, field, neighbors, order, power, cut_start, cut_distance, &
+    & dim1, dim2, dim3, ef_scale) result(fourier)
+
+    implicit none
+
+    ! Input representation, dimension=(5,n).
+    double precision, dimension(:,:), intent(in) :: x
+
+    double precision, dimension(3), intent(in) :: field
+
+    ! Number of neighboring atoms to iterate over.
+    integer, intent(in) :: neighbors
+
+    ! Fourier-expansion order.
+    integer, intent(in) :: order
+
+    ! Power law
+    double precision, intent(in) :: power
+
+    ! Lower limit of damping function
+    double precision, intent(in) :: cut_start
+
+    ! Upper limit of damping function
+    double precision, intent(in) :: cut_distance
+    
+    double precision, intent(in) :: ef_scale
+
+    ! Dimensions or the output array.
+    integer, intent(in) :: dim1, dim2, dim3
+
+    ! dim(1,:,:,:) are cos terms, dim(2,:,:,:) are sine terms.
+    double precision, dimension(2,dim1,dim2,dim3) :: fourier
+
+    ! Pi at double precision.
+    double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
+
+    ! Internal counters.
+    integer :: j, k, m
+
+    ! Indexes for the periodic-table distance matrix.
+    integer :: pj, pk
+
+    ! Angle between atoms for the three-body term.
+    double precision :: theta
+
+    ! Three-body weight
+    double precision :: ksi3
+
+    ! Temporary variables for cos and sine Fourier terms.
+    double precision :: cos_m, sin_m
+
+    fourier = 0.0d0
+
+    do j = 2, neighbors
+        do k = j+1, neighbors
+
+            ksi3 = calc_ksi3_ef(X(:,:), field, j, k, neighbors, power, cut_start, cut_distance, ef_scale)
+            theta = calc_angle(x(3:5, j), x(3:5, 1), x(3:5, k))
+
+            pj =  int(x(2,k))
+            pk =  int(x(2,j))
+
+            do m = 1, order
+
+                cos_m = (cos(m * theta) - cos((theta + pi) * m))*ksi3
+                sin_m = (sin(m * theta) - sin((theta + pi) * m))*ksi3
+
+                fourier(1, pj, m, j) = fourier(1, pj, m, j) + cos_m
+                fourier(2, pj, m, j) = fourier(2, pj, m, j) + sin_m
+
+                fourier(1, pk, m, k) = fourier(1, pk, m, k) + cos_m
+                fourier(2, pk, m, k) = fourier(2, pk, m, k) + sin_m
+
+            enddo
+
+        enddo
+    enddo
+
+    return
+
+end function get_threebody_fourier_ef
+
+
+function calc_ksi3_ef(X, field, j, k, neighbors, power, cut_start, cut_distance, ef_scale) result(ksi3)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: X
+    
+
+    double precision, dimension(3), intent(in) :: field
+
+    integer, intent(in) :: j
+    integer, intent(in) :: k
+    
+    ! Number of neighboring atoms to iterate over.
+    integer, intent(in) :: neighbors
+    
+    double precision, intent(in) :: power
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    double precision, intent(in) :: ef_scale
+
+    double precision :: cos_i, cos_j, cos_k
+    double precision :: di, dj, dk
+
+    double precision :: ksi3
+    double precision :: cut
+
+    ! Center of nuclear charge
+    double precision, dimension(3) :: coz
+    double precision, dimension(3) :: dipole
+    
+    double precision :: total_charge
+
+    integer :: i
+    ! coz
+    ! dipole
+
+    cos_i = calc_cos_angle(x(3:5, k), x(3:5, 1), x(3:5, j))
+    cos_j = calc_cos_angle(x(3:5, j), x(3:5, k), x(3:5, 1))
+    cos_k = calc_cos_angle(x(3:5, 1), x(3:5, j), x(3:5, k))
+
+    dk = x(1, j)
+    dj = x(1, k)
+    di = norm2(x(3:5, j) - x(3:5, k))
+
+
+    cut = cut_function(dk, cut_start, cut_distance) * &
+        & cut_function(dj, cut_start, cut_distance) * &
+        & cut_function(di, cut_start, cut_distance)
+    
+
+    total_charge = 0.0d0
+
+    coz = 0.0d0
+
+    do i = 1, neighbors
+        coz = coz + x(3:5, i) * x(2, i)
+        total_charge = total_charge + x(2, i)
+    enddo
+
+    coz = coz / total_charge
+
+    dipole = (x(3:5, 1) - coz) * x(6, 1) + (x(3:5, j) - coz) * x(6, j) &
+         & + (x(3:5, k) - coz) * x(6, k)
+
+    ! ksi3 = cut * (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power
+
+    ksi3 = cut * ( (1.0d0 + 3.0d0 * cos_i*cos_j*cos_k) / (di * dj * dk)**power &
+       & + ef_scale * dot_product(dipole, field) )
+    
+    ! ksi3 = cut * dot_product(dipole, field)
+
+end function calc_ksi3_ef
+
+function get_twobody_weights_ef(x, field, neighbors, power, cut_start, cut_distance, dim1, ef_scale) result(ksi)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: x
+    double precision, dimension(3), intent(in) :: field
+    integer, intent(in) :: neighbors
+    double precision, intent(in) :: power
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    double precision, intent(in) :: ef_scale
+    integer, intent(in) :: dim1
+
+    double precision, dimension(dim1) :: ksi
+    
+    ! Electric field displacement
+    ! double precision, intent(in) :: df
+
+    integer :: i
+
+    double precision, dimension(3) :: dipole
+
+    ! Center of nuclear charge
+    double precision, dimension(3) :: coz
+    double precision :: total_charge
+
+    ksi = 0.0d0
+   
+    coz = 0.0d0
+    total_charge = 0.0d0
+    do i = 1, neighbors
+        coz = coz + x(3:5, i) * x(2, i)
+        total_charge = total_charge + x(2, i)
+    enddo
+
+    coz = coz / total_charge
+
+    do i = 2, neighbors
+
+        dipole = (x(3:5, 1) - coz) * x(6, 1) + (x(3:5, i) - coz) * x(6, i)
+
+        ksi(i) = cut_function(x(1, i), cut_start, cut_distance) & 
+            & * (1.0d0/ x(1, i)**power + ef_scale * dot_product(dipole, field))
+
+        ! ksi(i) = cut_function(x(1, i), cut_start, cut_distance) & 
+        !     & * (dot_product(dipole, field))
+
+    enddo
+
+end function get_twobody_weights_ef
+
+
+! Code for polarization
+! function get_twobody_weights_pol(x, field, neighbors, power, cut_start, cut_distance, dim1, ef_scale, qidx, df) result(ksi)
+! 
+!     implicit none
+! 
+!     double precision, dimension(:,:), intent(in) :: x
+!     double precision, dimension(3), intent(in) :: field
+!     integer, intent(in) :: neighbors
+!     double precision, intent(in) :: power
+!     double precision, intent(in) :: cut_start
+!     double precision, intent(in) :: cut_distance
+!     double precision, intent(in) :: ef_scale
+!     integer, intent(in) :: dim1
+!     
+!     integer, intent(in) :: qidx 
+! 
+!     ! Electric field displacement
+!     double precision, intent(in) :: df
+! 
+!     double precision, dimension(dim1) :: ksi
+!     
+! 
+!     integer :: i
+! 
+!     double precision, dimension(3) :: dipole
+! 
+!     ! Center of nuclear charge
+!     double precision, dimension(3) :: coz
+!     double precision :: total_charge
+! 
+!     ksi = 0.0d0
+!    
+!     coz = 0.0d0
+!     total_charge = 0.0d0
+!     do i = 1, neighbors
+!         coz = coz + x(3:5, i) * x(2, i)
+!         total_charge = total_charge + x(2, i)
+!     enddo
+! 
+!     coz = coz / total_charge
+! 
+!     write(*,*) "SHAPE", size(x, dim=1), size(x, dim=2)
+!     do i = 2, neighbors
+! 
+!         write(*,*) i, qidx, x(qidx + 5, 1),  x(qidx + 5, i), sum(x(qidx + 5, :))
+! 
+!         dipole = (x(3:5, 1) - coz) * x(qidx + 5, 1) + (x(3:5, i) - coz) * x(qidx + 5, i)
+! 
+!         ! ksi(i) = cut_function(x(1, i), cut_start, cut_distance) & 
+!         !     & * (1.0d0/ x(1, i)**power + ef_scale * dot_product(dipole, field))
+! 
+!         ksi(i) = cut_function(x(1, i), cut_start, cut_distance) & 
+!             & * (dot_product(dipole, field))
+! 
+!     enddo
+! 
+! end function get_twobody_weights_pol
+! 
+! function get_ksi_pol(x, na, nneigh, two_body_power, cut_start, cut_distance, ef_scale, df) result(ksi)
+! 
+!     use omp_lib, only: omp_get_wtime
+! 
+!     implicit none
+! 
+!     ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+!     double precision, dimension(:,:,:,:), intent(in) :: x
+! 
+!     ! List of numbers of atoms in each molecule
+!     integer, dimension(:), intent(in) :: na
+! 
+!     ! Number of neighbors for each atom in each compound
+!     integer, dimension(:,:), intent(in) :: nneigh
+! 
+!     ! Decaying powerlaws for two-body term
+!     double precision, intent(in) :: two_body_power
+! 
+!     ! Fraction of cut_distance at which cut-off starts
+!     double precision, intent(in) :: cut_start
+!     double precision, intent(in) :: cut_distance
+!     
+!     ! Electric field displacement
+!     double precision, intent(in) :: ef_scale
+!     double precision, intent(in) :: df
+! 
+!     ! Pre-computed two-body weights
+!     double precision, allocatable, dimension(:,:,:,:) :: ksi
+! 
+!     ! Internal counters
+!     integer :: maxneigh, maxatoms, nm, a, ni, i, xyz
+! 
+!     ! Electric field
+!     double precision, dimension(3) :: field
+!     
+!     double precision :: t_start, t_end
+! 
+!     write (*,"(A)", advance="no") "TWO-BODY TERMS POLARIZABLE"
+!     t_start = omp_get_wtime()
+! 
+!     maxneigh = maxval(nneigh)
+!     maxatoms = maxval(na)
+!     nm = size(x, dim=1)
+! 
+!     allocate(ksi(nm, 19, maxatoms, maxneigh))
+!     
+!     ksi = 0.0d0
+! 
+!     !  !$OMP PARALLEL DO PRIVATE(ni, field)
+!     do a = 1, nm
+!         ni = na(a)
+!         do xyz = 1, 19
+!                
+!             field(1) = field_displacement(xyz,1) * df
+!             field(2) = field_displacement(xyz,2) * df
+!             field(3) = field_displacement(xyz,3) * df
+! 
+!             do i = 1, ni
+! 
+!                 ksi(a, xyz, i, :) = get_twobody_weights_pol(x(a,i,:,:), field, nneigh(a, i), &
+!                     & two_body_power, cut_start, cut_distance, maxneigh, ef_scale, xyz, df)
+! 
+!             enddo
+!         enddo
+!     enddo
+!     ! !$OMP END PARALLEL do
+!     
+!     t_end = omp_get_wtime()
+!     write (*,"(A,F12.4,A)") "              Time = ", t_end - t_start, " s"
+! 
+! end function get_ksi_pol
+! 
+! subroutine init_cosp_sinp_pol(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, ef_scale, df)
+! 
+!     use omp_lib, only: omp_get_wtime
+! 
+!     implicit none
+! 
+!     ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
+!     double precision, dimension(:,:,:,:), intent(in) :: x
+! 
+!     ! List of numbers of atoms in each molecule
+!     integer, dimension(:), intent(in) :: na
+! 
+!     ! Number of neighbors for each atom in each compound
+!     integer, dimension(:,:), intent(in) :: nneigh
+! 
+!     ! Decaying powerlaws for two-body term
+!     double precision, intent(in) :: three_body_power
+!     
+!     integer, intent(in) :: order
+! 
+!     ! Fraction of cut_distance at which cut-off starts
+!     double precision, intent(in) :: cut_start
+!     double precision, intent(in) :: cut_distance
+!     double precision, intent(in) :: ef_scale
+!     
+!     ! Electric field displacement
+!     double precision, intent(in) :: df
+! 
+!     ! Cosine and sine terms for each atomtype
+!     double precision, dimension(:,:,:,:,:,:), intent(out) :: cosp
+!     double precision, dimension(:,:,:,:,:,:), intent(out) :: sinp
+! 
+! 
+!     ! Internal counters
+!     integer :: maxneigh, maxatoms, pmax, nm, a, ni, i
+! 
+!     double precision, allocatable, dimension(:,:,:,:) :: fourier
+!     
+!     double precision :: t_start, t_end
+!     
+!     ! Internal counters
+!     integer :: xyz
+! 
+!     ! Electric field
+!     double precision, dimension(3) :: field
+!     
+!     write (*,"(A)", advance="no") "THREE-BODY TERMS POLARIZABLE"
+!     t_start = omp_get_wtime()
+!     
+!     maxneigh = maxval(nneigh)
+!     maxatoms = maxval(na)
+!     nm = size(x, dim=1)
+! 
+!     pmax = get_pmax(x, na)
+! 
+!     cosp = 0.0d0
+!     sinp = 0.0d0
+! 
+!     ! !$OMP PARALLEL DO PRIVATE(ni, fourier, field) schedule(dynamic)
+!     do a = 1, nm
+!         ni = na(a)
+!         do xyz = 1, 19
+!                
+!             field(1) = field_displacement(xyz,1) * df
+!             field(2) = field_displacement(xyz,2) * df
+!             field(3) = field_displacement(xyz,3) * df
+!             ! write(*,*) xyz, field_displacement(xyz,:), field
+! 
+!             do i = 1, ni
+! 
+!                 fourier = get_threebody_fourier_ef(x(a,i,:,:), field, &
+!                 & nneigh(a, i), order, three_body_power, cut_start, cut_distance, pmax, order, maxneigh, ef_scale)
+! 
+!                 cosp(a,xyz,i,:,:,:) = fourier(1,:,:,:)
+!                 sinp(a,xyz,i,:,:,:) = fourier(2,:,:,:)
+!             
+!             enddo
+!         enddo
+!     enddo
+!     ! !$OMP END PARALLEL DO
+! 
+!     t_end = omp_get_wtime()
+!     write (*,"(A,F12.4,A)") "            Time = ", t_end - t_start, " s"
+! 
+! end subroutine init_cosp_sinp_pol
+
+function get_twobody_weights_ef_field(x, field, neighbors, power, cut_start, cut_distance, dim1, ef_scale) result(ksi)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: x
+    double precision, dimension(3), intent(in) :: field
+    integer, intent(in) :: neighbors
+    double precision, intent(in) :: power
+    double precision, intent(in) :: cut_start
+    double precision, intent(in) :: cut_distance
+    double precision, intent(in) :: ef_scale
+    integer, intent(in) :: dim1
+
+    double precision, dimension(dim1) :: ksi
+    
+    ! Electric field displacement
+    ! double precision, intent(in) :: df
+
+    integer :: i
+
+    double precision, dimension(3) :: dipole
+
+    ! Center of nuclear charge
+    double precision, dimension(3) :: coz
+    double precision :: total_charge
+
+    ksi = 0.0d0
+   
+    coz = 0.0d0
+    total_charge = 0.0d0
+    do i = 1, neighbors
+        coz = coz + x(3:5, i) * x(2, i)
+        total_charge = total_charge + x(2, i)
+    enddo
+
+    coz = coz / total_charge
+
+    do i = 2, neighbors
+
+        dipole = (x(3:5, 1) - coz) * x(6, 1) + (x(3:5, i) - coz) * x(6, i)
+
+        ksi(i) = cut_function(x(1, i), cut_start, cut_distance) & 
+            & * (1.0d0/ x(1, i)**power + ef_scale * dot_product(dipole, field))
+
+    enddo
+
+end function get_twobody_weights_ef_field
+
 end module ffchl_module
+
