@@ -2228,7 +2228,7 @@ class ARMP(_NN):
             y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1], name="Properties")
 
             dataset = tf.data.Dataset.from_tensor_slices((x_ph, zs_ph, y_ph))
-            dataset = dataset.shuffle(buffer_size=self.n_samples)
+            dataset = dataset.shuffle(buffer_size=3*batch_size)
             dataset = dataset.batch(batch_size)
             # batched_dataset = dataset.prefetch(buffer_size=batch_size)
 
@@ -2257,7 +2257,6 @@ class ARMP(_NN):
 
         with tf.name_scope("Cost_func"):
             cost = self._cost(molecular_energies, tf_y, element_weights)
-            print(cost)
 
         if self.tensorboard:
             cost_summary = self.tensorboard_logger_training.write_cost_summary(cost)
