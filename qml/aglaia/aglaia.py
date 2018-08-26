@@ -1646,7 +1646,6 @@ class ARMP(_NN):
 
         return representation, classes
 
-    # TODO modify so that it uses the new map function
     def _generate_acsf_from_data(self, xyz, classes):
         """
         This function generates the acsf from the cartesian coordinates and the classes.
@@ -1658,23 +1657,8 @@ class ARMP(_NN):
         :return: representation acsf
         :rtype: numpy array of shape (n_samples, n_atoms, n_features)
         """
-        mbtypes = qml_rep.get_slatm_mbtypes([classes[i] for i in range(classes.shape[0])])
 
-        elements = []
-        element_pairs = []
-
-        # Splitting the one and two body interactions in mbtypes
-        for item in mbtypes:
-            if len(item) == 1:
-                elements.append(item[0])
-            if len(item) == 2:
-                element_pairs.append(list(item))
-            if len(item) == 3:
-                break
-
-        # Need the element pairs in descending order for TF
-        for item in element_pairs:
-            item.reverse()
+        elements, element_pairs = self._get_elements_and_pairs(classes)
 
         if self.tensorboard:
             run_metadata = tf.RunMetadata()
@@ -1958,7 +1942,7 @@ class ARMP(_NN):
         :rtype: tf tensor of shape (n_samples, 1)
         """
 
-        atomic_energies = tf.zeros_like(zs)
+        atomic_energies = tf.zeros_like(zs, dtype=tf.float32)
 
         for i in range(self.elements.shape[0]):
 
@@ -1971,7 +1955,7 @@ class ARMP(_NN):
             where_element = tf.equal(tf.cast(zs, dtype=tf.int32), current_element)  # (n_samples, n_atoms)
 
             # Extracting the energies corresponding to the right element
-            element_energies = tf.where(where_element, atomic_energies_all, tf.zeros_like(zs))
+            element_energies = tf.where(where_element, atomic_energies_all, tf.zeros_like(zs, dtype=tf.float32))
 
             # Adding the energies of the current element to the final atomic energies tensor
             atomic_energies = tf.add(atomic_energies, element_energies)
@@ -2147,6 +2131,36 @@ class ARMP(_NN):
                 except Exception:
                     raise InputError("Unrecognised parameter for acsf representation: %s" % (key))
 
+    def _get_elements_and_pairs(self, classes):
+        """
+        This function generates the atom centred symmetry functions.
+        :param classes: The different types of atoms present in the system
+        :type classes: numpy array of shape (n_samples, n_atoms)
+        :return: elements and element pairs in the system
+        :rtype: numpy array of shape (n_elements,) and (n_element_pairs)
+        """
+
+        # Obtaining the total elements and the element pairs
+        mbtypes = qml_rep.get_slatm_mbtypes(classes)
+
+        elements = []
+        element_pairs = []
+
+        # Splitting the one and two body interactions in mbtypes
+        for item in mbtypes:
+            if len(item) == 1:
+                elements.append(item[0])
+            if len(item) == 2:
+                element_pairs.append(list(item))
+            if len(item) == 3:
+                break
+
+        # Need the element pairs in descending order for TF
+        for item in element_pairs:
+            item.reverse()
+
+        return np.asarray(elements), np.asarray(element_pairs)
+
     def _find_elements(self, zs):
         """
         This function finds the unique atomic numbers in Zs and returns them in a list.
@@ -2203,7 +2217,7 @@ class ARMP(_NN):
         x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
 
         # Obtaining the array of unique elements in all samples
-        self.elements = self._find_elements(classes_approved)
+        self.elements, self.element_pairs = self._get_elements_and_pairs(classes_approved)
 
         if self.tensorboard:
             self.tensorboard_logger_training.initialise()
@@ -2228,15 +2242,12 @@ class ARMP(_NN):
             y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1], name="Properties")
 
             dataset = tf.data.Dataset.from_tensor_slices((x_ph, zs_ph, y_ph))
-            dataset = dataset.shuffle(buffer_size=3*batch_size)
+            # dataset = dataset.shuffle(buffer_size=3*batch_size)
             dataset = dataset.batch(batch_size)
             # batched_dataset = dataset.prefetch(buffer_size=batch_size)
 
             iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
             tf_x, tf_zs, tf_y = iterator.get_next()
-            # tf_x = tf.identity(tf_x, name="Descriptors")
-            # tf_zs = tf.identity(tf_zs, name="Atomic-numbers")
-            # tf_y = tf.identity(tf_y, name="Properties")
 
         # Creating dictionaries of the weights and biases for each element
         element_weights = {}
@@ -2300,6 +2311,8 @@ class ARMP(_NN):
 
             self.training_cost.append(avg_cost/n_batches)
 
+        self._build_model_from_xyz(self.n_atoms, element_weights, element_biases)
+
     def _fit_from_loaded(self, x, y, dy, classes):
         """
        This function carries on fitting an atomic decomposed network to the data after it has been loaded.
@@ -2362,6 +2375,40 @@ class ARMP(_NN):
                                      feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved})
                     self.tensorboard_logger_training.write_summary(self.session, i)
 
+    def _build_model_from_xyz(self, n_atoms, element_weights, element_biases):
+        """
+        This function builds a model that makes it possible to predict energies straight from xyz data. It constructs the
+        graph needed to do this.
+
+        :param n_atoms: number of atoms
+        :param element_weights: the dictionary of the trained weights in the model
+        :param element_biases: the dictionary of trained biases in the model
+        """
+
+        with tf.name_scope("Inputs_pred"):
+            zs_tf = tf.placeholder(shape=[None, n_atoms], dtype=tf.int32, name="Classes")
+            xyz_tf = tf.placeholder(shape=[None, n_atoms, 3], dtype=tf.float32, name="xyz")
+
+            dataset = tf.data.Dataset.from_tensor_slices((xyz_tf, zs_tf))
+            dataset = dataset.batch(2)
+            iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
+            batch_xyz, batch_zs = iterator.get_next()
+            iterator_init = iterator.make_initializer(dataset, name="dataset_init_pred")
+
+        with tf.name_scope("Descriptor_pred"):
+            batch_representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=self.elements,
+                                                          element_pairs=self.element_pairs,
+                                                          radial_cutoff=self.acsf_parameters['radial_cutoff'],
+                                                          angular_cutoff=self.acsf_parameters['angular_cutoff'],
+                                                          radial_rs=self.acsf_parameters['radial_rs'],
+                                                          angular_rs=self.acsf_parameters['angular_rs'],
+                                                          theta_s=self.acsf_parameters['theta_s'],
+                                                          eta=self.acsf_parameters['eta'],
+                                                          zeta=self.acsf_parameters['zeta'])
+
+        with tf.name_scope("Model_pred"):
+            batch_energies_nn = self._model(batch_representation, batch_zs, element_weights, element_biases)
+
     def _predict(self, x, classes):
         """
         This function checks whether x contains indices or data. If it contains indices, the data is extracted by the
@@ -2378,6 +2425,7 @@ class ARMP(_NN):
         """
 
         approved_x, approved_classes = self._check_predict_input(x, classes)
+        empty_ene = np.empty((approved_x.shape[0], 1))
 
         if self.session == None:
             raise InputError("Model needs to be fit before predictions can be made.")
@@ -2387,10 +2435,57 @@ class ARMP(_NN):
         with graph.as_default():
             tf_x = graph.get_tensor_by_name("Data/Descriptors:0")
             tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
+            tf_true_ene = graph.get_tensor_by_name("Data/Properties:0")
             model = graph.get_tensor_by_name("Model/output:0")
-            y_pred = self.session.run(model, feed_dict={tf_x: approved_x, tf_zs:approved_classes})
+            dataset_init_op = graph.get_operation_by_name("dataset_init")
+            self.session.run(dataset_init_op, feed_dict={tf_x: approved_x, tf_zs: approved_classes, tf_true_ene: empty_ene})
 
-        return y_pred
+        tot_y_pred = []
+
+        while True:
+            try:
+                y_pred = self.session.run(model)
+                tot_y_pred.append(y_pred)
+            except tf.errors.OutOfRangeError:
+                break
+
+        return np.concatenate(tot_y_pred, axis=0)
+
+    def predict_from_xyz(self, xyz, classes):
+        """
+        This function takes in the cartesian coordinates and the atom types and returns energies.
+
+        :param xyz: cartesian coordinates
+        :type xyz: numpy array of shape (n_samples, n_atoms, 3)
+        :param classes: atom types
+        :type classes: numpy array of shape (n_samples, n_atoms)
+        :return: energies
+        :rtype: numpy array of shape  (n_samples,)
+        """
+
+        if self.session == None:
+            raise InputError("Model needs to be fit before predictions can be made.")
+
+        graph = tf.get_default_graph()
+
+        with graph.as_default():
+            xyz_tf = graph.get_tensor_by_name("Inputs_pred/xyz:0")
+            classes_tf = graph.get_tensor_by_name("Inputs_pred/Classes:0")
+            ene_nn = graph.get_tensor_by_name("Model_pred/output:0")
+            dataset_init_op = graph.get_operation_by_name("Inputs_pred/dataset_init_pred")
+            self.session.run(dataset_init_op,
+                             feed_dict={xyz_tf: xyz, classes_tf: classes})
+
+        tot_y_pred = []
+
+        while True:
+            try:
+                y_pred = self.session.run(ene_nn)
+                tot_y_pred.append(y_pred)
+            except tf.errors.OutOfRangeError:
+                break
+
+        return np.concatenate(tot_y_pred, axis=0).ravel()
 
     def _score_r2(self, x, y=None, dy=None, classes=None):
         """
