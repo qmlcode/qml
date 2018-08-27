@@ -30,6 +30,7 @@ from qml.aglaia.aglaia import ARMP
 from qml.aglaia.utils import InputError
 import glob
 import os
+import shutil
 
 def test_set_representation():
     """
@@ -198,6 +199,105 @@ def test_predict_3():
 
     assert energies.shape == energies_pred.shape
 
+def test_predict_fromxyz():
+    """
+    This test checks that the predictions from the "predict" and the "predict_from_xyz" functions are the same.
+    It also checks that if the model is saved, when the model is reloaded the predictions are still the same.
+    """
+
+    xyz = np.array([[[0, 1, 0], [0, 1, 1], [1, 0, 1]],
+           [[1, 2, 2], [3, 1, 2], [1, 3, 4]],
+           [[4, 1, 2], [0.5, 5, 6], [-1, 2, 3]]])
+    zs = np.array([[1, 2, 3],
+          [1, 2, 3],
+          [1, 2, 3]])
+
+    ene_true = np.array([0.5, 0.9, 1.0])
+
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
+                    representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+                                           "theta_s": np.arange(0, 3.14, 3)})
+
+    estimator.set_properties(ene_true)
+    estimator.generate_representation(xyz, zs)
+
+    idx = list(range(xyz.shape[0]))
+
+    estimator.fit(idx)
+
+    pred1 = estimator.predict(idx)
+    pred2 = estimator.predict_from_xyz(xyz, zs)
+
+    assert np.all(pred1 == pred2)
+
+    estimator.save_nn(save_dir="temp")
+
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
+                    representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+                                           "theta_s": np.arange(0, 3.14, 3)})
+
+    new_estimator.load_nn(save_dir="temp")
+
+    new_estimator.set_properties(ene_true)
+    new_estimator.generate_representation(xyz, zs)
+
+    pred3 = new_estimator.predict(idx)
+    pred4 = new_estimator.predict_from_xyz(xyz, zs)
+
+    assert np.all(pred3 == pred4)
+    assert np.all(pred1 == pred3)
+
+    shutil.rmtree("temp")
+
+def test_retraining():
+    xyz = np.array([[[0, 1, 0], [0, 1, 1], [1, 0, 1]],
+                    [[1, 2, 2], [3, 1, 2], [1, 3, 4]],
+                    [[4, 1, 2], [0.5, 5, 6], [-1, 2, 3]]])
+    zs = np.array([[1, 2, 3],
+                   [1, 2, 3],
+                   [1, 2, 3]])
+
+    ene_true = np.array([0.5, 0.9, 1.0])
+
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
+                     representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+                                            "theta_s": np.arange(0, 3.14, 3)})
+
+    estimator.set_properties(ene_true)
+    estimator.generate_representation(xyz, zs)
+
+    idx = list(range(xyz.shape[0]))
+
+    estimator.fit(idx)
+    estimator.save_nn(save_dir="temp")
+
+    pred1 = estimator.predict(idx)
+
+    estimator.loaded_model = True
+
+    estimator.fit(idx)
+
+    pred2 = estimator.predict(idx)
+
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
+                     representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+                                            "theta_s": np.arange(0, 3.14, 3)})
+    new_estimator.set_properties(ene_true)
+    new_estimator.generate_representation(xyz, zs)
+
+    new_estimator.load_nn("temp")
+
+    pred3 = new_estimator.predict(idx)
+
+    new_estimator.fit(idx)
+
+    pred4 = new_estimator.predict(idx)
+
+    assert np.all(pred1 == pred3)
+    assert np.all(pred2 == pred4)
+
+    shutil.rmtree("temp")
+
 if __name__ == "__main__":
     test_set_representation()
     test_set_properties()
@@ -207,3 +307,5 @@ if __name__ == "__main__":
     test_fit_3()
     test_score_3()
     test_predict_3()
+    test_predict_fromxyz()
+    test_retraining()

@@ -1713,11 +1713,9 @@ class ARMP(_NN):
                     representation_slices.append(representation_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
-                    print("Generated all the representations.")
                     break
 
         representation_conc = np.concatenate(representation_slices, axis=0)
-        print("The representation has shape %s." % (str(representation_conc.shape)))
 
         sess.close()
 
@@ -2360,6 +2358,7 @@ class ARMP(_NN):
             tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
             tf_ene = graph.get_tensor_by_name("Data/Properties:0")
             cost = graph.get_tensor_by_name("Cost_func/add_13:0")
+            tf_buffer = graph.get_tensor_by_name("Data/buffer:0")
 
             optimisation_op = graph.get_operation_by_name("optimisation_op")
             dataset_init_op = graph.get_operation_by_name("dataset_init")
@@ -2368,7 +2367,13 @@ class ARMP(_NN):
             cost_summary = self.tensorboard_logger_training.write_cost_summary(cost)
 
         for i in range(self.iterations):
-            self.session.run(dataset_init_op, feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved})
+
+            if i % 2 == 0:
+                buff = int(3.5 * batch_size)
+            else:
+                buff = int(4.5 * batch_size)
+
+            self.session.run(dataset_init_op, feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved, tf_buffer: buff})
 
             for j in range(n_batches):
                 if self.tensorboard:
@@ -2380,7 +2385,7 @@ class ARMP(_NN):
             if self.tensorboard:
                 if i % self.tensorboard_logger_training.store_frequency == 0:
                     self.session.run(dataset_init_op,
-                                     feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved})
+                                     feed_dict={tf_x: x_approved, tf_zs: classes_approved, tf_ene: y_approved, tf_buffer: buff})
                     self.tensorboard_logger_training.write_summary(self.session, i)
 
     def _build_model_from_xyz(self, n_atoms, element_weights, element_biases):
