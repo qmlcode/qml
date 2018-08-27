@@ -2240,9 +2240,10 @@ class ARMP(_NN):
             x_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms, self.n_features], name="Descriptors")
             zs_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms], name="Atomic-numbers")
             y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1], name="Properties")
+            buffer_tf = tf.placeholder(dtype=tf.int64, name="buffer")
 
             dataset = tf.data.Dataset.from_tensor_slices((x_ph, zs_ph, y_ph))
-            # dataset = dataset.shuffle(buffer_size=3*batch_size)
+            dataset = dataset.shuffle(buffer_size=buffer_tf)
             dataset = dataset.batch(batch_size)
             # batched_dataset = dataset.prefetch(buffer_size=batch_size)
 
@@ -2286,11 +2287,15 @@ class ARMP(_NN):
             self.tensorboard_logger_training.set_summary_writer(self.session)
 
         self.session.run(init)
-        self.session.run(iterator_init, feed_dict={x_ph:x_approved, zs_ph:classes_approved, y_ph:y_approved})
 
         for i in range(self.iterations):
 
-            self.session.run(iterator_init, feed_dict={x_ph: x_approved, zs_ph: classes_approved, y_ph: y_approved})
+            if i % 2 == 0:
+                buff = int(3.5 * batch_size)
+            else:
+                buff = int(4.5 * batch_size)
+
+            self.session.run(iterator_init, feed_dict={x_ph: x_approved, zs_ph: classes_approved, y_ph: y_approved, buffer_tf:buff})
             avg_cost = 0
 
             for j in range(n_batches):
@@ -2304,9 +2309,12 @@ class ARMP(_NN):
 
             # This seems to run the iterator.get_next() op, which gives problems with end of sequence
             # Hence why I re-initialise the iterator
-            self.session.run(iterator_init, feed_dict={x_ph: x_approved, zs_ph: classes_approved, y_ph: y_approved})
+
             if self.tensorboard:
                 if i % self.tensorboard_logger_training.store_frequency == 0:
+                    self.session.run(iterator_init,
+                                     feed_dict={x_ph: x_approved, zs_ph: classes_approved, y_ph: y_approved,
+                                                buffer_tf: buff})
                     self.tensorboard_logger_training.write_summary(self.session, i)
 
             self.training_cost.append(avg_cost/n_batches)
@@ -2436,9 +2444,10 @@ class ARMP(_NN):
             tf_x = graph.get_tensor_by_name("Data/Descriptors:0")
             tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
             tf_true_ene = graph.get_tensor_by_name("Data/Properties:0")
+            tf_buffer =  graph.get_tensor_by_name("Data/buffer:0")
             model = graph.get_tensor_by_name("Model/output:0")
             dataset_init_op = graph.get_operation_by_name("dataset_init")
-            self.session.run(dataset_init_op, feed_dict={tf_x: approved_x, tf_zs: approved_classes, tf_true_ene: empty_ene})
+            self.session.run(dataset_init_op, feed_dict={tf_x: approved_x, tf_zs: approved_classes, tf_true_ene: empty_ene, tf_buffer:1})
 
         tot_y_pred = []
 
