@@ -1661,8 +1661,7 @@ class ARMP(_NN):
         elements, element_pairs = self._get_elements_and_pairs(classes)
 
         if self.tensorboard:
-            run_metadata = tf.RunMetadata()
-            options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            self.tensorboard_logger_representation.initialise()
 
         n_samples = xyz.shape[0]
         max_n_atoms = xyz.shape[1]
@@ -1692,14 +1691,14 @@ class ARMP(_NN):
         representation_slices = []
 
         if self.tensorboard:
-            summary_writer = tf.summary.FileWriter(logdir="tensorboard", graph=sess.graph)
+            self.tensorboard_logger_representation.set_summary_writer(sess)
 
             batch_counter = 0
             while True:
                 try:
-                    representation_np = sess.run(representation, options=options, run_metadata=run_metadata)
-                    summary_writer.add_run_metadata(run_metadata=run_metadata, tag="batch %s" % batch_counter,
-                                                    global_step=None)
+                    representation_np = sess.run(representation, options=self.tensorboard_logger_representation.options,
+                                                 run_metadata=self.tensorboard_logger_representation.run_metadata)
+                    self.tensorboard_logger_representation.write_metadata(batch_counter)
                     representation_slices.append(representation_np)
                     batch_counter += 1
                 except tf.errors.OutOfRangeError:
