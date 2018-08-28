@@ -36,6 +36,7 @@ from ..ml.representations.frepresentations import fgenerate_local_coulomb_matrix
 from ..ml.representations.frepresentations import fgenerate_atomic_coulomb_matrix
 from ..ml.representations.representations import get_slatm_mbtypes
 from ..ml.representations.representations import generate_slatm
+from ..ml.representations.facsf import fgenerate_acsf
 
 class _BaseRepresentation(BaseEstimator):
     """
@@ -460,6 +461,7 @@ class _SLATM(object):
 
         return self.data
 
+# TODO add reference
 class GlobalSLATM(_SLATM, _MolecularRepresentation):
     """
     Global version of SLATM.
@@ -541,6 +543,7 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
 
         return self.fit(X).transform(X).representations
 
+# TODO add reference
 class AtomicSLATM(_SLATM, _AtomicRepresentation):
     """
     Local version of SLATM.
@@ -621,3 +624,90 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         """
 
         return self.fit(X).transform(X).representations
+
+class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
+    """
+    The variant of Atom-Centered Symmetry Functions used in 10.1039/C7SC04934J
+
+
+    """
+
+    _representation_short_name = "acsf"
+
+    def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0):
+        """
+        :param data: Optional Data object containing all molecules used in training \
+                and/or prediction
+        :type data: Data object
+        :param nbasis: Number of basis functions to use
+        :type nbasis: integer
+        :param cutoff: Cutoff radius
+        :type cutoff: float
+        :param precision: Precision in the basis functions. A value of 2 corresponds to the \
+                        basis functions intersecting at half maximum. Higher values makes \
+                        the basis functions narrower.
+        :type precision: float
+        """
+
+        self.data = data
+        self.nbasis = nbasis
+        self.precision = precision
+        self.cutoff = cutoff
+
+    def fit(self, X, y=None):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+        self._preprocess_input(X)
+
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+
+        self.elements = get_unique(nuclear_charges)
+
+        return self
+
+    def transform(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Data object
+        :rtype: Data object
+        """
+
+        self._preprocess_input(X)
+
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+        coordinates = self.data.coordinates[self.data.indices]
+        natoms = self.data.natoms[self.data.indices]
+
+        # Check that the molecules being transformed doesn't contain elements
+        # not used in the fit.
+        self._check_elements(nuclear_charges)
+
+        # Calculate parameters needed for fortran input.
+        min_distance = 0.8
+        Rs = np.linspace(min_distance, cutoff, nbasis)
+        eta = 4 * np.log(self.precision) * ((self.nbasis-1)/(self.cutoff-min_distance))**2
+        Ts = np.linspace(0, np.pi, nbasis)
+        zeta = - np.log(self.precision) / np.log(np.cos(np.pi / (4 * (self.nbasis - 1)))**2)
+        nelements = len(self.elements)
+        size = nelements * self.nbasis + (n_elements * (n_elements + 1)) // 2 * self.nbasis ** 2
+
+        representations = []
+        for charge, xyz in zip(nuclear_charges, coordinates):
+            representations.append(
+                    np.asarray(
+                        fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
+                            eta, eta, zeta, cutoff, cutoff, natoms, size)))
+
+        self.data.representations = np.asarray(representations)
+
+        return self.data
+
