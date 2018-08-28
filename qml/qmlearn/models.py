@@ -43,7 +43,7 @@ class _BaseModel(BaseEstimator):
     def predict(self, X):
         return NotImplementedError
 
-    def score(self, X, y=None, multioutput = False):
+    def score(self, X, y=None):
         """
         Make predictions on `X` and return a score
 
@@ -51,8 +51,6 @@ class _BaseModel(BaseEstimator):
         :type X: object
         :param y: Energies
         :type y: array
-        :param multioutput: Return the score for each sample or an averaged score.
-        :type multioutput: bool
         :return: score
         :rtype: float
         """
@@ -75,33 +73,24 @@ class _BaseModel(BaseEstimator):
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
 
-        # Translate bool to string for sklearn
-        if multioutput:
-            multioutput = 'uniform_average'
-        else:
-            multioutput = 'raw_values'
-
         # Return the score
         if self.scoring == 'mae':
-            return mean_absolute_error(y, y_pred, multioutput=multioutput)
+            return mean_absolute_error(y, y_pred)
         elif self.scoring == 'neg_mae':
-            return - mean_absolute_error(y, y_pred, multioutput=multioutput)
+            return - mean_absolute_error(y, y_pred)
         elif self.scoring == 'rmsd':
-            return np.sqrt(mean_squared_error(y, y_pred, multioutput=multioutput))
+            return np.sqrt(mean_squared_error(y, y_pred))
         elif self.scoring == 'neg_rmsd':
-            return - np.sqrt(mean_squared_error(y, y_pred, multioutput=multioutput))
+            return - np.sqrt(mean_squared_error(y, y_pred))
         elif self.scoring == 'neg_log_mae':
-            return - np.log(mean_absolute_error(y, y_pred, multioutput=multioutput))
-
-
-
+            return - np.log(mean_absolute_error(y, y_pred))
 
 class KernelRidgeRegression(_BaseModel):
     """
     Standard Kernel Ridge Regression using a cholesky solver
     """
 
-    def __init__(self, l2_reg=1e-10, scoring = 'neg_mae'):
+    def __init__(self, l2_reg=1e-10, scoring='neg_mae'):
         """
         :param llambda: l2 regularization
         :type llambda: float

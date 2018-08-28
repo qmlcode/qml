@@ -24,7 +24,7 @@ class Data(object):
 
         self.property_type = property_type
 
-        self.ncompounds = 0
+        self._set_ncompounds(0)
         self.coordinates = None
         self.nuclear_charges = None
         self.natoms = None
@@ -61,6 +61,8 @@ class Data(object):
 
     # Hack for sklearn CV but also convenience
     def __len__(self):
+        if hasattr(self, 'indices'):
+            return len(self.indices)
         return self.ncompounds
 
     # Hack for sklearn CV but also convenience
@@ -84,14 +86,12 @@ class Data(object):
 
         return True
 
-
     # Hack for sklearn CV but also convenience
     def __ne__(self, other):
         """
         Overrides the != operator (unnecessary in Python 3)
         """
         return not self.__eq__(other)
-
 
     def set_energies(self, energies):
         self.energies = energies
@@ -101,7 +101,7 @@ class Data(object):
         Parse a list of xyz files.
         """
 
-        self.ncompounds = len(filenames)
+        self._set_ncompounds(len(filenames))
         self.coordinates = np.empty(self.ncompounds, dtype=object)
         self.nuclear_charges = np.empty(self.ncompounds, dtype=object)
         self.natoms = np.empty(self.ncompounds, dtype = int)

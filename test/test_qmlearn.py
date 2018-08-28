@@ -3,7 +3,7 @@ from qml.qmlearn.representations import *
 from qml.qmlearn.kernels import *
 from qml.qmlearn.models import *
 import numpy as np
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.model_selection import GridSearchCV
 import copy
 
@@ -15,18 +15,17 @@ import copy
 # molecular properties
 
 if __name__ == "__main__":
-    train_data = Data(filenames="qm7/0*.xyz")
+    train_data = Data(filenames="qm7/*.xyz")
     train_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:train_data.ncompounds]
     train_data.set_energies(train_energies)
-    test_data = Data(filenames="qm7/1*.xyz")
-    #test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
-    #test_data.set_energies(test_energies)
+    test_data = Data(filenames="qm7/00*.xyz")
+    test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
+    test_data.set_energies(test_energies)
 
-    model = make_pipeline(GlobalSLATM(), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6))#, memory='/dev/shm')
-    model.fit(train_data)
-    y = model.predict(test_data)
-    print(y.shape)
-    quit()
+    #model = make_pipeline(AtomicSLATM(), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
+    ##model = make_pipeline(CoulombMatrix(data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
+    #model.fit(test_data)
+    #y = model.score(test_data)
     #rep = AtomicCoulombMatrix().generate(train_data)
     #kernel = GaussianKernel().generate(rep[:100], rep[:50], representation_type='atomic')
 
@@ -59,10 +58,10 @@ if __name__ == "__main__":
     #print(predictions.shape)
 
     # Gridsearch CV of hyperparams
-    params = {
-              'atomiccoulombmatrix__sorting': ['distance', 'row-norm'],
-              'gaussiankernel__sigma': [77, 100, 300],
-              'kernelridgeregression__l2_reg': [1e-6,1e-4]
+    params = {'representation': [GlobalSLATM(train_data), AtomicSLATM(train_data)],
+              'representation__alchemy': [True, False],
+              'kernel__sigma': [100, 300, 1000, 3000],
+              'model__l2_reg': [1e-8, 1e-6, 1e-4]
              }
 
     #grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
@@ -77,6 +76,7 @@ if __name__ == "__main__":
     #print(predictions.shape)
 
     # Gridsearch CV of hyperparams
+    model = Pipeline([('representation', CoulombMatrix()), ('kernel',GaussianKernel(sigma=30)), ('model', KernelRidgeRegression(l2_reg=1e-6))])
     grid = GridSearchCV(model, cv=3, refit=False, param_grid = params, verbose=2)
 
     idx = np.arange(len(train_data))

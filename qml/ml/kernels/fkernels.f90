@@ -408,6 +408,78 @@ subroutine fget_vector_kernels_gaussian_symmetric(q, n, sigmas, &
 
 end subroutine fget_vector_kernels_gaussian_symmetric
 
+subroutine fget_vector_kernels_laplacian_symmetric(q, n, sigmas, &
+        & nm, nsigmas, kernels)
+
+    implicit none
+
+    ! Representations (rep_size, n_samples, n_max_atoms)
+    double precision, dimension(:,:,:), intent(in) :: q
+
+    ! List of numbers of atoms in each molecule
+    integer, dimension(:), intent(in) :: n
+
+    ! Sigma in the Laplacian kernel
+    double precision, dimension(:), intent(in) :: sigmas
+
+    ! Number of molecules
+    integer, intent(in) :: nm
+
+    ! Number of sigmas
+    integer, intent(in) :: nsigmas
+
+    ! Resulting kernels
+    double precision, dimension(nsigmas,nm,nm), intent(out) :: kernels
+
+    ! Temporary variables necessary for parallelization
+    double precision, allocatable, dimension(:,:) :: atomic_distance
+    double precision, allocatable, dimension(:) :: inv_sigma2
+
+    ! Internal counters
+    integer :: i, j, k, ni, nj, ia, ja
+    double precision :: val
+
+    allocate(inv_sigma2(nsigmas))
+
+    inv_sigma2 = -1.0d0 / sigmas
+
+    kernels = 1.0d0
+
+    i = size(q, dim=3)
+    allocate(atomic_distance(i,i))
+    atomic_distance(:,:) = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(atomic_distance,ni,nj,ja,ia,val) SCHEDULE(dynamic)
+    do j = 1, nm
+        nj = n(j)
+        do i = j, nm
+            ni = n(i)
+
+            atomic_distance(:,:) = 0.0d0
+
+            do ja = 1, nj
+                do ia = 1, ni
+
+                    atomic_distance(ia,ja) = sum(abs(q(:,ia,i) - q(:,ja,j)))
+
+                enddo
+            enddo
+
+            do k = 1, nsigmas
+                val = sum(exp(atomic_distance(:ni,:nj) * inv_sigma2(k)))
+                kernels(k, i, j) = val
+                kernels(k, j, i) = val
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(atomic_distance)
+    deallocate(inv_sigma2)
+
+end subroutine fget_vector_kernels_laplacian_symmetric
+
 subroutine fgaussian_kernel(a, na, b, nb, k, sigma)
 
     implicit none
@@ -509,6 +581,38 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 
 end subroutine flaplacian_kernel
 
+subroutine flaplacian_kernel_symmetric(x, n, k, sigma)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: x
+
+    integer, intent(in) :: n
+
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, intent(in) :: sigma
+
+    double precision :: val
+
+    double precision :: inv_sigma
+    integer :: i, j
+
+    inv_sigma = -1.0d0 / sigma
+
+    k = 1.0d0
+
+    !$OMP PARALLEL DO PRIVATE(val) SCHEDULE(dynamic)
+    do i = 1, n
+        do j = i+1, n
+            val = exp(inv_sigma * sum(abs(x(:,j) - x(:,i))))
+            k(j,i) = val
+            k(i,j) = val
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+
+end subroutine flaplacian_kernel_symmetric
 
 subroutine flinear_kernel(a, na, b, nb, k)
 

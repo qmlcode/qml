@@ -57,18 +57,6 @@ class _BaseRepresentation(BaseEstimator):
         """
         raise NotImplementedError
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
 
     def _preprocess_input(self, X):
         """
@@ -95,6 +83,8 @@ class _BaseRepresentation(BaseEstimator):
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
+
+        self._set_representation_type()
 
     def _set_data(self, data):
         if data and data.natoms is None:
@@ -191,7 +181,6 @@ class CoulombMatrix(_MolecularRepresentation):
         :rtype: object
         """
         self._preprocess_input(X)
-        self._set_representation_type()
 
         natoms = self.data.natoms[self.data.indices]
 
@@ -239,6 +228,19 @@ class CoulombMatrix(_MolecularRepresentation):
         self.data.representations = np.asarray(representations)
 
         return self.data
+
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
 
 # TODO add reference
 # TODO add support for atomic properties
@@ -342,7 +344,6 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :rtype: object
         """
         self._preprocess_input(X)
-        self._set_representation_type()
 
         ## Giving indices doesn't make sense when predicting energies
         #if self.data.property_type == 'energies' and not is_none(self.indices):
@@ -388,7 +389,78 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
 
         return self.data
 
-class GlobalSLATM(_MolecularRepresentation):
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
+
+class _SLATM(object):
+    """
+    Routines for global and local SLATM
+    """
+
+    def _fit(self, X, y=None):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+        self._preprocess_input(X)
+
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+
+        self.elements = get_unique(nuclear_charges)
+        self.mbtypes = get_slatm_mbtypes(nuclear_charges)
+
+        return self
+
+    def _transform(self, X, local):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param local: Use local or global version
+        :type local: bool
+        :return: Data object
+        :rtype: Data object
+        """
+
+        self._preprocess_input(X)
+
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+        coordinates = self.data.coordinates[self.data.indices]
+        natoms = self.data.natoms[self.data.indices]
+
+        # Check that the molecules being transformed doesn't contain elements
+        # not used in the fit.
+        self._check_elements(nuclear_charges)
+
+        representations = []
+        for charge, xyz in zip(nuclear_charges, coordinates):
+            representations.append(
+                    np.asarray(
+                        generate_slatm(xyz, charge, self.mbtypes, local=local,
+                        sigmas=[self.sigma2, self.sigma3],
+                        dgrids=[self.dgrid2, self.dgrid3], rcut=self.rcut,
+                        alchemy=self.alchemy, rpower=-self.rpower)))
+
+        self.data.representations = np.asarray(representations)
+
+        return self.data
+
+class GlobalSLATM(_SLATM, _MolecularRepresentation):
     """
     Global version of SLATM.
     """
@@ -442,16 +514,8 @@ class GlobalSLATM(_MolecularRepresentation):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
-        self._set_representation_type()
-        print(id(self.data))
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-
-        self.elements = get_unique(nuclear_charges)
-        self.mbtypes = get_slatm_mbtypes(nuclear_charges)
-
-        return self
+        return self._fit(X, y)
 
     def transform(self, X):
         """
@@ -462,24 +526,98 @@ class GlobalSLATM(_MolecularRepresentation):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        return self._transform(X, False)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
 
-        # Check that the molecules being transformed doesn't contain elements
-        # not used in the fit.
-        self._check_elements(nuclear_charges)
+        return self.fit(X).transform(X).representations
 
-        representations = []
-        for charge, xyz in zip(nuclear_charges, coordinates):
-            representations.append(
-                    generate_slatm(xyz, charge, self.mbtypes, local=False,
-                        sigmas=[self.sigma2, self.sigma3],
-                        dgrids=[self.dgrid2, self.dgrid3], rcut=self.rcut,
-                        alchemy=self.alchemy, rpower=-self.rpower))
+class AtomicSLATM(_SLATM, _AtomicRepresentation):
+    """
+    Local version of SLATM.
+    """
 
-        self.data.representations = np.asarray(representations)
+    _representation_short_name = "aslatm"
 
-        return self.data
+    def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6):
+        """
+        Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
+
+        :param sigma2: Width of Gaussian smearing function for 2-body part.
+        :type sigma2: float
+        :param sigma3: Width of Gaussian smearing function for 3-body part.
+        :type sigma3: float
+        :param dgrid2: The interval between two sampled internuclear distances.
+        :type dgrid2: float
+        :param dgrid3: The interval between two sampled internuclear angles.
+        :type dgrid3: float
+        :param rcut: Cut-off radius.
+        :type rcut: float
+        :param alchemy: Use the alchemy version of SLATM.
+        :type alchemy: bool
+        :param rpower: The scaling power of R in 2-body potential.
+        :type rpower: float
+        :param data: Optional Data object containing all molecules used in training \
+                and/or prediction
+        :type data: Data object
+        """
+
+        self.data = data
+        self.sigma2 = sigma2
+        self.sigma3 = sigma3
+        self.dgrid2 = dgrid2
+        self.dgrid3 = dgrid3
+        self.rcut = rcut
+        self.alchemy = alchemy
+        self.rpower = rpower
+
+        # Will be changed during fit
+        self.elements = None
+        self.mbtypes = None
+
+    def fit(self, X, y=None):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+
+        return self._fit(X, y)
+
+    def transform(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Data object
+        :rtype: Data object
+        """
+
+        return self._transform(X, True)
+
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
