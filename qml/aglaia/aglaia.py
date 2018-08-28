@@ -2191,9 +2191,9 @@ class ARMP(_NN):
         """
 
         if not self.loaded_model:
-            self._fit_from_scratch(x, y, classes, dy)
+            self._fit_from_scratch(x, y, dy, classes)
         else:
-            self._fit_from_loaded(x, y, classes, dy)
+            self._fit_from_loaded(x, y, dy, classes)
 
     def _fit_from_scratch(self, x, y, dy, classes):
         """
