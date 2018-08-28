@@ -2587,6 +2587,15 @@ class ARMP(_NN):
         :return: None
         """
 
+        counter = 0
+        dir = save_dir
+        while True:
+            if os.path.isdir(save_dir):
+                counter += 1
+                save_dir = dir + "_" + str(counter)
+            else:
+                break
+
         if self.session == None:
             raise InputError("Model needs to be fit before predictions can be made.")
 
