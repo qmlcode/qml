@@ -37,19 +37,19 @@ def test_set_representation():
     This function tests the method MRMP._set_representation.
     """
     try:
-        MRMP(representation='unsorted_coulomb_matrix', representation_params={'slatm_sigma1': 0.05})
+        MRMP(representation_name='unsorted_coulomb_matrix', representation_params={'slatm_sigma1': 0.05})
         raise Exception
     except InputError:
         pass
 
     try:
-        MRMP(representation='coulomb_matrix')
+        MRMP(representation_name='coulomb_matrix')
         raise Exception
     except InputError:
         pass
 
     try:
-        MRMP(representation='slatm', representation_params={'slatm_alchemy': 0.05})
+        MRMP(representation_name='slatm', representation_params={'slatm_alchemy': 0.05})
         raise Exception
     except InputError:
         pass
@@ -57,7 +57,7 @@ def test_set_representation():
     parameters ={'slatm_sigma1': 0.07, 'slatm_sigma2': 0.04, 'slatm_dgrid1': 0.02, 'slatm_dgrid2': 0.06,
                                 'slatm_rcut': 5.0, 'slatm_rpower': 7, 'slatm_alchemy': True}
 
-    estimator = MRMP(representation='slatm', representation_params=parameters)
+    estimator = MRMP(representation_name='slatm', representation_params=parameters)
 
     assert estimator.representation_name == 'slatm'
     assert estimator.slatm_parameters == parameters
@@ -71,7 +71,7 @@ def test_set_properties():
     energies = np.loadtxt(test_dir + '/CN_isobutane/prop_kjmol_training.txt',
                           usecols=[1])
 
-    estimator = MRMP(representation='unsorted_coulomb_matrix')
+    estimator = MRMP(representation_name='unsorted_coulomb_matrix')
 
     assert estimator.properties == None
 
@@ -123,7 +123,7 @@ def test_fit_1():
     available_representations = ['sorted_coulomb_matrix', 'unsorted_coulomb_matrix', 'bag_of_bonds', 'slatm']
 
     for rep in available_representations:
-        estimator = MRMP(representation=rep)
+        estimator = MRMP(representation_name=rep)
         estimator.generate_compounds(filenames[:100])
         estimator.set_properties(energies[:100])
         estimator.generate_representation()

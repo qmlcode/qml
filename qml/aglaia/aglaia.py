@@ -1020,7 +1020,7 @@ class MRMP(_NN):
                  activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
                  rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
                  l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
-                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation='unsorted_coulomb_matrix', representation_params=None):
+                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation_name='unsorted_coulomb_matrix', representation_params=None):
         """
         Descriptors is used as input to a single or multi layered feed-forward neural network with a single output.
         This class inherits from the _NN class and all inputs not unique to the NN class is passed to the _NN
@@ -1034,7 +1034,7 @@ class MRMP(_NN):
                  rho, initial_accumulator_value, initial_gradient_squared_accumulator_value,
                  l1_regularization_strength,l2_regularization_strength, tensorboard_subdir)
 
-        self._initialise_representation(representation, representation_params)
+        self._initialise_representation(representation_name, representation_params)
 
     def _initialise_representation(self, representation, parameters):
         """
@@ -1557,7 +1557,7 @@ class ARMP(_NN):
                  activation_function = tf.sigmoid, optimiser = tf.train.AdamOptimizer, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08,
                  rho = 0.95, initial_accumulator_value = 0.1, initial_gradient_squared_accumulator_value = 0.1,
                  l1_regularization_strength = 0.0, l2_regularization_strength = 0.0,
-                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation='acsf', representation_params=None):
+                 tensorboard_subdir = os.getcwd() + '/tensorboard', representation_name='acsf', representation_params=None):
         """
         To see what parameters are required, look at the description of the _NN class init.
         This class inherits from the _NN class and all inputs not unique to the ARMP class are passed to the _NN
@@ -1570,7 +1570,7 @@ class ARMP(_NN):
                  rho, initial_accumulator_value, initial_gradient_squared_accumulator_value,
                  l1_regularization_strength,l2_regularization_strength, tensorboard_subdir)
 
-        self._initialise_representation(representation, representation_params)
+        self._initialise_representation(representation_name, representation_params)
 
     def _initialise_representation(self, representation, parameters):
         """

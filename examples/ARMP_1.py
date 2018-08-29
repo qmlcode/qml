@@ -39,7 +39,7 @@ filenames.sort()
 
 ## ------------- ** Setting up the estimator ** ---------------
 
-estimator = ARMP(iterations=10, representation='acsf', representation_params={"radial_rs": np.arange(0, 10, 1), "angular_rs": np.arange(0.5, 10.5, 1),
+estimator = ARMP(iterations=10, representation_name='acsf', representation_params={"radial_rs": np.arange(0, 10, 1), "angular_rs": np.arange(0.5, 10.5, 1),
 "theta_s": np.arange(0, 5, 1)}, tensorboard=False)
 
 estimator.generate_compounds(filenames)

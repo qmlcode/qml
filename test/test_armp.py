@@ -37,19 +37,19 @@ def test_set_representation():
     This function tests the function _set_representation.
     """
     try:
-        ARMP(representation='slatm', representation_params={'slatm_sigma12': 0.05})
+        ARMP(representation_name='slatm', representation_params={'slatm_sigma12': 0.05})
         raise Exception
     except InputError:
         pass
 
     try:
-        ARMP(representation='coulomb_matrix')
+        ARMP(representation_name='coulomb_matrix')
         raise Exception
     except InputError:
         pass
 
     try:
-        ARMP(representation='slatm', representation_params={'slatm_alchemy': 0.05})
+        ARMP(representation_name='slatm', representation_params={'slatm_alchemy': 0.05})
         raise Exception
     except InputError:
         pass
@@ -57,7 +57,7 @@ def test_set_representation():
     parameters = {'slatm_sigma1': 0.07, 'slatm_sigma2': 0.04, 'slatm_dgrid1': 0.02, 'slatm_dgrid2': 0.06,
                   'slatm_rcut': 5.0, 'slatm_rpower': 7, 'slatm_alchemy': True}
 
-    estimator = ARMP(representation='slatm', representation_params=parameters)
+    estimator = ARMP(representation_name='slatm', representation_params=parameters)
 
     assert estimator.representation_name == 'slatm'
     assert estimator.slatm_parameters == parameters
@@ -72,7 +72,7 @@ def test_set_properties():
     energies = np.loadtxt(test_dir + '/CN_isobutane/prop_kjmol_training.txt',
                           usecols=[1])
 
-    estimator = ARMP(representation='slatm')
+    estimator = ARMP(representation_name='slatm')
 
     assert estimator.properties == None
 
@@ -120,7 +120,7 @@ def test_fit_1():
                           usecols=[1])
     filenames.sort()
 
-    estimator = ARMP(representation="acsf")
+    estimator = ARMP(representation_name="acsf")
     estimator.generate_compounds(filenames[:50])
     estimator.set_properties(energies[:50])
     estimator.generate_representation()
@@ -214,8 +214,8 @@ def test_predict_fromxyz():
 
     ene_true = np.array([0.5, 0.9, 1.0])
 
-    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
-                    representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                     representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
                                            "theta_s": np.arange(0, 3.14, 3)})
 
     estimator.set_properties(ene_true)
@@ -232,8 +232,8 @@ def test_predict_fromxyz():
 
     estimator.save_nn(save_dir="temp")
 
-    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
-                    representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                         representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
                                            "theta_s": np.arange(0, 3.14, 3)})
 
     new_estimator.load_nn(save_dir="temp")
@@ -259,7 +259,7 @@ def test_retraining():
 
     ene_true = np.array([0.5, 0.9, 1.0])
 
-    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
                      representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
                                             "theta_s": np.arange(0, 3.14, 3)})
 
@@ -279,8 +279,8 @@ def test_retraining():
 
     pred2 = estimator.predict(idx)
 
-    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation='acsf',
-                     representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                         representation_params={"radial_rs": np.arange(0, 10, 5), "angular_rs": np.arange(0, 10, 5),
                                             "theta_s": np.arange(0, 3.14, 3)})
     new_estimator.set_properties(ene_true)
     new_estimator.generate_representation(xyz, zs)
