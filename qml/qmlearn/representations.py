@@ -629,12 +629,11 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
     """
     The variant of Atom-Centered Symmetry Functions used in 10.1039/C7SC04934J
 
-
     """
 
     _representation_short_name = "acsf"
 
-    def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0):
+    def __init__(self, data=None, nbasis=15, precision=2, cutoff=5.0):
         """
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
@@ -692,22 +691,36 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         self._check_elements(nuclear_charges)
 
         # Calculate parameters needed for fortran input.
+        # This is a heuristic that cuts down the number of hyper-parameters
+        # and might be subject to future change.
         min_distance = 0.8
-        Rs = np.linspace(min_distance, cutoff, nbasis)
+        Rs = np.linspace(min_distance, self.cutoff, self.nbasis)
         eta = 4 * np.log(self.precision) * ((self.nbasis-1)/(self.cutoff-min_distance))**2
-        Ts = np.linspace(0, np.pi, nbasis)
+        Ts = np.linspace(0, np.pi, self.nbasis)
         zeta = - np.log(self.precision) / np.log(np.cos(np.pi / (4 * (self.nbasis - 1)))**2)
-        nelements = len(self.elements)
-        size = nelements * self.nbasis + (n_elements * (n_elements + 1)) // 2 * self.nbasis ** 2
+        n_elements = len(self.elements)
+        size = n_elements * self.nbasis + (n_elements * (n_elements + 1)) // 2 * self.nbasis ** 2
 
         representations = []
-        for charge, xyz in zip(nuclear_charges, coordinates):
+        for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
             representations.append(
-                    np.asarray(
                         fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
-                            eta, eta, zeta, cutoff, cutoff, natoms, size)))
+                            eta, eta, zeta, self.cutoff, self.cutoff, n, size))
 
         self.data.representations = np.asarray(representations)
 
         return self.data
+
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
 
