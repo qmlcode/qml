@@ -95,6 +95,13 @@ def get_unique(x):
     elements = list(set(item for l in x for item in l))
     return elements
 
+def get_pairs(x):
+    pairs = []
+    for i,v in enumerate(x):
+        for w in x[i:]:
+            pairs.append([v,w])
+    return pairs
+
 
 # ------------- ** Checking inputs ** --------------------------
 

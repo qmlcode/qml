@@ -29,7 +29,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 
 from .data import Data
-from ..utils import is_positive_integer_or_zero_array, get_unique
+from ..utils import is_positive_integer_or_zero_array, get_unique, get_pairs
 from ..ml.representations.frepresentations import fgenerate_coulomb_matrix
 from ..ml.representations.frepresentations import fgenerate_unsorted_coulomb_matrix
 from ..ml.representations.frepresentations import fgenerate_local_coulomb_matrix
@@ -106,7 +106,8 @@ class _BaseRepresentation(BaseEstimator):
         elements_transform = get_unique(nuclear_charges)
         if not np.isin(elements_transform, self.elements).all():
             print("Warning: Trying to transform molecules with elements",
-                  "not included during fit in the %s method" % self.__class__.__name__)
+                  "not included during fit in the %s method." % self.__class__.__name__,
+                  "%s used in training but trying to transform %s" % (str(self.elements), str(element_transform)))
 
 class _MolecularRepresentation(_BaseRepresentation):
     """
@@ -257,7 +258,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
     _representation_short_name = "acm"
 
     def __init__(self, data=None, size=23, sorting="distance", central_cutoff=10.0,
-            central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1):
+            central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1, alchemy=True):
         """
         Creates a Coulomb Matrix representation of the local environment of a central atom.
         For each central atom :math:`k`, a matrix :math:`M` is constructed with elements
@@ -322,7 +323,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :param interaction_cutoff: The distance between two non-central atom, where the coulomb interaction
             element will be zero
         :type interaction_cutoff: float
-        :param interaction_decay: The distance over which the the coulomb interaction decays from full to none
+        :param interaction_decay: The distance over which the coulomb interaction decays from full to none
         :type interaction_decay: float
         """
 
@@ -420,10 +421,14 @@ class _SLATM(object):
         """
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-
-        self.elements = get_unique(nuclear_charges)
-        self.mbtypes = get_slatm_mbtypes(nuclear_charges)
+        if self.elements is None and self.element_pairs is None:
+            nuclear_charges = self.data.nuclear_charges[self.data.indices]
+            self.elements = get_unique(nuclear_charges)
+            self.element_pairs = get_slatm_mbtypes(nuclear_charges)
+        elif self.elements is not None and self.element_pairs is None:
+            self.element_pairs = get_pairs(self.elements)
+        elif self.elements is None and self.element_pairs is not None:
+            self.elements = get_unique(self.element_pairs)
 
         return self
 
@@ -470,7 +475,8 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
     _representation_short_name = "slatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6):
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements=None,
+            element_pairs=None):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
 
@@ -488,6 +494,12 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
         :type alchemy: bool
         :param rpower: The scaling power of R in 2-body potential.
         :type rpower: float
+        :param elements: Atomnumber of elements that the representation should support.
+                         `elements=None` will try to determine this automatically.
+        :type elements: list
+        :param element_pairs: Atomnumbers of element pairs that the representation should support.
+                         `element_pairs=None` will try to determine this automatically.
+        :type element_pairs: list
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
         :type data: Data object
@@ -501,10 +513,9 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
         self.rcut = rcut
         self.alchemy = alchemy
         self.rpower = rpower
-
         # Will be changed during fit
-        self.elements = None
-        self.mbtypes = None
+        self.elements = elements
+        self.element_pairs = element_pairs
 
     def fit(self, X, y=None):
         """
@@ -552,10 +563,14 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
     _representation_short_name = "aslatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6):
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements=None,
+            element_pairs=None):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
 
+        :param data: Optional Data object containing all molecules used in training \
+                and/or prediction
+        :type data: Data object
         :param sigma2: Width of Gaussian smearing function for 2-body part.
         :type sigma2: float
         :param sigma3: Width of Gaussian smearing function for 3-body part.
@@ -570,9 +585,12 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         :type alchemy: bool
         :param rpower: The scaling power of R in 2-body potential.
         :type rpower: float
-        :param data: Optional Data object containing all molecules used in training \
-                and/or prediction
-        :type data: Data object
+        :param elements: Atomnumber of elements that the representation should support.
+                         `elements=None` will try to determine this automatically.
+        :type elements: list
+        :param element_pairs: Atomnumbers of element pairs that the representation should support.
+                         `element_pairs=None` will try to determine this automatically.
+        :type element_pairs: list
         """
 
         self.data = data
@@ -583,10 +601,9 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         self.rcut = rcut
         self.alchemy = alchemy
         self.rpower = rpower
-
         # Will be changed during fit
-        self.elements = None
-        self.mbtypes = None
+        self.elements = elements
+        self.element_pairs = element_pairs
 
     def fit(self, X, y=None):
         """
@@ -633,7 +650,7 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
 
     _representation_short_name = "acsf"
 
-    def __init__(self, data=None, nbasis=15, precision=2, cutoff=5.0):
+    def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0, elements=None):
         """
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
@@ -646,12 +663,20 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
                         basis functions intersecting at half maximum. Higher values makes \
                         the basis functions narrower.
         :type precision: float
+        :param elements: Atomnumber of elements that the representation should support.
+                         `elements=None` will try to determine this automatically.
+        :type elements: list
+        :param element_pairs: Atomnumbers of element pairs that the representation should support.
+                         `element_pairs=None` will try to determine this automatically.
+        :type element_pairs: list
         """
 
         self.data = data
         self.nbasis = nbasis
         self.precision = precision
         self.cutoff = cutoff
+        # Will be changed during fit
+        self.elements = elements
 
     def fit(self, X, y=None):
         """
@@ -665,9 +690,9 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         """
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-
-        self.elements = get_unique(nuclear_charges)
+        if self.elements is None:
+            nuclear_charges = self.data.nuclear_charges[self.data.indices]
+            self.elements = get_unique(nuclear_charges)
 
         return self
 

@@ -92,13 +92,23 @@ class _BaseKernel(BaseEstimator):
 
         return X
 
+
 class GaussianKernel(_BaseKernel):
     """
     Gaussian kernel
     """
 
-    def __init__(self, sigma=1):
+    def __init__(self, sigma='auto', alchemy=True):
+        """
+        :param sigma: Scale parameter of the gaussian kernel. `sigma='auto'` will try to guess
+                      a good value (very approximate).
+        :type sigma: float
+        :param alchemy: Determines if contributions from atoms of differing elements should be
+                        included in the kernel.
+        :type alchemy: bool
+        """
         self.sigma = sigma
+        self.alchemy = alchemy
 
         self.representations = None
 
@@ -107,6 +117,53 @@ class GaussianKernel(_BaseKernel):
 
     def fit_transform(self, X, y=None):
         return self._fit_transform(X)
+
+    def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
+        """
+        Use 50 random points for atomic, 200 for molecular, to get an approximate guess for sigma
+        """
+
+        if count > 10:
+            print("Error. Could not automatically determine parameter `sigma` in the kernel %s"
+                    % self.__class__.__name__)
+            raise SystemExit
+
+        if representation_type == 'molecular':
+            n = 200
+        else:
+            n = 50
+
+        if len(X) < n:
+            n = len(X)
+
+        self.sigma = sigma_init
+
+        # Generate kernel for a random subset
+        indices = np.random.choice(np.arange(len(X)), size=n, replace=False)
+        kernel = self.generate([X[i] for i in indices], representation_type=representation_type)
+
+        if representation_type == 'molecular':
+            # min smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+
+            # Rescale sigma such that smallest kernel element will be equal to 1/2
+            self.sigma = - np.log(smallest_kernel_element) / np.log(2)
+            # Update sigma if the given sigma was completely wrong
+            if np.isinf(self.sigma):
+                self._quick_estimate_sigma(X, representation_type, sigma_init * 10, count + 1)
+            elif self.sigma <= 1e-12:
+                self._quick_estimate_sigma(X, representation_type, sigma_init / 10, count + 1)
+        else:
+            sizes = np.asarray([len(X[i]) for i in indices])
+            kernel /= sizes[:,None] * sizes[None,:]
+            smallest_kernel_element = np.min(kernel)
+
+            if smallest_kernel_element < 0.5:
+                self._quick_estimate_sigma(X, representation_type, sigma_init * 2.5, count + 1)
+            elif smallest_kernel_element > 1:
+                self._quick_estimate_sigma(X, representation_type, sigma_init / 2.5, count + 1)
+
+
 
     def generate(self, X, Y=None, representation_type='molecular'):
         """
@@ -128,16 +185,41 @@ class GaussianKernel(_BaseKernel):
         :rtype: array
         """
 
+        if self.sigma == 'auto':
+            if representation_type == 'molecular':
+                auto_sigma = True
+            else:
+                auto_sigma = False
+
+            # Do a quick and dirty initial estimate of sigma
+            self._quick_estimate_sigma(X, representation_type)
+        else:
+            auto_sigma = False
+
+
         if representation_type == 'molecular':
-            return self._generate_molecular(X,Y)
+            kernel = self._generate_molecular(X,Y)
         elif representation_type == 'atomic':
-            return self._generate_atomic(X,Y)
+            kernel = self._generate_atomic(X,Y)
         else:
             # Should never get here for users
             print("Error: representation_type needs to be 'molecular' or 'atomic'. Got %s" % representation_type)
             raise SystemExit
 
+        if auto_sigma:
+            # Find smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+            largest_kernel_element = np.max(kernel)
+            # Rescale kernel such that we don't have to calculate it again for a new sigma
+            alpha = - np.log(2) / np.log(smallest_kernel_element/largest_kernel_element)
+            self.sigma /= np.sqrt(alpha)
+            return kernel ** alpha
+
+        return kernel
+
     def _generate_molecular(self, X, Y=None):
+
+        X = np.asarray(X)
 
         # Note: Transposed for Fortran
         n = X.shape[0]
@@ -147,6 +229,7 @@ class GaussianKernel(_BaseKernel):
             K = np.empty((n, n), order='F')
             fgaussian_kernel_symmetric(X.T, n, K, self.sigma)
         else:
+            Y = np.asarray(Y)
             # Do asymmetric matrix
             m = Y.shape[0]
             K = np.empty((n, m), order='F')
@@ -197,8 +280,17 @@ class LaplacianKernel(_BaseKernel):
     Laplacian kernel
     """
 
-    def __init__(self, sigma=1):
+    def __init__(self, sigma='auto', alchemy=True):
+        """
+        :param sigma: Scale parameter of the gaussian kernel. `sigma='auto'` will try to guess
+                      a good value (very approximate).
+        :type sigma: float or string
+        :param alchemy: Determines if contributions from atoms of differing elements should be
+                        included in the kernel.
+        :type alchemy: bool
+        """
         self.sigma = sigma
+        self.alchemy = alchemy
 
         self.representations = None
 
@@ -207,6 +299,53 @@ class LaplacianKernel(_BaseKernel):
 
     def fit_transform(self, X, y=None):
         return self._fit_transform(X)
+
+    def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
+        """
+        Use 50 random points for atomic, 200 for molecular, to get an approximate guess for sigma
+        """
+
+        if count > 10:
+            print("Error. Could not automatically determine parameter `sigma` in the kernel %s"
+                    % self.__class__.__name__)
+            raise SystemExit
+
+        if representation_type == 'molecular':
+            n = 200
+        else:
+            n = 50
+
+        if len(X) < n:
+            n = len(X)
+
+        self.sigma = sigma_init
+
+        # Generate kernel for a random subset
+        indices = np.random.choice(np.arange(len(X)), size=n, replace=False)
+        kernel = self.generate([X[i] for i in indices], representation_type=representation_type)
+
+        if representation_type == 'molecular':
+            # min smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+
+            # Rescale sigma such that smallest kernel element will be equal to 1/2
+            self.sigma = - np.log(smallest_kernel_element) / np.log(2)
+            # Update sigma if the given sigma was completely wrong
+            if np.isinf(self.sigma):
+                self._quick_estimate_sigma(X, representation_type, sigma_init * 10, count + 1)
+            elif self.sigma <= 1e-12:
+                self._quick_estimate_sigma(X, representation_type, sigma_init / 10, count + 1)
+        else:
+            sizes = np.asarray([len(X[i]) for i in indices])
+            kernel /= sizes[:,None] * sizes[None,:]
+            smallest_kernel_element = np.min(kernel)
+
+            if smallest_kernel_element < 0.5:
+                self._quick_estimate_sigma(X, representation_type, sigma_init * 2.5, count + 1)
+            elif smallest_kernel_element > 1:
+                self._quick_estimate_sigma(X, representation_type, sigma_init / 2.5, count + 1)
+
+
 
     def generate(self, X, Y=None, representation_type='molecular'):
         """
@@ -228,16 +367,41 @@ class LaplacianKernel(_BaseKernel):
         :rtype: array
         """
 
+        if self.sigma == 'auto':
+            if representation_type == 'molecular':
+                auto_sigma = True
+            else:
+                auto_sigma = False
+
+            # Do a quick and dirty initial estimate of sigma
+            self._quick_estimate_sigma(X, representation_type)
+        else:
+            auto_sigma = False
+
+
         if representation_type == 'molecular':
-            return self._generate_molecular(X,Y)
+            kernel = self._generate_molecular(X,Y)
         elif representation_type == 'atomic':
-            return self._generate_atomic(X,Y)
+            kernel = self._generate_atomic(X,Y)
         else:
             # Should never get here for users
             print("Error: representation_type needs to be 'molecular' or 'atomic'. Got %s" % representation_type)
             raise SystemExit
 
+        if auto_sigma:
+            # Find smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+            largest_kernel_element = np.max(kernel)
+            # Rescale kernel such that we don't have to calculate it again for a new sigma
+            alpha = - np.log(2) / np.log(smallest_kernel_element/largest_kernel_element)
+            self.sigma /= alpha
+            return kernel ** alpha
+
+        return kernel
+
     def _generate_molecular(self, X, Y=None):
+
+        X = np.asarray(X)
 
         # Note: Transposed for Fortran
         n = X.shape[0]
@@ -247,6 +411,7 @@ class LaplacianKernel(_BaseKernel):
             K = np.empty((n, n), order='F')
             flaplacian_kernel_symmetric(X.T, n, K, self.sigma)
         else:
+            Y = np.asarray(Y)
             # Do asymmetric matrix
             m = Y.shape[0]
             K = np.empty((n, m), order='F')
