@@ -29,7 +29,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 
 from .data import Data
-from ..utils import is_positive_integer_or_zero_array, get_unique, get_pairs
+from ..utils import is_positive_integer_or_zero_array, get_unique, get_pairs, is_string
 from ..ml.representations.frepresentations import fgenerate_coulomb_matrix
 from ..ml.representations.frepresentations import fgenerate_unsorted_coulomb_matrix
 from ..ml.representations.frepresentations import fgenerate_local_coulomb_matrix
@@ -131,7 +131,7 @@ class CoulombMatrix(_MolecularRepresentation):
 
     _representation_short_name = "cm"
 
-    def __init__(self, data=None, size=23, sorting="row-norm"):
+    def __init__(self, data=None, size='auto', sorting="row-norm"):
         """
         Coulomb Matrix representation of a molecule.
         Sorting of the elements can either be done by ``sorting="row-norm"`` or ``sorting="unsorted"``.
@@ -159,7 +159,8 @@ class CoulombMatrix(_MolecularRepresentation):
 
         The representation is calculated using an OpenMP parallel Fortran routine.
 
-        :param size: The size of the largest molecule supported by the representation
+        :param size: The size of the largest molecule supported by the representation.
+                     `size='auto'` will try to determine this automatically.
         :type size: integer
         :param sorting: How the atom indices are sorted ('row-norm', 'unsorted')
         :type sorting: string
@@ -184,7 +185,10 @@ class CoulombMatrix(_MolecularRepresentation):
         """
         self._preprocess_input(X)
 
-        natoms = self.data.natoms[self.data.indices]
+        natoms = self.data.natoms#[self.data.indices]
+
+        if self.size == 'auto':
+            self.size = max(natoms)
 
         if self.size < max(natoms):
             print("Warning: Maximum size of system increased from %d to %d"
@@ -311,7 +315,8 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
         :type data: Data object
-        :param size: The maximum number of atoms within the cutoff radius supported by the representation
+        :param size: The maximum number of atoms within the cutoff radius supported by the representation.
+                     `size='auto'` will try to determine this automatically.
         :type size: integer
         :param sorting: How the atom indices are sorted ('row-norm', 'distance')
         :type sorting: string
@@ -346,6 +351,11 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :rtype: object
         """
         self._preprocess_input(X)
+
+        natoms = self.data.natoms#[self.data.indices]
+
+        if self.size == 'auto':
+            self.size = min(max(natoms), 2 * self.central_cutoff**3)
 
         ## Giving indices doesn't make sense when predicting energies
         #if self.data.property_type == 'energies' and not is_none(self.indices):
@@ -421,13 +431,16 @@ class _SLATM(object):
         """
         self._preprocess_input(X)
 
-        if self.elements is None and self.element_pairs is None:
-            nuclear_charges = self.data.nuclear_charges[self.data.indices]
+        if is_string(self.elements) and self.elements == 'auto' \
+                and is_string(self.element_pairs) and self.element_pairs == 'auto':
+            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
             self.elements = get_unique(nuclear_charges)
             self.element_pairs = get_slatm_mbtypes(nuclear_charges)
-        elif self.elements is not None and self.element_pairs is None:
-            self.element_pairs = get_pairs(self.elements)
-        elif self.elements is None and self.element_pairs is not None:
+        elif not is_string(self.elements) and is_string(self.element_pairs) \
+                and self.element_pairs == 'auto':
+            self.element_pairs = list(self.elements) + get_pairs(self.elements)
+        elif is_string(self.elements) and self.elements == 'auto' and \
+                not is_string(self.element_pairs):
             self.elements = get_unique(self.element_pairs)
 
         return self
@@ -475,8 +488,8 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
     _representation_short_name = "slatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements=None,
-            element_pairs=None):
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements='auto',
+            element_pairs='auto'):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
 
@@ -495,10 +508,10 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
         :param rpower: The scaling power of R in 2-body potential.
         :type rpower: float
         :param elements: Atomnumber of elements that the representation should support.
-                         `elements=None` will try to determine this automatically.
+                         `elements='auto'` will try to determine this automatically.
         :type elements: list
         :param element_pairs: Atomnumbers of element pairs that the representation should support.
-                         `element_pairs=None` will try to determine this automatically.
+                         `element_pairs='auto'` will try to determine this automatically.
         :type element_pairs: list
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
@@ -563,8 +576,8 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
     _representation_short_name = "aslatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements=None,
-            element_pairs=None):
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements='auto',
+            element_pairs='auto'):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
 
@@ -586,10 +599,10 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         :param rpower: The scaling power of R in 2-body potential.
         :type rpower: float
         :param elements: Atomnumber of elements that the representation should support.
-                         `elements=None` will try to determine this automatically.
+                         `elements='auto'` will try to determine this automatically.
         :type elements: list
         :param element_pairs: Atomnumbers of element pairs that the representation should support.
-                         `element_pairs=None` will try to determine this automatically.
+                         `element_pairs='auto'` will try to determine this automatically.
         :type element_pairs: list
         """
 
@@ -650,7 +663,7 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
 
     _representation_short_name = "acsf"
 
-    def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0, elements=None):
+    def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0, elements='auto'):
         """
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
@@ -664,11 +677,109 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
                         the basis functions narrower.
         :type precision: float
         :param elements: Atomnumber of elements that the representation should support.
-                         `elements=None` will try to determine this automatically.
+                         `elements='auto'` will try to determine this automatically.
         :type elements: list
-        :param element_pairs: Atomnumbers of element pairs that the representation should support.
-                         `element_pairs=None` will try to determine this automatically.
-        :type element_pairs: list
+        """
+
+        self.data = data
+        self.nbasis = nbasis
+        self.precision = precision
+        self.cutoff = cutoff
+        # Will be changed during fit
+        self.elements = elements
+
+    def fit(self, X, y=None):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+        self._preprocess_input(X)
+
+        if is_string(self.elements) and self.elements == 'auto':
+            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
+            self.elements = get_unique(nuclear_charges)
+
+        return self
+
+    def transform(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Data object
+        :rtype: Data object
+        """
+
+        self._preprocess_input(X)
+
+        nuclear_charges = self.data.nuclear_charges[self.data.indices]
+        coordinates = self.data.coordinates[self.data.indices]
+        natoms = self.data.natoms[self.data.indices]
+
+        # Check that the molecules being transformed doesn't contain elements
+        # not used in the fit.
+        self._check_elements(nuclear_charges)
+
+        # Calculate parameters needed for fortran input.
+        # This is a heuristic that cuts down the number of hyper-parameters
+        # and might be subject to future change.
+        min_distance = 0.8
+        Rs = np.linspace(min_distance, self.cutoff, self.nbasis)
+        eta = 4 * np.log(self.precision) * ((self.nbasis-1)/(self.cutoff-min_distance))**2
+        Ts = np.linspace(0, np.pi, self.nbasis)
+        zeta = - np.log(self.precision) / np.log(np.cos(np.pi / (4 * (self.nbasis - 1)))**2)
+        n_elements = len(self.elements)
+        size = n_elements * self.nbasis + (n_elements * (n_elements + 1)) // 2 * self.nbasis ** 2
+
+        representations = []
+        for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
+            representations.append(
+                        fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
+                            eta, eta, zeta, self.cutoff, self.cutoff, n, size))
+
+        self.data.representations = np.asarray(representations)
+
+        return self.data
+
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
+
+class FCHL(_AtomicRepresentation):
+    """
+    The representation from 10.1063/1.5020710
+    """
+
+    _representation_short_name = "fchl"
+
+    def __init__(self, data=None, size='auto', cut_distance=10.0):
+        """
+        :param data: Optional Data object containing all molecules used in training \
+                and/or prediction
+        :type data: Data object
+        :param size: Max number of atoms in representation. `max_size='auto'` Will try to determine this
+                         automatically.
+        :type size: integer
+        :param neighbors: Max number of atoms within the cut-off around an atom. (For periodic systems)
+        :type neighbors: integer
+        :param cell: Unit cell vectors. The presence of this keyword argument will generate a periodic representation.
+        :type cell: numpy array
+        :param cut_distance: Spatial cut-off distance - must be the same as used in the kernel function call.
+        :type cut_distance: float
         """
 
         self.data = data
@@ -691,7 +802,7 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         self._preprocess_input(X)
 
         if self.elements is None:
-            nuclear_charges = self.data.nuclear_charges[self.data.indices]
+            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
             self.elements = get_unique(nuclear_charges)
 
         return self

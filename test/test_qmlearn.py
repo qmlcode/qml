@@ -22,6 +22,9 @@ if __name__ == "__main__":
     test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
     test_data.set_energies(test_energies)
 
+    rep = AtomicCoulombMatrix(central_cutoff=4., size=24).generate(train_data)
+
+    quit()
 
     ##model = make_pipeline(CoulombMatrix(data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
     #model.fit(train_data)
@@ -58,6 +61,7 @@ if __name__ == "__main__":
     #model.fit(train_data)
     #predictions = model.predict(test_data)
     #print(predictions.shape)
+
 
     # Gridsearch CV of hyperparams
     params = {'representation': [AtomicCoulombMatrix(train_data)],
