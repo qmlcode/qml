@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.model_selection import GridSearchCV
 import copy
+import sklearn
 
 # TODO
 # other representations
@@ -18,13 +19,15 @@ if __name__ == "__main__":
     train_data = Data(filenames="qm7/*.xyz")
     train_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:train_data.ncompounds]
     train_data.set_energies(train_energies)
-    test_data = Data(filenames="qm7/00*.xyz")
+    test_data = Data(filenames="qm7/11*.xyz")
     test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
     test_data.set_energies(test_energies)
 
-    rep = AtomicCoulombMatrix(central_cutoff=4., size=24).generate(train_data)
+    #rep = FCHLRepresentation().generate(test_data)
+    #model = FCHLKernel(local=False)
+    #kernel = model.generate(rep)
 
-    quit()
+
 
     ##model = make_pipeline(CoulombMatrix(data=train_data), GaussianKernel(sigma=30), KernelRidgeRegression(l2_reg=1e-6), memory='/dev/shm')
     #model.fit(train_data)
@@ -64,10 +67,10 @@ if __name__ == "__main__":
 
 
     # Gridsearch CV of hyperparams
-    params = {'representation': [AtomicCoulombMatrix(train_data)],
-              'kernel': [LaplacianKernel()],
-              'kernel__sigma': ['auto'],
-              'model__l2_reg': [1e-8]
+    params = {'representation': [FCHLRepresentation(train_data)],
+              'kernel': [FCHLKernel(local=False)],
+              'kernel__sigma': [10, 100, 300, 1000],
+              'model__l2_reg': [1e-8, 1e-6, 1e-4]
              }
 
     #grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
@@ -82,16 +85,19 @@ if __name__ == "__main__":
     #print(predictions.shape)
 
     # Gridsearch CV of hyperparams
-    model = Pipeline([('representation', AtomCenteredSymmetryFunctions(train_data, nbasis=5)), ('kernel',GaussianKernel(sigma=0.01)), ('model', KernelRidgeRegression(l2_reg=1e-8))])
-    grid = GridSearchCV(model, cv=3, refit=False, param_grid = params, verbose=2)
+    #model = Pipeline([('representation', FCHLRepresentation(train_data)), ('kernel',GaussianKernel(sigma=0.01)), ('model', KernelRidgeRegression(l2_reg=1e-8))])
+    #grid = GridSearchCV(model, cv=3, refit=False, param_grid = params, verbose=2)
+
+    model = make_pipeline(FCHLRepresentation(train_data), FCHLKernel(sigma='auto', local=False), KernelRidgeRegression(l2_reg=1e-8))
 
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
 
-    #import sklearn
-    #scores = sklearn.model_selection.cross_validate(model, idx[:(3*500)//2], cv=3)['test_score']
-    #print(scores)
-    grid.fit(idx[:(3*200)//2])
+    import sklearn
+    scores = sklearn.model_selection.cross_validate(model, idx[:(3*100)//2], cv=3)['test_score']
+    print(scores)
+    quit()
+    grid.fit(idx[:(3*50)//2])
     print(grid.best_params_, grid.best_score_)
 
 

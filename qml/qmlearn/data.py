@@ -40,7 +40,9 @@ class Data(object):
         #self.representation = None
         #self.kernel = None
         #self.indices = None
-        #self.representation_type = None
+        #self._representation_type = None
+        #self._representation_short_name
+        #self._representation_cutoff
 
     def _set_ncompounds(self, n):
         self.ncompounds = n

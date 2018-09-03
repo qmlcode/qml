@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix A. Faber, Lars A. Bratholm
+# Copyright (c) 2018 Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,13 @@ from ..ml.kernels.fkernels import flaplacian_kernel_symmetric
 from ..ml.kernels.fkernels import fget_vector_kernels_laplacian
 from ..ml.kernels.fkernels import fget_vector_kernels_laplacian_symmetric
 
+from ..ml.representations.ffchl_module import fget_kernels_fchl
+from ..ml.representations.ffchl_module import fget_symmetric_kernels_fchl
+from ..ml.representations.ffchl_module import fget_global_kernels_fchl
+from ..ml.representations.ffchl_module import fget_global_symmetric_kernels_fchl
+
+from ..utils.alchemy import get_alchemy
+
 class _BaseKernel(BaseEstimator):
     """
     Base class for kernels
@@ -64,34 +71,52 @@ class _BaseKernel(BaseEstimator):
             print("Error: Expected Data object as input in %s" % self.__class__.__name__)
             raise SystemExit
 
+        if X._representation_short_name == 'fchl' and self.__class__.__name__ != 'FCHLKernel' or \
+                X._representation_short_name != 'fchl' and self.__class__.__name__ == 'FCHLKernel':
+            print("Error: The FCHL representation is only compatible with the FCHL kernel")
+            raise SystemExit
+
+
     def _set_representations(self, rep):
         self.representations = rep
 
-    def _transform(self, X):
+    def transform(self, X):
 
         self._check_data_object(X)
 
         # Kernel between representation stored in fit and representation
         # given in data object. The order matters
-        kernel = self.generate(X.representations, self.representations, X.representation_type)
+        if X._representation_type is None:
+            # For FCHL to keep the documentation tidy, since self.local overrides
+            # X._representation_type
+            kernel = self.generate(X.representations, self.representations)
+        else:
+            kernel = self.generate(X.representations, self.representations, X._representation_type)
 
         X.kernel = kernel
 
         return X
 
-    def _fit_transform(self, X, y=None):
+    def _fit_transform(self, X):
 
         self._check_data_object(X)
 
         # Store representation for future transform calls
         self._set_representations(X.representations)
 
-        kernel = self.generate(X.representations, representation_type=X.representation_type)
+        if X._representation_type is None:
+            # For FCHL to keep the documentation tidy, since self.local overrides
+            # X._representation_type
+            kernel = self.generate(X.representations)
+        else:
+            kernel = self.generate(X.representations, representation_type=X._representation_type)
 
         X.kernel = kernel
 
         return X
 
+    def fit_transform(self, X, y=None):
+        return self._fit_transform(X)
 
 class GaussianKernel(_BaseKernel):
     """
@@ -111,12 +136,6 @@ class GaussianKernel(_BaseKernel):
         self.alchemy = alchemy
 
         self.representations = None
-
-    def transform(self, X):
-        return self._transform(X)
-
-    def fit_transform(self, X, y=None):
-        return self._fit_transform(X)
 
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """
@@ -147,7 +166,7 @@ class GaussianKernel(_BaseKernel):
             smallest_kernel_element = np.min(kernel)
 
             # Rescale sigma such that smallest kernel element will be equal to 1/2
-            self.sigma = - np.log(smallest_kernel_element) / np.log(2)
+            self.sigma *= np.sqrt(-np.log(smallest_kernel_element) / np.log(2))
             # Update sigma if the given sigma was completely wrong
             if np.isinf(self.sigma):
                 self._quick_estimate_sigma(X, representation_type, sigma_init * 10, count + 1)
@@ -162,8 +181,6 @@ class GaussianKernel(_BaseKernel):
                 self._quick_estimate_sigma(X, representation_type, sigma_init * 2.5, count + 1)
             elif smallest_kernel_element > 1:
                 self._quick_estimate_sigma(X, representation_type, sigma_init / 2.5, count + 1)
-
-
 
     def generate(self, X, Y=None, representation_type='molecular'):
         """
@@ -294,12 +311,6 @@ class LaplacianKernel(_BaseKernel):
 
         self.representations = None
 
-    def transform(self, X):
-        return self._transform(X)
-
-    def fit_transform(self, X, y=None):
-        return self._fit_transform(X)
-
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """
         Use 50 random points for atomic, 200 for molecular, to get an approximate guess for sigma
@@ -329,7 +340,7 @@ class LaplacianKernel(_BaseKernel):
             smallest_kernel_element = np.min(kernel)
 
             # Rescale sigma such that smallest kernel element will be equal to 1/2
-            self.sigma = - np.log(smallest_kernel_element) / np.log(2)
+            self.sigma *= - np.log(smallest_kernel_element) / np.log(2)
             # Update sigma if the given sigma was completely wrong
             if np.isinf(self.sigma):
                 self._quick_estimate_sigma(X, representation_type, sigma_init * 10, count + 1)
@@ -344,8 +355,6 @@ class LaplacianKernel(_BaseKernel):
                 self._quick_estimate_sigma(X, representation_type, sigma_init * 2.5, count + 1)
             elif smallest_kernel_element > 1:
                 self._quick_estimate_sigma(X, representation_type, sigma_init / 2.5, count + 1)
-
-
 
     def generate(self, X, Y=None, representation_type='molecular'):
         """
@@ -456,4 +465,258 @@ class LaplacianKernel(_BaseKernel):
             x2 = np.swapaxes(x2, 0, 2)
             return fget_vector_kernels_laplacian(x1, x2, n1, n2, [self.sigma],
                 nm1, nm2, nsigmas)[0]
+
+class FCHLKernel(_BaseKernel):
+    """
+    FCHL kernel
+    """
+
+    def __init__(self, sigma='auto', alchemy=True, two_body_scaling=np.sqrt(8),
+            three_body_scaling=1.6, two_body_width=0.2, three_body_width=np.pi,
+            two_body_power=4.0, three_body_power=2.0, damping_start=1.0, cutoff=5.0,
+            fourier_order=1, alchemy_period_width=1.6, alchemy_group_width=1.6,
+            local=True):
+        """
+        :param sigma: Scale parameter of the gaussian basis functions. `sigma='auto'` will try to guess
+                      a good value (very approximate).
+        :type sigma: float or string
+        :param alchemy: Determines if contributions from atoms of differing elements should be
+                        included in the kernel.
+        :type alchemy: bool
+        :param two_body_scaling: Weight for 2-body terms.
+        :type two_body_scaling: float
+        :param three_body_scaling: Weight for 3-body terms.
+        :type three_body_scaling: float
+        :param two_body_width: Gaussian width for 2-body terms
+        :type two_body_width: float
+        :param three_body_width: Gaussian width for 3-body terms.
+        :type three_body_width: float
+        :param two_body_power: Powerlaw for :math:`r^{-n}` 2-body terms.
+        :type two_body_power: float
+        :param three_body_power: Powerlaw for Axilrod-Teller-Muto 3-body term
+        :type three_body_power: float
+        :param damping_start: The fraction of the cutoff radius at which cut-off damping start.
+        :type damping_start: float
+        :param cutoff: Cut-off radius.
+        :type cutoff: float
+        :param fourier_order: 3-body Fourier-expansion truncation order.
+        :type fourier_order: integer
+        :param alchemy_period_width: Gaussian width along periods (columns) in the periodic table.
+        :type alchemy_period_width: float
+        :param alchemy_group_width: Gaussian width along groups (rows) in the periodic table.
+        :type alchemy_group_width: float
+        :param local: Do local decomposition
+        :param local: bool
+        """
+        self.sigma = sigma
+        self.alchemy = alchemy
+        self.two_body_scaling = two_body_scaling
+        self.three_body_scaling = three_body_scaling
+        self.two_body_width = two_body_width
+        self.three_body_width = three_body_width
+        self.two_body_power = two_body_power
+        self.three_body_power = three_body_power
+        self.damping_start = damping_start
+        self.cutoff = cutoff
+        self.fourier_order = fourier_order
+        self.alchemy_period_width = alchemy_period_width
+        self.alchemy_group_width = alchemy_group_width
+        self.local = local
+
+        self.representations = None
+
+    def _quick_estimate_sigma(self, X, sigma_init=100, count=1):
+        """
+        Use 50 random points for atomic, 200 for molecular, to get an approximate guess for sigma
+        """
+
+        if count > 10:
+            print("Error. Could not automatically determine parameter `sigma` in the kernel %s"
+                    % self.__class__.__name__)
+            raise SystemExit
+
+        n = 50
+
+        if len(X) < n:
+            n = len(X)
+
+        self.sigma = sigma_init
+
+        # Generate kernel for a random subset
+        indices = np.random.choice(np.arange(len(X)), size=n, replace=False)
+        kernel = self.generate(X[indices])
+
+        if not self.local:
+            # min smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+
+            # Rescale sigma such that smallest kernel element will be equal to 1/2
+            self.sigma *= np.sqrt(- np.log(smallest_kernel_element) / np.log(1.1))
+            # Update sigma if the given sigma was completely wrong
+            if np.isinf(self.sigma):
+                self._quick_estimate_sigma(X, sigma_init * 10, count + 1)
+            elif self.sigma <= 1e-12:
+                self._quick_estimate_sigma(X, sigma_init / 10, count + 1)
+        else:
+            sizes = np.asarray([len(X[i]) for i in indices])
+            kernel /= sizes[:,None] * sizes[None,:]
+            smallest_kernel_element = np.min(kernel)
+
+            if smallest_kernel_element < 0.5:
+                self._quick_estimate_sigma(X, sigma_init * 2.5, count + 1)
+            elif smallest_kernel_element > 1:
+                self._quick_estimate_sigma(X, sigma_init / 2.5, count + 1)
+
+    def generate(self, X, Y=None):
+        """
+        Create a kernel from representations `X`. Optionally
+        an asymmetric kernel can be constructed between representations
+        `X` and `Y`.
+
+        :param X: representations
+        :type X: array
+        :param Y: (Optional) representations
+        :type Y: array
+
+        :return: Gaussian kernel matrix of shape (n_samplesX, n_samplesX) if \
+                 Y=None else (n_samplesX, n_samplesY)
+        :rtype: array
+        """
+
+        if self.sigma == 'auto':
+            if not self.local:
+                auto_sigma = True
+            else:
+                auto_sigma = False
+
+            # Do a quick and dirty initial estimate of sigma
+            self._quick_estimate_sigma(X)
+        else:
+            auto_sigma = False
+
+
+        if not self.local:
+            kernel = self._generate_molecular(X,Y)
+        else:
+            kernel = self._generate_atomic(X,Y)
+
+        if auto_sigma:
+            # Find smallest kernel element
+            smallest_kernel_element = np.min(kernel)
+            # Rescale kernel such that we don't have to calculate it again for a new sigma
+            alpha = - np.log(1.1) / np.log(smallest_kernel_element)
+            self.sigma /= np.sqrt(alpha)
+            print(self.sigma)
+            return kernel ** alpha
+
+        return kernel
+
+    def _generate_molecular(self, X, Y=None):
+
+        atoms_max = X.shape[1]
+        neighbors_max = X.shape[3]
+        nm1 = X.shape[0]
+        N1 = np.zeros((nm1),dtype=np.int32)
+
+        for a in range(nm1):
+            N1[a] = len(np.where(X[a,:,1,0] > 0.0001)[0])
+
+        neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
+
+        for a, representation in enumerate(X):
+            ni = N1[a]
+            for i, x in enumerate(representation[:ni]):
+                neighbors1[a,i] = len(np.where(x[0] < self.cutoff)[0])
+
+        if self.alchemy:
+            alchemy = 'periodic-table'
+        else:
+            alchemy = 'off'
+
+        doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
+
+        if Y is None:
+            # Do symmetric kernel
+            return fget_global_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
+                        nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
+                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
+                        doalchemy, self.two_body_power, self.three_body_power)[0]
+        else:
+            # Do asymmetric kernel
+            nm2 = Y.shape[0]
+            N2 = np.zeros((nm2),dtype=np.int32)
+
+            for a in range(nm2):
+                N2[a] = len(np.where(Y[a,:,1,0] > 0.0001)[0])
+
+            neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
+
+            for a, representation in enumerate(Y):
+                ni = N2[a]
+                for i, x in enumerate(representation[:ni]):
+                    neighbors2[a,i] = len(np.where(x[0] < self.cutoff)[0])
+
+            return fget_global_kernels_fchl(X, Y, N1, N2, neighbors1, neighbors2, [self.sigma],
+                        nm1, nm2, 1, self.three_body_width, self.two_body_width, self.damping_start,
+                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
+                        doalchemy, self.two_body_power, self.three_body_power)[0]
+
+    def _generate_atomic(self, X, Y=None):
+
+        atoms_max = X.shape[1]
+        neighbors_max = X.shape[3]
+
+        nm1 = X.shape[0]
+        N1 = np.zeros((nm1),dtype=np.int32)
+
+        for a in range(nm1):
+            N1[a] = len(np.where(X[a,:,1,0] > 0.0001)[0])
+
+        neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
+
+        for a, representation in enumerate(X):
+            ni = N1[a]
+            for i, x in enumerate(representation[:ni]):
+                neighbors1[a,i] = len(np.where(x[0] < self.cutoff)[0])
+
+        if self.alchemy:
+            alchemy = 'periodic-table'
+        else:
+            alchemy = 'off'
+
+        doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
+
+        if Y is None:
+            return fget_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
+                        nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
+                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
+                        doalchemy, self.two_body_power, self.three_body_power)[0]
+        else:
+            nm2 = Y.shape[0]
+            N2 = np.zeros((nm2),dtype=np.int32)
+
+            for a in range(nm2):
+                N2[a] = len(np.where(Y[a,:,1,0] > 0.0001)[0])
+
+            neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
+
+            for a, representation in enumerate(Y):
+                ni = N2[a]
+                for i, x in enumerate(representation[:ni]):
+                    neighbors2[a,i] = len(np.where(x[0] < self.cutoff)[0])
+
+            return fget_kernels_fchl(X, Y, N1, N2, neighbors1, neighbors2, [self.sigma],
+                        nm1, nm2, 1, self.three_body_width, self.two_body_width, self.damping_start, 
+                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling, 
+                        doalchemy, self.two_body_power, self.three_body_power)[0]
+
+    def fit_transform(self, X, y=None):
+
+        # Check that the cutoff is less than the cutoff used to make the representation
+        if self.cutoff > X._representation_cutoff:
+            print("Error: Cutoff used in the FCHL kernel (%.2f) must be lower or equal" % self.cutoff,
+                    "to the cutoff used in the FCHL representation (%.2f)" % X._representation_cutoff)
+            raise SystemExit
+
+        return self._fit_transform(X)
 

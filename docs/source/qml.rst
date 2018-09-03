@@ -93,3 +93,14 @@ qml\.aglaia module
    :inherited-members:
 
 
+qml\.qmlearn.representations module
+------------------
+
+.. automodule:: qml.qmlearn.representations
+   :inherited-members:
+
+qml\.qmlearn.kernels module
+------------------
+
+.. automodule:: qml.qmlearn.kernels
+   :inherited-members:

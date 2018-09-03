@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017-2018 Anders Steen Christensen, Lars Andersen Bratholm, Bing Huang
+# Copyright (c) 2018 Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,11 +37,17 @@ from ..ml.representations.frepresentations import fgenerate_atomic_coulomb_matri
 from ..ml.representations.representations import get_slatm_mbtypes
 from ..ml.representations.representations import generate_slatm
 from ..ml.representations.facsf import fgenerate_acsf
+from ..ml.representations.fchl import generate_representation
 
 class _BaseRepresentation(BaseEstimator):
     """
     Base class for representations
     """
+
+    # Variables that has to be set in child methods
+    _representation_short_name = None
+    _representation_type = None
+
 
     def fit(self, X, y=None):
         """
@@ -57,7 +63,6 @@ class _BaseRepresentation(BaseEstimator):
         and return self.data.
         """
         raise NotImplementedError
-
 
     def _preprocess_input(self, X):
         """
@@ -95,7 +100,8 @@ class _BaseRepresentation(BaseEstimator):
         self.data = copy.copy(data)
 
     def _set_representation_type(self):
-        self.data.representation_type = self._representation_type
+        self.data._representation_type = self._representation_type
+        self.data._representation_short_name = self._representation_short_name
 
     def _check_elements(self, nuclear_charges):
         """
@@ -108,6 +114,19 @@ class _BaseRepresentation(BaseEstimator):
             print("Warning: Trying to transform molecules with elements",
                   "not included during fit in the %s method." % self.__class__.__name__,
                   "%s used in training but trying to transform %s" % (str(self.elements), str(element_transform)))
+
+    # TODO Make it possible to pass data in other ways as well
+    # e.g. dictionary
+    def generate(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Representations of shape (n_samples, representation_size)
+        :rtype: array
+        """
+
+        return self.fit(X).transform(X).representations
 
 class _MolecularRepresentation(_BaseRepresentation):
     """
@@ -122,6 +141,7 @@ class _AtomicRepresentation(_BaseRepresentation):
     """
 
     _representation_type = "atomic"
+    alchemy = None
 
 class CoulombMatrix(_MolecularRepresentation):
     """
@@ -235,18 +255,6 @@ class CoulombMatrix(_MolecularRepresentation):
 
         return self.data
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
 
 # TODO add reference
 # TODO add support for atomic properties
@@ -260,6 +268,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
     """
 
     _representation_short_name = "acm"
+    alchemy = True
 
     def __init__(self, data=None, size=23, sorting="distance", central_cutoff=10.0,
             central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1, alchemy=True):
@@ -401,18 +410,6 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
 
         return self.data
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
 
 class _SLATM(object):
     """
@@ -554,18 +551,6 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
 
         return self._transform(X, False)
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
 
 # TODO add reference
 class AtomicSLATM(_SLATM, _AtomicRepresentation):
@@ -642,26 +627,13 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
 
         return self._transform(X, True)
 
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
-
 class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
     """
     The variant of Atom-Centered Symmetry Functions used in 10.1039/C7SC04934J
-
     """
 
     _representation_short_name = "acsf"
+    alchemy = False
 
     def __init__(self, data=None, nbasis=3, precision=2, cutoff=5.0, elements='auto'):
         """
@@ -759,14 +731,14 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
 
         return self.fit(X).transform(X).representations
 
-class FCHL(_AtomicRepresentation):
+class FCHLRepresentation(_BaseRepresentation):
     """
     The representation from 10.1063/1.5020710
     """
 
     _representation_short_name = "fchl"
 
-    def __init__(self, data=None, size='auto', cut_distance=10.0):
+    def __init__(self, data=None, size='auto', cutoff=10.0):
         """
         :param data: Optional Data object containing all molecules used in training \
                 and/or prediction
@@ -774,20 +746,13 @@ class FCHL(_AtomicRepresentation):
         :param size: Max number of atoms in representation. `max_size='auto'` Will try to determine this
                          automatically.
         :type size: integer
-        :param neighbors: Max number of atoms within the cut-off around an atom. (For periodic systems)
-        :type neighbors: integer
-        :param cell: Unit cell vectors. The presence of this keyword argument will generate a periodic representation.
-        :type cell: numpy array
-        :param cut_distance: Spatial cut-off distance - must be the same as used in the kernel function call.
-        :type cut_distance: float
+        :param cutoff: Spatial cut-off distance - must be the same as used in the kernel function call.
+        :type cutoff: float
         """
 
         self.data = data
-        self.nbasis = nbasis
-        self.precision = precision
+        self.size = size
         self.cutoff = cutoff
-        # Will be changed during fit
-        self.elements = elements
 
     def fit(self, X, y=None):
         """
@@ -800,10 +765,18 @@ class FCHL(_AtomicRepresentation):
         :rtype: object
         """
         self._preprocess_input(X)
+        # Store cutoff to make sure that the kernel cutoff is less
+        self.data._representation_cutoff = self.cutoff
 
-        if self.elements is None:
-            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
-            self.elements = get_unique(nuclear_charges)
+        natoms = self.data.natoms#[self.data.indices]
+
+        if self.size == 'auto':
+            self.size = max(natoms)
+
+        if self.size < max(natoms):
+            print("Warning: Maximum size of system increased from %d to %d"
+                    % (self.size, max(natoms)))
+            self.size = max(natoms)
 
         return self
 
@@ -822,41 +795,16 @@ class FCHL(_AtomicRepresentation):
         coordinates = self.data.coordinates[self.data.indices]
         natoms = self.data.natoms[self.data.indices]
 
-        # Check that the molecules being transformed doesn't contain elements
-        # not used in the fit.
-        self._check_elements(nuclear_charges)
-
-        # Calculate parameters needed for fortran input.
-        # This is a heuristic that cuts down the number of hyper-parameters
-        # and might be subject to future change.
-        min_distance = 0.8
-        Rs = np.linspace(min_distance, self.cutoff, self.nbasis)
-        eta = 4 * np.log(self.precision) * ((self.nbasis-1)/(self.cutoff-min_distance))**2
-        Ts = np.linspace(0, np.pi, self.nbasis)
-        zeta = - np.log(self.precision) / np.log(np.cos(np.pi / (4 * (self.nbasis - 1)))**2)
-        n_elements = len(self.elements)
-        size = n_elements * self.nbasis + (n_elements * (n_elements + 1)) // 2 * self.nbasis ** 2
+        if max(natoms) > self.size:
+            print("Error: Representation can't be generated for molecule of size \
+                %d when variable 'size' is %d" % (max(natoms), self.size))
+            raise SystemExit
 
         representations = []
-        for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
+        for charge, xyz in zip(nuclear_charges, coordinates):
             representations.append(
-                        fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
-                            eta, eta, zeta, self.cutoff, self.cutoff, n, size))
+                    generate_representation(xyz, charge, max_size=self.size, cut_distance=self.cutoff))
 
         self.data.representations = np.asarray(representations)
 
         return self.data
-
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
-
