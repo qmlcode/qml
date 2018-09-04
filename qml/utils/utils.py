@@ -96,6 +96,10 @@ def get_unique(x):
     return elements
 
 def get_pairs(x):
+    """
+    Get all unique pairs. E.g. x = [1,2,3] will return
+    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
+    """
     pairs = []
     for i,v in enumerate(x):
         for w in x[i:]:

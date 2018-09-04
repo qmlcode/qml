@@ -71,20 +71,20 @@ class _BaseRepresentation(BaseEstimator):
 
         :param X: Data object or array of indices
         :type X: Data object or array
-        :return: array of indices
-        :rtype: array
         """
 
         if isinstance(X, Data):
-            self._set_data(X)
+            # NOTE: If memory of the data object is ever an issue,
+            # not making a shallow copy here should be fine
+            self._set_data(X, make_copy=True)
             # Part of the sklearn CV hack.
             if not hasattr(self.data, 'indices'):
                 self.data.indices = np.arange(len(self.data))
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
-            # This forces a copy to be made, which is helpful when
-            # using scikit-learn.
-            self._set_data(self.data)
+            # A copy here might avoid some unintended behaviour
+            # if multiple models is used sequentially.
+            self._set_data(self.data, True)
             self.data.indices = np.asarray(X, dtype=int).ravel()
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
@@ -92,12 +92,15 @@ class _BaseRepresentation(BaseEstimator):
 
         self._set_representation_type()
 
-    def _set_data(self, data):
+    def _set_data(self, data, make_copy=False):
         if data and data.natoms is None:
             print("Error: Empty Data object passed to %s representation" % self.__class__.__name__)
             raise SystemExit
-        # Shallow copy should be fine
-        self.data = copy.copy(data)
+        if make_copy:
+            # Shallow copy should be fine
+            self.data = copy.copy(data)
+        else:
+            self.data = data
 
     def _set_representation_type(self):
         self.data._representation_type = self._representation_type
@@ -191,7 +194,8 @@ class CoulombMatrix(_MolecularRepresentation):
 
         self.size = size
         self.sorting = sorting
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
 
     def fit(self, X, y=None):
         """
@@ -341,7 +345,8 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :type interaction_decay: float
         """
 
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
         self.size = size
         self.sorting = sorting
         self.central_cutoff = central_cutoff
@@ -515,7 +520,8 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
         :type data: Data object
         """
 
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
         self.sigma2 = sigma2
         self.sigma3 = sigma3
         self.dgrid2 = dgrid2
@@ -591,7 +597,8 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         :type element_pairs: list
         """
 
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
         self.sigma2 = sigma2
         self.sigma3 = sigma3
         self.dgrid2 = dgrid2
@@ -653,7 +660,8 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         :type elements: list
         """
 
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
         self.nbasis = nbasis
         self.precision = precision
         self.cutoff = cutoff
@@ -750,7 +758,8 @@ class FCHLRepresentation(_BaseRepresentation):
         :type cutoff: float
         """
 
-        self.data = data
+        # Has to not make copy for sklearn
+        self._set_data(data, make_copy=False)
         self.size = size
         self.cutoff = cutoff
 

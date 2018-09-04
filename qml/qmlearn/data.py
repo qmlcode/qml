@@ -34,7 +34,7 @@ class Data(object):
             filenames = sorted(glob.glob(filenames))
         if isinstance(filenames, list):
             self._parse_xyz_files(filenames)
-
+        # TODO change representation, kernel, indices to private
         # Overwritten in various parts of a standard prediction pipeline
         # so don't use these within the class
         #self.representation = None
@@ -43,6 +43,7 @@ class Data(object):
         #self._representation_type = None
         #self._representation_short_name
         #self._representation_cutoff
+        #self.
 
     def _set_ncompounds(self, n):
         self.ncompounds = n
