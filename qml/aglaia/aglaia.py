@@ -37,6 +37,7 @@ from qml.aglaia.utils import InputError, ceil, is_positive_or_zero, is_positive_
     is_positive_integer_or_zero_array, check_local_representation
 
 from qml.aglaia.tf_utils import TensorBoardLogger
+from qml.representations import generate_acsf
 
 try:
     from qml.data import Compound
@@ -674,7 +675,7 @@ class _NN(BaseEstimator):
         for i, filename in enumerate(filenames):
             self.compounds[i] = Compound(filename)
 
-    def generate_representation(self, xyz=None, classes=None):
+    def generate_representation(self, xyz=None, classes=None, method='fortran'):
         """
         This function can generate representations either from the data contained in the compounds or from xyz data passed
         through the argument. If the Compounds have already being set and xyz data is given, it complains.
@@ -695,7 +696,7 @@ class _NN(BaseEstimator):
 
         if is_none(self.compounds):
 
-            self.representation, self.classes = self._generate_representations_from_data(xyz, classes)
+            self.representation, self.classes = self._generate_representations_from_data(xyz, classes, method)
 
         elif is_none(xyz):
             # Make representations from compounds
@@ -1080,7 +1081,7 @@ class MRMP(_NN):
 
         self.representation = representation
 
-    def _generate_representations_from_data(self, xyz, classes):
+    def _generate_representations_from_data(self, xyz, classes, method):
         """
         This function makes the representation from xyz data and nuclear charges.
 
@@ -1088,6 +1089,8 @@ class MRMP(_NN):
         :type xyz: numpy array of shape (n_samples, n_atoms, 3)
         :param classes: classes for atomic decomposition
         :type classes: None
+        :param method: What method to use
+        :type method: string
         :return: numpy array of shape (n_samples, n_features) and None
         """
         # TODO implement
@@ -1615,7 +1618,7 @@ class ARMP(_NN):
 
         self.representation = representation
 
-    def _generate_representations_from_data(self, xyz, classes):
+    def _generate_representations_from_data(self, xyz, classes, method):
         """
         This function generates the representations from xyz data
 
@@ -1623,9 +1626,14 @@ class ARMP(_NN):
         :type xyz: numpy array of shape (n_samples, n_atoms, 3)
         :param classes: classes to use for atomic decomposition
         :type classes: numpy array of shape (n_samples, n_atoms)
+        :param method: What method to use
+        :type method: string
         :return: representations and classes
         :rtype: numpy arrays of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
+
+        if method not in ['fortran', 'tf']:
+            raise InputError("The method to generate the acsf can only be 'fortran' or 'tf'. Got %s." % (method))
 
         if is_none(classes):
             raise InputError("The classes need to be provided for the ARMP estimator.")
@@ -1641,12 +1649,14 @@ class ARMP(_NN):
             raise InputError("Slatm from data has not been implemented yet. Use Compounds.")
 
         elif self.representation_name == 'acsf':
-
-            representation = self._generate_acsf_from_data(xyz, classes)
+            if method == 'tf':
+                representation = self._generate_acsf_from_data_tf(xyz, classes)
+            else:
+                representation = self._generate_acsf_from_data_fortran(xyz, classes)
 
         return representation, classes
 
-    def _generate_acsf_from_data(self, xyz, classes):
+    def _generate_acsf_from_data_tf(self, xyz, classes):
         """
         This function generates the acsf from the cartesian coordinates and the classes.
 
@@ -1658,7 +1668,13 @@ class ARMP(_NN):
         :rtype: numpy array of shape (n_samples, n_atoms, n_features)
         """
 
-        elements, element_pairs = self._get_elements_and_pairs(classes)
+        if 0 in classes:
+            idx_zeros = np.where(classes == 0)[1]
+            classes_for_elements = classes[:, :idx_zeros[0]]
+        else:
+            classes_for_elements = classes
+
+        elements, element_pairs = self._get_elements_and_pairs(classes_for_elements)
 
         if self.tensorboard:
             self.tensorboard_logger_representation.initialise()
@@ -1719,6 +1735,62 @@ class ARMP(_NN):
         sess.close()
 
         return representation_conc
+
+    # TODO Make tensorflow and fortran consistent
+    def _generate_acsf_from_data_fortran(self, xyz, classes):
+        """
+        This function uses fortran to generate the representation and the derivative of the representation with respect
+        to the cartesian coordinates.
+        :param xyz: cartesian coordinates
+        :type xyz: numpy array of shape (n_samples, n_atoms, 3)
+        :param classes: the atom types
+        :type classes: numpy array of shape (n_samples, n_atoms)
+        :return: representations and their derivatives wrt to xyz
+        :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms, n_features, n_atoms, 3)
+        """
+
+        initial_natoms = xyz.shape[1]
+
+        if 0 in classes:
+            idx_zeros = np.where(classes == 0)[1]
+            xyz = xyz[:, :idx_zeros[0], :]
+            classes = classes[:, :idx_zeros[0]]
+
+        unpadded_natoms = xyz.shape[1]
+
+        elements, element_paris = self._get_elements_and_pairs(classes)
+
+        rcut = self.acsf_parameters['radial_cutoff']
+        acut = self.acsf_parameters['angular_cutoff']
+        nRs2 = len(self.acsf_parameters['radial_rs'])
+        nRs3 = len(self.acsf_parameters['angular_rs'])
+        nTs = len(self.acsf_parameters['theta_s'])
+        eta2 = self.acsf_parameters['eta']
+        eta3 = eta2
+        zeta = self.acsf_parameters['zeta']
+
+
+        representation = []
+
+        for i in range(xyz.shape[0]):
+            g = generate_acsf(coordinates=xyz[i], elements=elements, gradients=False, nuclear_charges=classes[i],
+                                  rcut=rcut,
+                                  acut=acut,
+                                  nRs2=nRs2,
+                                  nRs3=nRs3,
+                                  nTs=nTs,
+                                  eta2=eta2,
+                                  eta3=eta3,
+                                  zeta=zeta)
+
+            if initial_natoms - unpadded_natoms != 0:
+                padded_g = np.zeros((initial_natoms, g.shape[-1]))
+                padded_g[:unpadded_natoms, :] = g
+                representation.append(padded_g)
+            else:
+                representation.append(g)
+
+        return np.asarray(representation)
 
     def _generate_representations_from_compounds(self):
         """
@@ -2213,8 +2285,14 @@ class ARMP(_NN):
 
         x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
 
-        # Obtaining the array of unique elements in all samples
-        self.elements, self.element_pairs = self._get_elements_and_pairs(classes_approved)
+        # Obtaining the array of unique elements in all samples (excluding dummy atoms 0)
+        if 0 in classes_approved:
+            idx_zeros = np.where(classes_approved == 0)[1]
+            classes_for_elements = classes_approved[:, :idx_zeros[0]]
+        else:
+            classes_for_elements = classes_approved
+
+        self.elements, self.element_pairs = self._get_elements_and_pairs(classes_for_elements)
 
         if self.tensorboard:
             self.tensorboard_logger_training.initialise()
@@ -2336,7 +2414,13 @@ class ARMP(_NN):
 
         x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
 
-        self.elements = self._find_elements(classes_approved)
+
+        if 0 in classes:
+            idx_zeros = np.where(classes == 0)[1]
+            classes_for_elements = classes_approved[:, :idx_zeros[0]]
+        else:
+            classes_for_elements = classes_approved
+        self.elements = self._find_elements(classes_for_elements)
 
         if self.tensorboard:
             self.tensorboard_logger_training.initialise()
