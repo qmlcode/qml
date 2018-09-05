@@ -46,7 +46,7 @@ class AtomScaler(BaseEstimator):
         :type normalize: bool
         """
         # Shallow copy should be fine
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.elements = elements
         self.normalize = normalize
 
@@ -71,31 +71,21 @@ class AtomScaler(BaseEstimator):
         """
 
         if isinstance(X, Data):
-            if X.energies is None:
-                print("Error: Expected Data object to have non-empty attribute 'energies'" % self.__class__.__name__)
-                raise SystemExit
 
-            # NOTE: If memory of the data object is ever an issue,
-            # not making a shallow copy here should be fine
-            self._set_data(X, make_copy=True)
+            self._check_data(X)
+
+            data = copy.copy(X)
+
             # Part of the sklearn CV hack.
-            if not hasattr(self.data, 'indices'):
-                self.data.indices = np.arange(len(self.data))
-
-            return X.nuclear_charges, X.energies
+            if not hasattr(self.data, '_indices'):
+                data._indices = np.arange(len(data))
 
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.
-            self._set_data(self.data, make_copy = True)
-            self.data.indices = np.asarray(X, dtype=int).ravel()
-
-            if X.energies is None:
-                print("Error: Expected Data object to have non-empty attribute 'energies'" % self.__class__.__name__)
-                raise SystemExit
-
-            return self.data.nuclear_charges[self.data.indices], self.data.energies[self.data.indices]
+            data = copy.copy(self.data)
+            data._indices = np.asarray(X, dtype=int).ravel()
 
         elif len(X) > 0 and is_numeric_array(y):
             if is_numeric_array(X[0]):
@@ -116,19 +106,24 @@ class AtomScaler(BaseEstimator):
         if self.data is None:
             return y
         else:
-            self.data.energies[self.data.indices] = 
+            self.data.energies[self.data.indices] = None
 
         #self._has_transformed_labels
 
-    def _set_data(self, data, make_copy=False):
-        if data and data.natoms is None:
+    def _check_data(self, X):
+        if X.natoms is None:
             print("Error: Empty Data object passed to the %s transformer" % self.__class__.__name__)
             raise SystemExit
-        if make_copy:
-            # Shallow copy should be fine
-            self.data = copy.copy(data)
-        else:
-            self.data = data
+
+        if X.energies is None:
+            print("Error: Expected Data object to have non-empty attribute 'energies'" % self.__class__.__name__)
+            raise SystemExit
+
+
+    def _set_data(self, data):
+        if data:
+            self._check_data(data)
+        self.data = data
 
     def fit_transform(self, X, y=None):
         """

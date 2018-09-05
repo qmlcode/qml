@@ -55,7 +55,7 @@ class Data(object):
         Hack for sklearn CV
         """
         other = copy.copy(self)
-        other.indices = i
+        other._indices = i
         return other
 
     # Hack for sklearn CV
@@ -64,8 +64,8 @@ class Data(object):
 
     # Hack for sklearn CV but also convenience
     def __len__(self):
-        if hasattr(self, 'indices'):
-            return len(self.indices)
+        if hasattr(self, '_indices'):
+            return len(self._indices)
         return self.ncompounds
 
     # Hack for sklearn CV but also convenience

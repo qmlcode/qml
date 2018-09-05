@@ -64,47 +64,50 @@ class _BaseRepresentation(BaseEstimator):
         """
         raise NotImplementedError
 
-    def _preprocess_input(self, X):
+    def _extract_data(self, X):
         """
         Convenience function that processes X in a way such that
         X can both be a data object or an array of indices.
 
         :param X: Data object or array of indices
         :type X: Data object or array
+        :return: Data object
+        :rtype: Data object
         """
 
         if isinstance(X, Data):
-            # NOTE: If memory of the data object is ever an issue,
-            # not making a shallow copy here should be fine
-            self._set_data(X, make_copy=True)
-            # Part of the sklearn CV hack.
-            if not hasattr(self.data, 'indices'):
-                self.data._indices = np.arange(len(self.data))
+            self._check_data(X)
+            data = copy.copy(X)
+            if not hasattr(data, "_indices"):
+                data._indices = np.arange(len(data))
+
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.
-            self._set_data(self.data, True)
-            self.data._indices = np.asarray(X, dtype=int).ravel()
+            data = copy.copy(self.data)
+            data._indices = np.asarray(X, dtype=int).ravel()
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
 
-        self._set_representation_type()
+        # Store representation type / name for later use
+        data._representation_type = self._representation_type
+        data._representation_short_name = self._representation_short_name
 
-    def _set_data(self, data, make_copy=False):
-        if data and data.natoms is None:
-            print("Error: Empty Data object passed to %s representation" % self.__class__.__name__)
+        return data
+
+    def _check_data(self, X):
+        if X.natoms is None:
+            print("Error: Empty Data object passed to %s" % self.__class__.__name__)
             raise SystemExit
-        if make_copy:
-            # Shallow copy should be fine
-            self.data = copy.copy(data)
-        else:
-            self.data = data
 
-    def _set_representation_type(self):
-        self.data._representation_type = self._representation_type
-        self.data._representation_short_name = self._representation_short_name
+    def _set_data(self, data):
+        if data:
+            self._check_data(data)
+
+        self.data = data
+
 
     def _check_elements(self, nuclear_charges):
         """
@@ -194,8 +197,7 @@ class CoulombMatrix(_MolecularRepresentation):
 
         self.size = size
         self.sorting = sorting
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
 
     def fit(self, X, y=None):
         """
@@ -207,9 +209,10 @@ class CoulombMatrix(_MolecularRepresentation):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
 
-        natoms = self.data.natoms#[self.data._indices]
+        data = self._extract_data(X)
+
+        natoms = data.natoms#[data._indices]
 
         if self.size == 'auto':
             self.size = max(natoms)
@@ -230,11 +233,11 @@ class CoulombMatrix(_MolecularRepresentation):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data._indices]
-        coordinates = self.data.coordinates[self.data._indices]
-        natoms = self.data.natoms[self.data._indices]
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
 
         if max(natoms) > self.size:
             print("Error: Representation can't be generated for molecule of size \
@@ -255,9 +258,9 @@ class CoulombMatrix(_MolecularRepresentation):
             print("ERROR: Unknown sorting scheme requested")
             raise SystemExit
 
-        self.data._representations = np.asarray(representations)
+        data._representations = np.asarray(representations)
 
-        return self.data
+        return data
 
 
 # TODO add reference
@@ -345,8 +348,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :type interaction_decay: float
         """
 
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.size = size
         self.sorting = sorting
         self.central_cutoff = central_cutoff
@@ -364,18 +366,12 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        natoms = self.data.natoms#[self.data._indices]
+        natoms = data.natoms#[data._indices]
 
         if self.size == 'auto':
             self.size = min(max(natoms), 2 * self.central_cutoff**3)
-
-        ## Giving indices doesn't make sense when predicting energies
-        #if self.data.property_type == 'energies' and not is_none(self.indices):
-        #    print("Error: Specifying variable 'indices' in representation %s \
-        #            is not compatiple with 'property_type' specified in the \
-        #            Data object" % self.__class__.__name__)
 
         return self
 
@@ -388,11 +384,11 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data._indices]
-        coordinates = self.data.coordinates[self.data._indices]
-        natoms = self.data.natoms[self.data._indices]
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
 
         representations = []
         if (self.sorting == "row-norm"):
@@ -411,9 +407,9 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
             print("ERROR: Unknown sorting scheme requested")
             raise SystemExit
 
-        self.data._representations = representations
+        data._representations = representations
 
-        return self.data
+        return data
 
 
 class _SLATM(object):
@@ -431,16 +427,16 @@ class _SLATM(object):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
         if is_string(self.elements) and self.elements == 'auto' \
                 and is_string(self.element_pairs) and self.element_pairs == 'auto':
-            nuclear_charges = self.data.nuclear_charges#[self.data._indices]
+            nuclear_charges = data.nuclear_charges#[data._indices]
             self.elements = get_unique(nuclear_charges)
             self.element_pairs = get_slatm_mbtypes(nuclear_charges)
         elif not is_string(self.elements) and is_string(self.element_pairs) \
                 and self.element_pairs == 'auto':
-            self.element_pairs = list(self.elements) + get_pairs(self.elements)
+            self.element_pairs = get_slatm_mbtypes(self.elements * 3)
         elif is_string(self.elements) and self.elements == 'auto' and \
                 not is_string(self.element_pairs):
             self.elements = get_unique(self.element_pairs)
@@ -458,11 +454,11 @@ class _SLATM(object):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data._indices]
-        coordinates = self.data.coordinates[self.data._indices]
-        natoms = self.data.natoms[self.data._indices]
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
 
         # Check that the molecules being transformed doesn't contain elements
         # not used in the fit.
@@ -472,14 +468,14 @@ class _SLATM(object):
         for charge, xyz in zip(nuclear_charges, coordinates):
             representations.append(
                     np.asarray(
-                        generate_slatm(xyz, charge, self.mbtypes, local=local,
+                        generate_slatm(xyz, charge, self.element_pairs, local=local,
                         sigmas=[self.sigma2, self.sigma3],
                         dgrids=[self.dgrid2, self.dgrid3], rcut=self.rcut,
                         alchemy=self.alchemy, rpower=-self.rpower)))
 
-        self.data._representations = np.asarray(representations)
+        data._representations = np.asarray(representations)
 
-        return self.data
+        return data
 
 # TODO add reference
 class GlobalSLATM(_SLATM, _MolecularRepresentation):
@@ -520,8 +516,7 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
         :type data: Data object
         """
 
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.sigma2 = sigma2
         self.sigma3 = sigma3
         self.dgrid2 = dgrid2
@@ -597,8 +592,7 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
         :type element_pairs: list
         """
 
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.sigma2 = sigma2
         self.sigma3 = sigma3
         self.dgrid2 = dgrid2
@@ -660,8 +654,7 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         :type elements: list
         """
 
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.nbasis = nbasis
         self.precision = precision
         self.cutoff = cutoff
@@ -678,10 +671,10 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
         if is_string(self.elements) and self.elements == 'auto':
-            nuclear_charges = self.data.nuclear_charges#[self.data._indices]
+            nuclear_charges = data.nuclear_charges#[data._indices]
             self.elements = get_unique(nuclear_charges)
 
         return self
@@ -695,11 +688,11 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data._indices]
-        coordinates = self.data.coordinates[self.data._indices]
-        natoms = self.data.natoms[self.data._indices]
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
 
         # Check that the molecules being transformed doesn't contain elements
         # not used in the fit.
@@ -722,9 +715,9 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
                         fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
                             eta, eta, zeta, self.cutoff, self.cutoff, n, size))
 
-        self.data._representations = np.asarray(representations)
+        data._representations = np.asarray(representations)
 
-        return self.data
+        return data
 
 class FCHLRepresentation(_BaseRepresentation):
     """
@@ -745,8 +738,7 @@ class FCHLRepresentation(_BaseRepresentation):
         :type cutoff: float
         """
 
-        # Has to not make copy for sklearn
-        self._set_data(data, make_copy=False)
+        self._set_data(data)
         self.size = size
         self.cutoff = cutoff
 
@@ -760,11 +752,11 @@ class FCHLRepresentation(_BaseRepresentation):
         :return: self
         :rtype: object
         """
-        self._preprocess_input(X)
+        data = self._extract_data(X)
         # Store cutoff to make sure that the kernel cutoff is less
-        self.data._representation_cutoff = self.cutoff
+        data._representation_cutoff = self.cutoff
 
-        natoms = self.data.natoms#[self.data._indices]
+        natoms = data.natoms#[data._indices]
 
         if self.size == 'auto':
             self.size = max(natoms)
@@ -785,11 +777,11 @@ class FCHLRepresentation(_BaseRepresentation):
         :rtype: Data object
         """
 
-        self._preprocess_input(X)
+        data = self._extract_data(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data._indices]
-        coordinates = self.data.coordinates[self.data._indices]
-        natoms = self.data.natoms[self.data._indices]
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
 
         if max(natoms) > self.size:
             print("Error: Representation can't be generated for molecule of size \
@@ -801,6 +793,6 @@ class FCHLRepresentation(_BaseRepresentation):
             representations.append(
                     generate_representation(xyz, charge, max_size=self.size, cut_distance=self.cutoff))
 
-        self.data._representations = np.asarray(representations)
+        data._representations = np.asarray(representations)
 
-        return self.data
+        return data

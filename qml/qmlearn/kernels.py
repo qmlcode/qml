@@ -71,6 +71,10 @@ class _BaseKernel(BaseEstimator):
             print("Error: Expected Data object as input in %s" % self.__class__.__name__)
             raise SystemExit
 
+        if not hasattr(X, '_representation_short_name'):
+            print("Error: No representations found in Data object")
+            raise SystemExit
+
         if X._representation_short_name == 'fchl' and self.__class__.__name__ != 'FCHLKernel' or \
                 X._representation_short_name != 'fchl' and self.__class__.__name__ == 'FCHLKernel':
             print("Error: The FCHL representation is only compatible with the FCHL kernel")
@@ -112,6 +116,8 @@ class _BaseKernel(BaseEstimator):
             kernel = self.generate(X._representations, representation_type=X._representation_type)
 
         X._kernel = kernel
+
+        print(np.min(kernel), np.max(kernel), np.mean(kernel), np.median(kernel), np.var(kernel))
 
         return X
 
