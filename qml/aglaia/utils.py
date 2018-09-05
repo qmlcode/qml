@@ -233,7 +233,7 @@ def check_classes(classes):
         if not is_array_like(classes):
             raise InputError("classes should be array like.")
 
-        if not is_positive_integer_array(classes):
+        if not is_positive_integer_or_zero_array(classes):
             raise InputError("classes should be an array of ints.")
 
         classes = np.asarray(classes)
