@@ -89,11 +89,11 @@ class _BaseKernel(BaseEstimator):
         if X._representation_type is None:
             # For FCHL to keep the documentation tidy, since self.local overrides
             # X._representation_type
-            kernel = self.generate(X.representations, self.representations)
+            kernel = self.generate(X._representations, self.representations)
         else:
-            kernel = self.generate(X.representations, self.representations, X._representation_type)
+            kernel = self.generate(X._representations, self.representations, X._representation_type)
 
-        X.kernel = kernel
+        X._kernel = kernel
 
         return X
 
@@ -102,16 +102,16 @@ class _BaseKernel(BaseEstimator):
         self._check_data_object(X)
 
         # Store representation for future transform calls
-        self._set_representations(X.representations)
+        self._set_representations(X._representations)
 
         if X._representation_type is None:
             # For FCHL to keep the documentation tidy, since self.local overrides
             # X._representation_type
-            kernel = self.generate(X.representations)
+            kernel = self.generate(X._representations)
         else:
-            kernel = self.generate(X.representations, representation_type=X._representation_type)
+            kernel = self.generate(X._representations, representation_type=X._representation_type)
 
-        X.kernel = kernel
+        X._kernel = kernel
 
         return X
 

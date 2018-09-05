@@ -79,13 +79,13 @@ class _BaseRepresentation(BaseEstimator):
             self._set_data(X, make_copy=True)
             # Part of the sklearn CV hack.
             if not hasattr(self.data, 'indices'):
-                self.data.indices = np.arange(len(self.data))
+                self.data._indices = np.arange(len(self.data))
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.
             self._set_data(self.data, True)
-            self.data.indices = np.asarray(X, dtype=int).ravel()
+            self.data._indices = np.asarray(X, dtype=int).ravel()
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
@@ -129,7 +129,7 @@ class _BaseRepresentation(BaseEstimator):
         :rtype: array
         """
 
-        return self.fit(X).transform(X).representations
+        return self.fit(X).transform(X)._representations
 
 class _MolecularRepresentation(_BaseRepresentation):
     """
@@ -209,7 +209,7 @@ class CoulombMatrix(_MolecularRepresentation):
         """
         self._preprocess_input(X)
 
-        natoms = self.data.natoms#[self.data.indices]
+        natoms = self.data.natoms#[self.data._indices]
 
         if self.size == 'auto':
             self.size = max(natoms)
@@ -232,9 +232,9 @@ class CoulombMatrix(_MolecularRepresentation):
 
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+        nuclear_charges = self.data.nuclear_charges[self.data._indices]
+        coordinates = self.data.coordinates[self.data._indices]
+        natoms = self.data.natoms[self.data._indices]
 
         if max(natoms) > self.size:
             print("Error: Representation can't be generated for molecule of size \
@@ -255,7 +255,7 @@ class CoulombMatrix(_MolecularRepresentation):
             print("ERROR: Unknown sorting scheme requested")
             raise SystemExit
 
-        self.data.representations = np.asarray(representations)
+        self.data._representations = np.asarray(representations)
 
         return self.data
 
@@ -366,7 +366,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
         """
         self._preprocess_input(X)
 
-        natoms = self.data.natoms#[self.data.indices]
+        natoms = self.data.natoms#[self.data._indices]
 
         if self.size == 'auto':
             self.size = min(max(natoms), 2 * self.central_cutoff**3)
@@ -390,9 +390,9 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
 
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+        nuclear_charges = self.data.nuclear_charges[self.data._indices]
+        coordinates = self.data.coordinates[self.data._indices]
+        natoms = self.data.natoms[self.data._indices]
 
         representations = []
         if (self.sorting == "row-norm"):
@@ -411,7 +411,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
             print("ERROR: Unknown sorting scheme requested")
             raise SystemExit
 
-        self.data.representations = representations
+        self.data._representations = representations
 
         return self.data
 
@@ -435,7 +435,7 @@ class _SLATM(object):
 
         if is_string(self.elements) and self.elements == 'auto' \
                 and is_string(self.element_pairs) and self.element_pairs == 'auto':
-            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
+            nuclear_charges = self.data.nuclear_charges#[self.data._indices]
             self.elements = get_unique(nuclear_charges)
             self.element_pairs = get_slatm_mbtypes(nuclear_charges)
         elif not is_string(self.elements) and is_string(self.element_pairs) \
@@ -460,9 +460,9 @@ class _SLATM(object):
 
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+        nuclear_charges = self.data.nuclear_charges[self.data._indices]
+        coordinates = self.data.coordinates[self.data._indices]
+        natoms = self.data.natoms[self.data._indices]
 
         # Check that the molecules being transformed doesn't contain elements
         # not used in the fit.
@@ -477,7 +477,7 @@ class _SLATM(object):
                         dgrids=[self.dgrid2, self.dgrid3], rcut=self.rcut,
                         alchemy=self.alchemy, rpower=-self.rpower)))
 
-        self.data.representations = np.asarray(representations)
+        self.data._representations = np.asarray(representations)
 
         return self.data
 
@@ -681,7 +681,7 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
         self._preprocess_input(X)
 
         if is_string(self.elements) and self.elements == 'auto':
-            nuclear_charges = self.data.nuclear_charges#[self.data.indices]
+            nuclear_charges = self.data.nuclear_charges#[self.data._indices]
             self.elements = get_unique(nuclear_charges)
 
         return self
@@ -697,9 +697,9 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
 
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+        nuclear_charges = self.data.nuclear_charges[self.data._indices]
+        coordinates = self.data.coordinates[self.data._indices]
+        natoms = self.data.natoms[self.data._indices]
 
         # Check that the molecules being transformed doesn't contain elements
         # not used in the fit.
@@ -722,22 +722,9 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
                         fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
                             eta, eta, zeta, self.cutoff, self.cutoff, n, size))
 
-        self.data.representations = np.asarray(representations)
+        self.data._representations = np.asarray(representations)
 
         return self.data
-
-    # TODO Make it possible to pass data in other ways as well
-    # e.g. dictionary
-    def generate(self, X):
-        """
-        :param X: Data object or indices to use from the \
-                Data object passed at initialization
-        :type X: Data object or array of indices
-        :return: Representations of shape (n_samples, representation_size)
-        :rtype: array
-        """
-
-        return self.fit(X).transform(X).representations
 
 class FCHLRepresentation(_BaseRepresentation):
     """
@@ -777,7 +764,7 @@ class FCHLRepresentation(_BaseRepresentation):
         # Store cutoff to make sure that the kernel cutoff is less
         self.data._representation_cutoff = self.cutoff
 
-        natoms = self.data.natoms#[self.data.indices]
+        natoms = self.data.natoms#[self.data._indices]
 
         if self.size == 'auto':
             self.size = max(natoms)
@@ -800,9 +787,9 @@ class FCHLRepresentation(_BaseRepresentation):
 
         self._preprocess_input(X)
 
-        nuclear_charges = self.data.nuclear_charges[self.data.indices]
-        coordinates = self.data.coordinates[self.data.indices]
-        natoms = self.data.natoms[self.data.indices]
+        nuclear_charges = self.data.nuclear_charges[self.data._indices]
+        coordinates = self.data.coordinates[self.data._indices]
+        natoms = self.data.natoms[self.data._indices]
 
         if max(natoms) > self.size:
             print("Error: Representation can't be generated for molecule of size \
@@ -814,6 +801,6 @@ class FCHLRepresentation(_BaseRepresentation):
             representations.append(
                     generate_representation(xyz, charge, max_size=self.size, cut_distance=self.cutoff))
 
-        self.data.representations = np.asarray(representations)
+        self.data._representations = np.asarray(representations)
 
         return self.data

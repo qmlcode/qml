@@ -109,13 +109,16 @@ class AtomScaler(BaseEstimator):
 
     def _postprocess_output(self, y):
         """
+        The output type should match the input, so do all the things
+        to make this happen.
         """
 
-        if self.normalize:
-            self.std = np.std(y)
+        if self.data is None:
+            return y
+        else:
+            self.data.energies[self.data.indices] = 
 
-        y /= self.std
-
+        #self._has_transformed_labels
 
     def _set_data(self, data, make_copy=False):
         if data and data.natoms is None:
@@ -155,6 +158,11 @@ class AtomScaler(BaseEstimator):
         X = self._featurizer(nuclear_charges)
 
         delta_y = y - self.model.fit(X, y).predict(X)
+
+        if self.normalize:
+            self.std = np.std(delta_y)
+
+        delta_y /= self.std
 
         output = self._postprocess_output(delta_y)
 

@@ -34,13 +34,13 @@ class Data(object):
             filenames = sorted(glob.glob(filenames))
         if isinstance(filenames, list):
             self._parse_xyz_files(filenames)
-        # TODO change representation, kernel, indices to private
         # Overwritten in various parts of a standard prediction pipeline
         # so don't use these within the class
-        #self.representation = None
-        #self.kernel = None
-        #self.indices = None
-        #self._representation_type = None
+        #self._has_transformed_labels
+        #self._representations
+        #self._kernel
+        #self._indices
+        #self._representation_type
         #self._representation_short_name
         #self._representation_cutoff
         #self.

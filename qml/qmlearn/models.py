@@ -64,7 +64,7 @@ class _BaseModel(BaseEstimator):
 
         elif isinstance(X, Data):
             try:
-                y = X.energies[X.indices]
+                y = X.energies[X._indices]
             except:
                 print("No kernel energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
@@ -114,7 +114,7 @@ class KernelRidgeRegression(_BaseModel):
 
         if isinstance(X, Data):
             try:
-                K, y = X.kernel, X.energies[X.indices]
+                K, y = X._kernel, X.energies[X._indices]
             except:
                 print("No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
@@ -146,7 +146,7 @@ class KernelRidgeRegression(_BaseModel):
 
         if isinstance(X, Data):
             try:
-                K = X.kernel
+                K = X._kernel
             except:
                 print("No kernel matrix found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
