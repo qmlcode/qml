@@ -2011,26 +2011,26 @@ class ARMP(_NN):
         :rtype: tf tensor of shape (n_samples, 1)
         """
 
-        atomic_energies = tf.zeros_like(zs, dtype=tf.float32)
+        all_atomic_energies = tf.zeros_like(zs, dtype=tf.float32)
 
-        for i in range(self.elements.shape[0]):
+        for el in self.elements:
+            # Obtaining the indices of where in Zs there is the current element
+            current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
+            where_element = tf.cast(tf.where(tf.equal(zs, current_element)), dtype=tf.int32)
 
-            # Calculating the output for every atom in all data as if they were all of the same element
-            atomic_energies_all = self._atomic_model(x, self.hidden_layer_sizes, element_weights[self.elements[i]],
-                                                 element_biases[self.elements[i]])  # (n_samples, n_atoms)
+            # Extract the descriptor corresponding to the right element
+            current_element_in_x = tf.gather_nd(x, where_element)
 
-            # Figuring out which atomic energies correspond to the current element.
-            current_element = tf.expand_dims(tf.constant(self.elements[i], dtype=tf.int32), axis=0)
-            where_element = tf.equal(tf.cast(zs, dtype=tf.int32), current_element)  # (n_samples, n_atoms)
+            # Calculate the atomic energy of all the atoms of type equal to the current element
+            atomic_ene = self._atomic_model(current_element_in_x, self.hidden_layer_sizes, element_weights[el],
+                                                 element_biases[el])
 
-            # Extracting the energies corresponding to the right element
-            element_energies = tf.where(where_element, atomic_energies_all, tf.zeros_like(zs, dtype=tf.float32))
-
-            # Adding the energies of the current element to the final atomic energies tensor
-            atomic_energies = tf.add(atomic_energies, element_energies)
+            # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
+            updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(zs))
+            all_atomic_energies = tf.add(all_atomic_energies, updates)
 
         # Summing the energies of all the atoms
-        total_energies = tf.reduce_sum(atomic_energies, axis=-1, name="output", keepdims=True)
+        total_energies = tf.reduce_sum(all_atomic_energies, axis=-1, name="output", keepdims=True)
 
         return total_energies
 
@@ -2313,7 +2313,7 @@ class ARMP(_NN):
         # Initial set up of the NN
         with tf.name_scope("Data"):
             x_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms, self.n_features], name="Descriptors")
-            zs_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, self.n_atoms], name="Atomic-numbers")
+            zs_ph = tf.placeholder(dtype=tf.int32, shape=[None, self.n_atoms], name="Atomic-numbers")
             y_ph = tf.placeholder(dtype=self.tf_dtype, shape=[None, 1], name="Properties")
             buffer_tf = tf.placeholder(dtype=tf.int64, name="buffer")
 
