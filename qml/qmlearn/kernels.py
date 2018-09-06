@@ -43,6 +43,7 @@ from ..ml.representations.ffchl_module import fget_global_kernels_fchl
 from ..ml.representations.ffchl_module import fget_global_symmetric_kernels_fchl
 
 from ..utils.alchemy import get_alchemy
+from ..utils import get_unique
 
 class _BaseKernel(BaseEstimator):
     """
@@ -84,6 +85,9 @@ class _BaseKernel(BaseEstimator):
     def _set_representations(self, rep):
         self.representations = rep
 
+    def _set_nuclear_charges(self, charge):
+        self.nuclear_charges = charge
+
     def transform(self, X):
 
         self._check_data_object(X)
@@ -101,6 +105,15 @@ class _BaseKernel(BaseEstimator):
 
         return X
 
+    def _get_indices(self, representations, nuclear_charges):
+        elements = get_unique(nuclear_charges)
+
+        Y = [[np.asarray([v for j,v in enumerate(representations[i]) if nuclear_charges[i][j] == element])
+            for i in range(len(nuclear_charges))] for element in elements]
+
+        return Y
+
+
     def _fit_transform(self, X):
 
         self._check_data_object(X)
@@ -113,7 +126,14 @@ class _BaseKernel(BaseEstimator):
             # X._representation_type
             kernel = self.generate(X._representations)
         else:
+            Y = self._get_indices(X._representations, X.nuclear_charges[X._indices])
             kernel = self.generate(X._representations, representation_type=X._representation_type)
+            print(kernel[:3,:3])
+            for y in Y:
+                kernel = self.generate(y, representation_type=X._representation_type)
+                print(kernel[:3,:3])
+            quit()
+
 
         X._kernel = kernel
 
@@ -185,7 +205,7 @@ class GaussianKernel(_BaseKernel):
 
             if smallest_kernel_element < 0.5:
                 self._quick_estimate_sigma(X, representation_type, sigma_init * 2.5, count + 1)
-            elif smallest_kernel_element > 1:
+            elif smallest_kernel_element > 0.95:
                 self._quick_estimate_sigma(X, representation_type, sigma_init / 2.5, count + 1)
 
     def generate(self, X, Y=None, representation_type='molecular'):
@@ -207,6 +227,9 @@ class GaussianKernel(_BaseKernel):
                  Y=None else (n_samplesX, n_samplesY)
         :rtype: array
         """
+
+        if not self.alchemy:
+            print("Warning: 'alchemy=False' is only supported as part of a pipeline")
 
         if self.sigma == 'auto':
             if representation_type == 'molecular':
@@ -247,7 +270,7 @@ class GaussianKernel(_BaseKernel):
         # Note: Transposed for Fortran
         n = X.shape[0]
 
-        if Y is None:
+        if Y is None or X is Y:
             # Do symmetric matrix
             K = np.empty((n, n), order='F')
             fgaussian_kernel_symmetric(X.T, n, K, self.sigma)
@@ -273,6 +296,8 @@ class GaussianKernel(_BaseKernel):
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
         for i in range(nm1):
+            if n1[i] == 0:
+                continue
             x1[i,:n1[i]] = X[i]
 
 
@@ -282,7 +307,7 @@ class GaussianKernel(_BaseKernel):
         sigmas = np.array([self.sigma], dtype=np.float64)
         nsigmas = sigmas.size
 
-        if Y is None:
+        if Y is None or X is Y:
             # Do symmetric matrix
             return fget_vector_kernels_gaussian_symmetric(x1, n1, [self.sigma],
                 nm1, nsigmas)[0]
@@ -421,7 +446,7 @@ class LaplacianKernel(_BaseKernel):
         # Note: Transposed for Fortran
         n = X.shape[0]
 
-        if Y is None:
+        if Y is None or X is Y:
             # Do symmetric matrix
             K = np.empty((n, n), order='F')
             flaplacian_kernel_symmetric(X.T, n, K, self.sigma)
@@ -456,7 +481,7 @@ class LaplacianKernel(_BaseKernel):
         sigmas = np.array([self.sigma], dtype=np.float64)
         nsigmas = sigmas.size
 
-        if Y is None:
+        if Y is None or X is Y:
             # Do symmetric matrix
             return fget_vector_kernels_laplacian_symmetric(x1, n1, [self.sigma],
                 nm1, nsigmas)[0]
@@ -531,7 +556,7 @@ class FCHLKernel(_BaseKernel):
 
         self.representations = None
 
-    def _quick_estimate_sigma(self, X, sigma_init=100, count=1):
+    def _quick_estimate_sigma(self, X, sigma_init=1, count=1):
         """
         Use 50 random points for atomic, 200 for molecular, to get an approximate guess for sigma
         """
@@ -550,27 +575,24 @@ class FCHLKernel(_BaseKernel):
 
         # Generate kernel for a random subset
         indices = np.random.choice(np.arange(len(X)), size=n, replace=False)
-        kernel = self.generate(X[indices])
+        kernel = self.generate(X)#[indices])
 
         if not self.local:
             # min smallest kernel element
             smallest_kernel_element = np.min(kernel)
+            if smallest_kernel_element < 0.3:
+                self._quick_estimate_sigma(X, sigma_init * 2.5, count + 1)
+            elif smallest_kernel_element > 0.9:
+                self._quick_estimate_sigma(X, sigma_init / 2.5, count + 1)
 
-            # Rescale sigma such that smallest kernel element will be equal to 1/2
-            self.sigma *= np.sqrt(- np.log(smallest_kernel_element) / np.log(1.1))
-            # Update sigma if the given sigma was completely wrong
-            if np.isinf(self.sigma):
-                self._quick_estimate_sigma(X, sigma_init * 10, count + 1)
-            elif self.sigma <= 1e-12:
-                self._quick_estimate_sigma(X, sigma_init / 10, count + 1)
         else:
             sizes = np.asarray([len(X[i]) for i in indices])
             kernel /= sizes[:,None] * sizes[None,:]
             smallest_kernel_element = np.min(kernel)
 
-            if smallest_kernel_element < 0.5:
+            if smallest_kernel_element < 0.1:
                 self._quick_estimate_sigma(X, sigma_init * 2.5, count + 1)
-            elif smallest_kernel_element > 1:
+            elif smallest_kernel_element > 0.3:
                 self._quick_estimate_sigma(X, sigma_init / 2.5, count + 1)
 
     def generate(self, X, Y=None):
@@ -590,30 +612,14 @@ class FCHLKernel(_BaseKernel):
         """
 
         if self.sigma == 'auto':
-            if not self.local:
-                auto_sigma = True
-            else:
-                auto_sigma = False
-
             # Do a quick and dirty initial estimate of sigma
             self._quick_estimate_sigma(X)
-        else:
-            auto_sigma = False
 
 
         if not self.local:
             kernel = self._generate_molecular(X,Y)
         else:
             kernel = self._generate_atomic(X,Y)
-
-        if auto_sigma:
-            # Find smallest kernel element
-            smallest_kernel_element = np.min(kernel)
-            # Rescale kernel such that we don't have to calculate it again for a new sigma
-            alpha = - np.log(1.1) / np.log(smallest_kernel_element)
-            self.sigma /= np.sqrt(alpha)
-            print(self.sigma)
-            return kernel ** alpha
 
         return kernel
 
@@ -641,7 +647,7 @@ class FCHLKernel(_BaseKernel):
 
         doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
 
-        if Y is None:
+        if Y is None or X is Y:
             # Do symmetric kernel
             return fget_global_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
                         nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
@@ -692,7 +698,7 @@ class FCHLKernel(_BaseKernel):
 
         doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
 
-        if Y is None:
+        if Y is None or X is Y:
             return fget_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
                         nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
                         self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,

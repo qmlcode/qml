@@ -22,21 +22,21 @@
 
 from __future__ import print_function
 
-import numpy as np
+import copy
 
+import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
 
 from .data import Data
-
-from ..utils import is_numeric_array, get_unique
+from ..utils import is_numeric_array, get_unique, is_positive_integer_or_zero_array
 
 class AtomScaler(BaseEstimator):
     """
     Subtracts any constant offset or linear dependency on the number of atoms of each element from the property
     """
 
-    def __init__(self, data=None, elements='auto', normalize=True):
+    def __init__(self, data=None, elements='auto'):
         """
         :param data: Data object (optional)
         :type data: Data object
@@ -48,15 +48,11 @@ class AtomScaler(BaseEstimator):
         # Shallow copy should be fine
         self._set_data(data)
         self.elements = elements
-        self.normalize = normalize
 
         # Initialize model
         self.model = LinearRegression()
 
-        # Constant unless normalize==True
-        self.std = 1
-
-    def _preprocess_input(self, X, y):
+    def _preprocess_input(self, X):
         """
         Convenience function that processes X in a way such that
         X can both be a data object, or an array of indices. And y
@@ -77,8 +73,16 @@ class AtomScaler(BaseEstimator):
             data = copy.copy(X)
 
             # Part of the sklearn CV hack.
-            if not hasattr(self.data, '_indices'):
+            if not hasattr(data, '_indices'):
                 data._indices = np.arange(len(data))
+
+            if hasattr(data, '_has_transformed_labels'):
+                print("Error: Target data has already been transformed by %s" % self.__class__.__name__)
+                raise SystemExit
+
+            transformed_labels = np.zeros(len(data), dtype=bool)
+            transformed_labels[data._indices] = True
+            data._has_transformed_labels = transformed_labels
 
         elif self.data and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
@@ -87,28 +91,22 @@ class AtomScaler(BaseEstimator):
             data = copy.copy(self.data)
             data._indices = np.asarray(X, dtype=int).ravel()
 
-        elif len(X) > 0 and is_numeric_array(y):
-            if is_numeric_array(X[0]):
-                return X, y
+
+            if hasattr(data, '_has_transformed_labels'):
+                if any(data._has_transformed_labels[data._indices] == True):
+                    print("Error: Target data has already been transformed by %s" % self.__class__.__name__)
+                    raise SystemExit
+                data._has_transformed_labels[data._indices] = True
             else:
-                print("Error: Expected numeric array. Got %s" % str(X))
-                raise SystemExit
+                transformed_labels = np.zeros(len(data.energies), dtype=bool)
+                transformed_labels[data._indices] = True
+                data._has_transformed_labels = transformed_labels
+
         else:
             print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
 
-    def _postprocess_output(self, y):
-        """
-        The output type should match the input, so do all the things
-        to make this happen.
-        """
-
-        if self.data is None:
-            return y
-        else:
-            self.data.energies[self.data.indices] = None
-
-        #self._has_transformed_labels
+        return data
 
     def _check_data(self, X):
         if X.natoms is None:
@@ -141,27 +139,31 @@ class AtomScaler(BaseEstimator):
         :rtype: array or Data object
         """
 
-        nuclear_charges, y = self._preprocess_input(X, y)
+        if not isinstance(X, Data) and y is not None:
+            data = None
+            nuclear_charges = X
+        else:
+            data = self._preprocess_input(X)
+            nuclear_charges = data.nuclear_charges[data._indices]
+            y = data.energies[data._indices]
 
         if self.elements == 'auto':
             self.elements = get_unique(nuclear_charges)
         else:
-            self_check_elements(nuclear_charges)
+            self._check_elements(nuclear_charges)
 
 
+        features = self._featurizer(nuclear_charges)
 
-        X = self._featurizer(nuclear_charges)
+        delta_y = y - self.model.fit(features, y).predict(features)
 
-        delta_y = y - self.model.fit(X, y).predict(X)
-
-        if self.normalize:
-            self.std = np.std(delta_y)
-
-        delta_y /= self.std
-
-        output = self._postprocess_output(delta_y)
-
-        return output
+        if data:
+            # Force copy
+            data.energies = data.energies.copy()
+            data.energies[data._indices] = delta_y
+            return data
+        else:
+            return delta_y
 
     def _check_elements(self, nuclear_charges):
         """
@@ -173,7 +175,7 @@ class AtomScaler(BaseEstimator):
         if not np.isin(elements_transform, self.elements).all():
             print("Warning: Trying to transform molecules with elements",
                   "not included during fit in the %s method." % self.__class__.__name__,
-                  "%s used in training but trying to transform %s" % (str(self.elements), str(element_transform)))
+                  "%s used in training but trying to transform %s" % (str(self.elements), str(elements_transform)))
 
     def _featurizer(self, X):
         """
@@ -188,11 +190,48 @@ class AtomScaler(BaseEstimator):
         for i, x in enumerate(X):
             count_dict = {k:v for k,v in zip(*np.unique(x, return_counts=True))}
             for key, value in count_dict.items():
+                if key not in element_to_index:
+                    continue
                 j = element_to_index[key]
                 features[i, j] = value
 
         return features
 
-    def transform(self, X, y):
-        X = self._featurizer(X)
-        return y - self.model.predict(X)
+    def transform(self, X, y=None):
+        """
+        Transform the data with the fitted linear model.
+        Supports three different types of input.
+        1) X is a list of nuclear charges and y is values to transform.
+        2) X is an array of indices of which to transform.
+        3) X is a data object
+
+        :param X: List with nuclear charges or Data object.
+        :type X: list
+        :param y: Values to transform
+        :type y: array or None
+        :return: Array of transformed values or Data object, depending on input
+        :rtype: array or Data object
+        """
+
+        if not isinstance(X, Data) and y is not None:
+            data = None
+            nuclear_charges = X
+        else:
+            data = self._preprocess_input(X)
+            nuclear_charges = data.nuclear_charges[data._indices]
+            y = data.energies[data._indices]
+
+        self._check_elements(nuclear_charges)
+
+        features = self._featurizer(nuclear_charges)
+
+        delta_y = y - self.model.predict(features)
+
+        if data:
+            # Force copy
+            data.energies = data.energies.copy()
+            data.energies[data._indices] = delta_y
+            return data
+        else:
+            return delta_y
+

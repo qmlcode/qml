@@ -24,15 +24,6 @@ if __name__ == "__main__":
     test_energies = np.loadtxt('data/hof_qm7.txt', usecols=1)[:test_data.ncompounds]
     test_data.set_energies(test_energies)
 
-    #print(train_data.energies[:5])
-    #model = AtomScaler()
-    #energies = model.fit_transform(train_data.nuclear_charges, train_data.energies)
-    #print(energies[:5])
-    #energies = model.transform(train_data.nuclear_charges, train_data.energies)
-    #print(energies[:5])
-
-    #quit()
-
     #rep = FCHLRepresentation().generate(test_data)
     #model = FCHLKernel(local=False)
     #kernel = model.generate(rep)
@@ -69,30 +60,31 @@ if __name__ == "__main__":
     #predictions = model.predict(test_kernel)
     #print(predictions.shape)
 
-    #model = make_pipeline(CoulombMatrix(train_data), GaussianKernel(sigma=300), KernelRidgeRegression(l2_reg=1e-4))
+    #model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma='auto'), KernelRidgeRegression(l2_reg=1e-8))
     #idx = np.arange(len(train_data))
     #np.random.shuffle(idx)
-    #model.fit(idx[:(3*500)//2])
+    #model.fit(idx[:(3*100)//2])
     #quit()
+    model = make_pipeline(AtomScaler(train_data), CoulombMatrix(), GaussianKernel(), KernelRidgeRegression())
 
     ## Fit and predict KRR from pipeline
     #model = make_pipeline(CoulombMatrix(train_data), GaussianKernel(), KernelRidgeRegression())
-    model = Pipeline([('representation', CoulombMatrix(train_data)), ('kernel',GaussianKernel()), ('model', KernelRidgeRegression())])
+    model = Pipeline([('preprocessing', AtomScaler(train_data)), ('representation', FCHLRepresentation()), ('kernel',GaussianKernel()), ('model', KernelRidgeRegression())])
     #predictions = model.predict(test_data)
     #print(predictions.shape)
 
 
     # Gridsearch CV of hyperparams
-    params = {'representation': [GlobalSLATM(train_data)],
+    params = {'representation': [AtomicCoulombMatrix(train_data)],
               'kernel': [GaussianKernel()],
-              'kernel__sigma': [100, 300, 1000],
-              'model__l2_reg': [1e-6, 1e-4, 1e-2]
+              'kernel__sigma': [1000],
+              'model__l2_reg': [1e-8]
              }
 
     grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
-    grid.fit(idx[:(3*200)//2])
+    grid.fit(idx[:(3*50)//2])
     print(grid.best_params_, grid.best_score_)
     quit()
 

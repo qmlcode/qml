@@ -753,8 +753,6 @@ class FCHLRepresentation(_BaseRepresentation):
         :rtype: object
         """
         data = self._extract_data(X)
-        # Store cutoff to make sure that the kernel cutoff is less
-        data._representation_cutoff = self.cutoff
 
         natoms = data.natoms#[data._indices]
 
@@ -778,6 +776,9 @@ class FCHLRepresentation(_BaseRepresentation):
         """
 
         data = self._extract_data(X)
+
+        # Store cutoff to make sure that the kernel cutoff is less
+        data._representation_cutoff = self.cutoff
 
         nuclear_charges = data.nuclear_charges[data._indices]
         coordinates = data.coordinates[data._indices]
