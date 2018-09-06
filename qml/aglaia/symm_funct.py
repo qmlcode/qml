@@ -352,8 +352,8 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
 
     return clean_final_term
 
-def generate_parkhill_acsf(xyzs, Zs, elements, element_pairs, radial_cutoff, angular_cutoff,
-                           radial_rs, angular_rs, theta_s, zeta, eta):
+def generate_parkhill_acsf(xyzs, Zs, elements, element_pairs, rcut, acut,
+                           nRs2, nRs3, nTs, zeta, eta):
     """
     This function generates the atom centred symmetry function as used in the Tensormol paper. Currently only tested for
     single systems with many conformations. It requires the coordinates of all the atoms in each data sample, the atomic
@@ -364,19 +364,23 @@ def generate_parkhill_acsf(xyzs, Zs, elements, element_pairs, radial_cutoff, ang
     :param Zs: tensor of shape (n_samples, n_atoms)
     :param elements: np.array of shape (n_elements,)
     :param element_pairs: np.array of shape (n_elementpairs, 2)
-    :param radial_cutoff: scalar float
-    :param angular_cutoff: scalar float
-    :param radial_rs: np.array of shape (n_rad_rs,)
-    :param angular_rs: np.array of shape (n_ang_rs,)
-    :param theta_s: np.array of shape (n_thetas,)
+    :param rcut: scalar float
+    :param acut: scalar float
+    :param nRs2: positive integer
+    :param nRs3: positive integer
+    :param nTs: positive integer
     :param zeta: scalar float
-    :param eta: scalar float
-    :return: a tf tensor of shape (n_samples, n_atoms, n_rad_rs * n_elements + n_ang_rs * n_thetas * n_elementpairs)
+    :param eta2: scalar float
+    :return: a tf tensor of shape a tf tensor of shape (n_samples, n_atoms, nRs2 * n_elements + nRs3 * nTs * n_elementpairs)
     """
 
+    radial_rs = np.linspace(0, rcut, nRs2)
+    angular_rs = np.linspace(0, acut, nRs3)
+    theta_s = np.linspace(0, np.pi, nTs)
+
     with tf.name_scope("acsf_params"):
-        rad_cutoff = tf.constant(radial_cutoff, dtype=tf.float32)
-        ang_cutoff = tf.constant(angular_cutoff, dtype=tf.float32)
+        rad_cutoff = tf.constant(rcut, dtype=tf.float32)
+        ang_cutoff = tf.constant(acut, dtype=tf.float32)
         rad_rs = tf.constant(radial_rs, dtype=tf.float32)
         ang_rs = tf.constant(angular_rs, dtype=tf.float32)
         theta_s = tf.constant(theta_s, dtype=tf.float32)

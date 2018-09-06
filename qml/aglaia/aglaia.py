@@ -598,8 +598,8 @@ class _NN(BaseEstimator):
         :return: None
         """
 
-        self.acsf_parameters = {'radial_cutoff': 10.0, 'angular_cutoff': 10.0, 'radial_rs': (0.0, 0.1, 0.2),
-                                'angular_rs': (0.0, 0.1, 0.2), 'theta_s': (3.0, 2.0), 'zeta': 3.0, 'eta': 2.0}
+        self.acsf_parameters = {'rcut': 5.0, 'acut': 5.0, 'nRs2': 5, 'nRs3': 5, 'nTs': 5,
+                                      'zeta': 220.127, 'eta': 30.8065}
 
         if not is_none(params):
             for key, value in params.items():
@@ -824,29 +824,25 @@ class _NN(BaseEstimator):
         :return: None
         """
 
-        if not is_positive(self.acsf_parameters['radial_cutoff']):
-            raise InputError("Expected positive float for variable 'radial_cutoff'. Got %s." % str(self.acsf_parameters['radial_cutoff']))
+        if not is_positive(self.acsf_parameters['rcut']):
+            raise InputError(
+                "Expected positive float for variable 'rcut'. Got %s." % str(self.acsf_parameters['rcut']))
 
-        if not is_positive(self.acsf_parameters['angular_cutoff']):
-            raise InputError("Expected positive float for variable 'angular_cutoff'. Got %s." % str(self.acsf_parameters['angular_cutoff']))
+        if not is_positive(self.acsf_parameters['acut']):
+            raise InputError(
+                "Expected positive float for variable 'acut'. Got %s." % str(self.acsf_parameters['acut']))
 
-        if not is_numeric_array(self.acsf_parameters['radial_rs']):
-            raise InputError("Expecting an array like radial_rs. Got %s." % (self.acsf_parameters['radial_rs']) )
-        if not len(self.acsf_parameters['radial_rs'])>0:
-            raise InputError("No radial_rs values were given." )
+        if not is_positive_integer(self.acsf_parameters['nRs2']):
+            raise InputError("Expected positinve integer for 'nRs2. Got %s." % (self.acsf_parameters['nRs2']))
 
-        if not is_numeric_array(self.acsf_parameters['angular_rs']):
-            raise InputError("Expecting an array like angular_rs. Got %s." % (self.acsf_parameters['angular_rs']) )
-        if not len(self.acsf_parameters['angular_rs'])>0:
-            raise InputError("No angular_rs values were given." )
+        if not is_positive_integer(self.acsf_parameters['nRs3']):
+            raise InputError("Expected positinve integer for 'nRs3. Got %s." % (self.acsf_parameters['nRs3']))
 
-        if not is_numeric_array(self.acsf_parameters['theta_s']):
-            raise InputError("Expecting an array like theta_s. Got %s." % (self.acsf_parameters['theta_s']) )
-        if not len(self.acsf_parameters['theta_s'])>0:
-            raise InputError("No theta_s values were given. " )
+        if not is_positive_integer(self.acsf_parameters['nTs']):
+            raise InputError("Expected positinve integer for 'nTs. Got %s." % (self.acsf_parameters['nTs']))
 
-        if is_numeric_array(self.acsf_parameters['eta']):
-            raise InputError("Expecting a scalar value for eta. Got %s." % (self.acsf_parameters['eta']))
+        if is_numeric_array(self.acsf_parameters['eta']) or is_numeric_array(self.acsf_parameters['eta']):
+            raise InputError("Expecting a scalar value for eta parameters.")
 
         if is_numeric_array(self.acsf_parameters['zeta']):
             raise InputError("Expecting a scalar value for zeta. Got %s." % (self.acsf_parameters['zeta']))
@@ -1693,11 +1689,11 @@ class ARMP(_NN):
             batch_xyz, batch_zs = iterator.get_next()
 
         representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
-                                            radial_cutoff=self.acsf_parameters['radial_cutoff'],
-                                            angular_cutoff=self.acsf_parameters['angular_cutoff'],
-                                            radial_rs=self.acsf_parameters['radial_rs'],
-                                            angular_rs=self.acsf_parameters['angular_rs'],
-                                            theta_s=self.acsf_parameters['theta_s'], eta=self.acsf_parameters['eta'],
+                                            rcut=self.acsf_parameters['rcut'],
+                                            acut=self.acsf_parameters['acut'],
+                                            nRs2=self.acsf_parameters['nRs2'],
+                                            nRs3=self.acsf_parameters['nRs3'],
+                                            nTs=self.acsf_parameters['nTs'], eta=self.acsf_parameters['eta'],
                                             zeta=self.acsf_parameters['zeta'])
 
         sess = tf.Session()
@@ -1758,30 +1754,20 @@ class ARMP(_NN):
 
         unpadded_natoms = xyz.shape[1]
 
-        elements, element_paris = self._get_elements_and_pairs(classes)
-
-        rcut = self.acsf_parameters['radial_cutoff']
-        acut = self.acsf_parameters['angular_cutoff']
-        nRs2 = len(self.acsf_parameters['radial_rs'])
-        nRs3 = len(self.acsf_parameters['angular_rs'])
-        nTs = len(self.acsf_parameters['theta_s'])
-        eta2 = self.acsf_parameters['eta']
-        eta3 = eta2
-        zeta = self.acsf_parameters['zeta']
-
+        elements, _ = self._get_elements_and_pairs(classes)
 
         representation = []
 
         for i in range(xyz.shape[0]):
             g = generate_acsf(coordinates=xyz[i], elements=elements, gradients=False, nuclear_charges=classes[i],
-                                  rcut=rcut,
-                                  acut=acut,
-                                  nRs2=nRs2,
-                                  nRs3=nRs3,
-                                  nTs=nTs,
-                                  eta2=eta2,
-                                  eta3=eta3,
-                                  zeta=zeta)
+                              rcut=self.acsf_parameters['rcut'],
+                              acut=self.acsf_parameters['acut'],
+                              nRs2=self.acsf_parameters['nRs2'],
+                              nRs3=self.acsf_parameters['nRs3'],
+                              nTs=self.acsf_parameters['nTs'],
+                              eta2=self.acsf_parameters['eta'],
+                              eta3=self.acsf_parameters['eta'],
+                              zeta=self.acsf_parameters['zeta'])
 
             if initial_natoms - unpadded_natoms != 0:
                 padded_g = np.zeros((initial_natoms, g.shape[-1]))
@@ -1823,25 +1809,6 @@ class ARMP(_NN):
         :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
-        # Obtaining the total elements and the element pairs
-        mbtypes = qml_rep.get_slatm_mbtypes([mol.nuclear_charges for mol in self.compounds])
-
-        elements = []
-        element_pairs = []
-
-        # Splitting the one and two body interactions in mbtypes
-        for item in mbtypes:
-            if len(item) == 1:
-                elements.append(item[0])
-            if len(item) == 2:
-                element_pairs.append(list(item))
-            if len(item) == 3:
-                break
-
-        # Need the element pairs in descending order for TF
-        for item in element_pairs:
-            item.reverse()
-
         # Obtaining the xyz and the nuclear charges
         xyzs = []
         zs = []
@@ -1852,6 +1819,8 @@ class ARMP(_NN):
             zs.append(compound.nuclear_charges)
             if len(compound.nuclear_charges) > max_n_atoms:
                 max_n_atoms = len(compound.nuclear_charges)
+
+        elements, element_pairs = self._get_elements_and_pairs(zs)
 
         # Padding so that all the samples have the same shape
         n_samples = len(zs)
@@ -1882,12 +1851,13 @@ class ARMP(_NN):
             batch_xyz, batch_zs = iterator.get_next()
 
         representations = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
-                                            radial_cutoff=self.acsf_parameters['radial_cutoff'],
-                                            angular_cutoff=self.acsf_parameters['angular_cutoff'],
-                                            radial_rs=self.acsf_parameters['radial_rs'],
-                                            angular_rs=self.acsf_parameters['angular_rs'],
-                                            theta_s=self.acsf_parameters['theta_s'], eta=self.acsf_parameters['eta'],
-                                            zeta=self.acsf_parameters['zeta'])
+                                                 rcut=self.acsf_parameters['rcut'],
+                                                 acut=self.acsf_parameters['acut'],
+                                                 nRs2=self.acsf_parameters['nRs2'],
+                                                 nRs3=self.acsf_parameters['nRs3'],
+                                                 nTs=self.acsf_parameters['nTs'],
+                                                 eta=self.acsf_parameters['eta'],
+                                                 zeta=self.acsf_parameters['zeta'])
 
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
@@ -2209,24 +2179,11 @@ class ARMP(_NN):
         :rtype: numpy array of shape (n_elements,) and (n_element_pairs)
         """
 
-        # Obtaining the total elements and the element pairs
-        mbtypes = qml_rep.get_slatm_mbtypes(classes)
-
-        elements = []
+        elements = np.unique(classes)
         element_pairs = []
-
-        # Splitting the one and two body interactions in mbtypes
-        for item in mbtypes:
-            if len(item) == 1:
-                elements.append(item[0])
-            if len(item) == 2:
-                element_pairs.append(list(item))
-            if len(item) == 3:
-                break
-
-        # Need the element pairs in descending order for TF
-        for item in element_pairs:
-            item.reverse()
+        for i, ei in enumerate(elements):
+            for ej in elements[i:]:
+                element_pairs.append([ej, ei])
 
         return np.asarray(elements), np.asarray(element_pairs)
 
@@ -2415,8 +2372,8 @@ class ARMP(_NN):
         x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
 
 
-        if 0 in classes:
-            idx_zeros = np.where(classes == 0)[1]
+        if 0 in classes_approved:
+            idx_zeros = np.where(classes_approved == 0)[1]
             classes_for_elements = classes_approved[:, :idx_zeros[0]]
         else:
             classes_for_elements = classes_approved
@@ -2494,11 +2451,11 @@ class ARMP(_NN):
         with tf.name_scope("Descriptor_pred"):
             batch_representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=self.elements,
                                                           element_pairs=self.element_pairs,
-                                                          radial_cutoff=self.acsf_parameters['radial_cutoff'],
-                                                          angular_cutoff=self.acsf_parameters['angular_cutoff'],
-                                                          radial_rs=self.acsf_parameters['radial_rs'],
-                                                          angular_rs=self.acsf_parameters['angular_rs'],
-                                                          theta_s=self.acsf_parameters['theta_s'],
+                                                          rcut=self.acsf_parameters['rcut'],
+                                                          acut=self.acsf_parameters['acut'],
+                                                          nRs2=self.acsf_parameters['nRs2'],
+                                                          nRs3=self.acsf_parameters['nRs3'],
+                                                          nTs=self.acsf_parameters['nTs'],
                                                           eta=self.acsf_parameters['eta'],
                                                           zeta=self.acsf_parameters['zeta'])
 
