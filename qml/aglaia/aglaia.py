@@ -1747,8 +1747,10 @@ class ARMP(_NN):
 
         initial_natoms = xyz.shape[1]
 
+        # Hack to make fortran ACSF deal with dummy atoms (only if all the molecules are the same and the padding is at the end)
         if 0 in classes:
             idx_zeros = np.where(classes == 0)[1]
+
             xyz = xyz[:, :idx_zeros[0], :]
             classes = classes[:, :idx_zeros[0]]
 
@@ -2161,8 +2163,8 @@ class ARMP(_NN):
 
         elif self.representation_name == "acsf":
 
-            acsf_parameters = {'radial_cutoff': 10.0, 'angular_cutoff': 10.0, 'radial_rs': (0.0, 0.1, 0.2),
-                                    'angular_rs': (0.0, 0.1, 0.2), 'theta_s': (3.0, 2.0), 'zeta': 3.0, 'eta': 2.0}
+            acsf_parameters =  {'rcut': 5.0, 'acut': 5.0, 'nRs2': 5, 'nRs3': 5, 'nTs': 5,
+                                      'zeta': 220.127, 'eta': 30.8065}
 
             for key, value in parameters.items():
                 try:
@@ -2242,12 +2244,8 @@ class ARMP(_NN):
 
         x_approved, y_approved, dy_approved, classes_approved = self._check_inputs(x, y, dy, classes)
 
-        # Obtaining the array of unique elements in all samples (excluding dummy atoms 0)
-        if 0 in classes_approved:
-            idx_zeros = np.where(classes_approved == 0)[1]
-            classes_for_elements = classes_approved[:, :idx_zeros[0]]
-        else:
-            classes_for_elements = classes_approved
+        # Putting a mask on all the 0 values
+        classes_for_elements = np.ma.masked_equal(classes_approved, 0).compressed()
 
         self.elements, self.element_pairs = self._get_elements_and_pairs(classes_for_elements)
 
