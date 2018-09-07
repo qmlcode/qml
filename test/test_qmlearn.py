@@ -64,8 +64,8 @@ if __name__ == "__main__":
     model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma=3, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
-    model.fit(idx[:50])
-    print(model.score(idx[200:250]))
+    model.fit(idx[:500])
+    print(model.score(idx[500:750]))
     quit()
     model = make_pipeline(AtomScaler(train_data), CoulombMatrix(), GaussianKernel(), KernelRidgeRegression())
 

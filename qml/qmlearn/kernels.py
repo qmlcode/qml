@@ -147,6 +147,7 @@ class _BaseKernel(BaseEstimator):
             rep = np.concatenate([rep1, rep2])
             constant_features[ele] = (np.std(rep, axis=0) == 0)
 
+        # Create the representations
         elementwise_representations1 = [[np.atleast_2d(
             [v[~constant_features[element]] for j,v in enumerate(representations[i]) 
             if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))]
@@ -176,6 +177,7 @@ class _BaseKernel(BaseEstimator):
             rep = flat_representations[flat_nuclear_charges == ele]
             constant_features[ele] = (np.std(rep, axis=0) == 0)
 
+        # Create the representations
         elementwise_representations = [[np.atleast_2d(
             [v[~constant_features[element]] for j,v in enumerate(representations[i]) 
             if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))]
