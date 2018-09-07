@@ -47,6 +47,7 @@ class _BaseRepresentation(BaseEstimator):
     # Variables that has to be set in child methods
     _representation_short_name = None
     _representation_type = None
+    alchemy = None
 
 
     def fit(self, X, y=None):
@@ -94,6 +95,7 @@ class _BaseRepresentation(BaseEstimator):
         # Store representation type / name for later use
         data._representation_type = self._representation_type
         data._representation_short_name = self._representation_short_name
+        data._representation_alchemy = self.alchemy
 
         return data
 
@@ -107,7 +109,6 @@ class _BaseRepresentation(BaseEstimator):
             self._check_data(data)
 
         self.data = data
-
 
     def _check_elements(self, nuclear_charges):
         """
@@ -278,7 +279,7 @@ class AtomicCoulombMatrix(_AtomicRepresentation):
     alchemy = True
 
     def __init__(self, data=None, size=23, sorting="distance", central_cutoff=10.0,
-            central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1, alchemy=True):
+            central_decay=-1, interaction_cutoff=10.0, interaction_decay=-1):
         """
         Creates a Coulomb Matrix representation of the local environment of a central atom.
         For each central atom :math:`k`, a matrix :math:`M` is constructed with elements

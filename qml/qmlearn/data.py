@@ -43,7 +43,7 @@ class Data(object):
         #self._representation_type
         #self._representation_short_name
         #self._representation_cutoff
-        #self.
+        #self._representation_alchemy
 
     def _set_ncompounds(self, n):
         self.ncompounds = n

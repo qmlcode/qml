@@ -99,45 +99,65 @@ class _BaseKernel(BaseEstimator):
             # X._representation_type
             kernel = self.generate(X._representations, self.representations)
         else:
-            kernel = self.generate(X._representations, self.representations, X._representation_type)
+            if (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
+                kernel = self.generate(X._representations, self.representations, X._representation_type)
+            else:
+                # Find elements used in representations from X
+                elements1 = get_unique(X.nuclear_charges[X._indices])
+                # Get the elements common to both X and the fitted representations
+                # stored in self
+                elements = list(set(elements1).intersection(self.elements))
+                # Get list in the form [H_representations, C_representations, ...]
+                rep1 = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices], elements)
+                rep2 = self._get_elementwise_representations(self.representations, self.nuclear_charges, elements)
+                # Sum elementwise contributions to the kernel
+                kernel = np.zeros((len(X._representations), len(self.representations)))
+                for i in range(len(rep1)):
+                    kernel += self.generate(rep1[i], rep2[i], representation_type=X._representation_type)
 
         X._kernel = kernel
 
         return X
 
-    def _get_indices(self, representations, nuclear_charges):
-        elements = get_unique(nuclear_charges)
+    def _get_elementwise_representations(self, representations, nuclear_charges, elements=None):
+        """
+        Create a list where the each item only contain representations of a specific element
+        """
+        if elements is None:
+            elements = get_unique(nuclear_charges)
+            self.elements = elements
 
-        Y = [[np.asarray([v for j,v in enumerate(representations[i]) if nuclear_charges[i][j] == element])
-            for i in range(len(nuclear_charges))] for element in elements]
+        elementwise_representations = [[np.atleast_2d([v for j,v in enumerate(representations[i]) 
+            if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))] for element in elements]
 
-        return Y
+        return elementwise_representations
 
 
     def _fit_transform(self, X):
 
         self._check_data_object(X)
 
-        # Store representation for future transform calls
+        # Store representation / nuclear_charges for future transform calls
         self._set_representations(X._representations)
+        self._set_nuclear_charges(X.nuclear_charges[X._indices])
 
         if X._representation_type is None:
             # For FCHL to keep the documentation tidy, since self.local overrides
             # X._representation_type
             kernel = self.generate(X._representations)
         else:
-            Y = self._get_indices(X._representations, X.nuclear_charges[X._indices])
-            kernel = self.generate(X._representations, representation_type=X._representation_type)
-            print(kernel[:3,:3])
-            for y in Y:
-                kernel = self.generate(y, representation_type=X._representation_type)
-                print(kernel[:3,:3])
-            quit()
+            if (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
+                kernel = self.generate(X._representations, representation_type=X._representation_type)
+            else:
+                # Get list in the form [H_representations, C_representations, ...]
+                rep = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices])
+                # Sum elementwise contributions to the kernel
+                kernel = np.zeros((len(X._representations),)*2)
+                for r in rep:
+                    kernel += self.generate(r, representation_type=X._representation_type)
 
 
         X._kernel = kernel
-
-        print(np.min(kernel), np.max(kernel), np.mean(kernel), np.median(kernel), np.var(kernel))
 
         return X
 
@@ -149,19 +169,21 @@ class GaussianKernel(_BaseKernel):
     Gaussian kernel
     """
 
-    def __init__(self, sigma='auto', alchemy=True):
+    def __init__(self, sigma='auto', alchemy='auto'):
         """
         :param sigma: Scale parameter of the gaussian kernel. `sigma='auto'` will try to guess
                       a good value (very approximate).
         :type sigma: float
         :param alchemy: Determines if contributions from atoms of differing elements should be
-                        included in the kernel.
+                        included in the kernel. If alchemy='auto', this will be automatically
+                        determined from the representation used
         :type alchemy: bool
         """
         self.sigma = sigma
         self.alchemy = alchemy
 
         self.representations = None
+        self._elements = None
 
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """
@@ -228,9 +250,6 @@ class GaussianKernel(_BaseKernel):
         :rtype: array
         """
 
-        if not self.alchemy:
-            print("Warning: 'alchemy=False' is only supported as part of a pipeline")
-
         if self.sigma == 'auto':
             if representation_type == 'molecular':
                 auto_sigma = True
@@ -291,12 +310,20 @@ class GaussianKernel(_BaseKernel):
 
         nm1 = n1.size
 
-        rep_size = X[0].shape[1]
+        for i in range(len(X)):
+            rep_size = X[0].shape[1]
+            if rep_size == 0:
+                continue
+            break
+        else:
+            if Y is None:
+                return np.zeros((nm1, nm1))
+            return np.zeros((nm1, len(Y)))
 
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
         for i in range(nm1):
-            if n1[i] == 0:
+            if n1[i] == 0 or X[i].shape[1] == 0:
                 continue
             x1[i,:n1[i]] = X[i]
 
@@ -318,6 +345,8 @@ class GaussianKernel(_BaseKernel):
             nm2 = n2.size
             x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
             for i in range(nm2):
+                if n2[i] == 0 or Y[i].shape[1] == 0:
+                    continue
                 x2[i,:n2[i]] = Y[i]
             x2 = np.swapaxes(x2, 0, 2)
             return fget_vector_kernels_gaussian(x1, x2, n1, n2, [self.sigma],
@@ -341,6 +370,7 @@ class LaplacianKernel(_BaseKernel):
         self.alchemy = alchemy
 
         self.representations = None
+        self._elements = None
 
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """

@@ -60,11 +60,11 @@ if __name__ == "__main__":
     #predictions = model.predict(test_kernel)
     #print(predictions.shape)
 
-    #model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma='auto'), KernelRidgeRegression(l2_reg=1e-8))
-    #idx = np.arange(len(train_data))
-    #np.random.shuffle(idx)
-    #model.fit(idx[:(3*100)//2])
-    #quit()
+    model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma=1000, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
+    idx = np.arange(len(train_data))
+    np.random.shuffle(idx)
+    model.fit(idx[:200])
+    quit()
     model = make_pipeline(AtomScaler(train_data), CoulombMatrix(), GaussianKernel(), KernelRidgeRegression())
 
     ## Fit and predict KRR from pipeline
@@ -75,16 +75,16 @@ if __name__ == "__main__":
 
 
     # Gridsearch CV of hyperparams
-    params = {'representation': [AtomicCoulombMatrix(train_data)],
-              'kernel': [GaussianKernel()],
-              'kernel__sigma': [1000],
-              'model__l2_reg': [1e-8]
+    params = {'representation': [AtomicSLATM(train_data)],
+              'kernel': [GaussianKernel(alchemy=False)],
+              'kernel__sigma': [100, 300, 1000, 3000, 10000, ],
+              'model__l2_reg': [1e-8],
              }
 
     grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
-    grid.fit(idx[:(3*50)//2])
+    grid.fit(idx[:(3*100)//2])
     print(grid.best_params_, grid.best_score_)
     quit()
 
