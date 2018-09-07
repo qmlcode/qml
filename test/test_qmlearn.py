@@ -60,10 +60,12 @@ if __name__ == "__main__":
     #predictions = model.predict(test_kernel)
     #print(predictions.shape)
 
-    model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma=1000, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
+    np.random.seed(42)
+    model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), LaplacianKernel(sigma=3, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
-    model.fit(idx[:200])
+    model.fit(idx[:50])
+    print(model.score(idx[200:250]))
     quit()
     model = make_pipeline(AtomScaler(train_data), CoulombMatrix(), GaussianKernel(), KernelRidgeRegression())
 
@@ -77,14 +79,14 @@ if __name__ == "__main__":
     # Gridsearch CV of hyperparams
     params = {'representation': [AtomicSLATM(train_data)],
               'kernel': [GaussianKernel(alchemy=False)],
-              'kernel__sigma': [100, 300, 1000, 3000, 10000, ],
+              'kernel__sigma': [1, 3, 10],
               'model__l2_reg': [1e-8],
              }
 
     grid = GridSearchCV(model, cv=3, refit=False, param_grid = params)
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
-    grid.fit(idx[:(3*100)//2])
+    grid.fit(idx[:(3*50)//2])
     print(grid.best_params_, grid.best_score_)
     quit()
 

@@ -270,7 +270,7 @@ subroutine fget_vector_kernels_gaussian(q1, q2, n1, n2, sigmas, &
 
     implicit none
 
-    ! Representations (n_samples, n_max_atoms, rep_size)
+    ! Representations (rep_size, n_max_atoms, n_samples)
     double precision, dimension(:,:,:), intent(in) :: q1
     double precision, dimension(:,:,:), intent(in) :: q2
 
@@ -341,7 +341,7 @@ subroutine fget_vector_kernels_gaussian_symmetric(q, n, sigmas, &
 
     implicit none
 
-    ! Representations (rep_size, n_samples, n_max_atoms)
+    ! Representations (rep_size, n_max_atoms, n_samples)
     double precision, dimension(:,:,:), intent(in) :: q
 
     ! List of numbers of atoms in each molecule
@@ -413,7 +413,7 @@ subroutine fget_vector_kernels_laplacian_symmetric(q, n, sigmas, &
 
     implicit none
 
-    ! Representations (rep_size, n_samples, n_max_atoms)
+    ! Representations (rep_size, n_max_atoms, n_samples)
     double precision, dimension(:,:,:), intent(in) :: q
 
     ! List of numbers of atoms in each molecule

@@ -81,7 +81,6 @@ class _BaseKernel(BaseEstimator):
             print("Error: The FCHL representation is only compatible with the FCHL kernel")
             raise SystemExit
 
-
     def _set_representations(self, rep):
         self.representations = rep
 
@@ -98,26 +97,106 @@ class _BaseKernel(BaseEstimator):
             # For FCHL to keep the documentation tidy, since self.local overrides
             # X._representation_type
             kernel = self.generate(X._representations, self.representations)
+        elif X._representation_type == 'molecular':
+            # Ignore constant features
+            constant_features = (np.std(X._representations, axis=0) == 0) * self._constant_features * \
+                    (X._representations[0] == self.representations[0])
+            kernel = self.generate(X._representations[:,~constant_features], self.representations[:,~constant_features], 'molecular')
+        elif (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
+            # Ignore constant features
+            flat_representations = np.asarray([item for sublist in X._representations for item in sublist])
+            constant_features = (np.std(flat_representations, axis=0) == 0) * self._constant_features * \
+                    (X._representations[0][0] == self.representations[0][0])
+            X_representations = [np.asarray([rep[~constant_features] for rep in mol]) for mol in X._representations]
+            self_representations = [np.asarray([rep[~constant_features] for rep in mol]) for mol in self.representations]
+            kernel = self.generate(X_representations, self_representations, 'atomic')
         else:
-            if (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
-                kernel = self.generate(X._representations, self.representations, X._representation_type)
-            else:
-                # Find elements used in representations from X
-                elements1 = get_unique(X.nuclear_charges[X._indices])
-                # Get the elements common to both X and the fitted representations
-                # stored in self
-                elements = list(set(elements1).intersection(self.elements))
-                # Get list in the form [H_representations, C_representations, ...]
-                rep1 = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices], elements)
-                rep2 = self._get_elementwise_representations(self.representations, self.nuclear_charges, elements)
-                # Sum elementwise contributions to the kernel
-                kernel = np.zeros((len(X._representations), len(self.representations)))
-                for i in range(len(rep1)):
-                    kernel += self.generate(rep1[i], rep2[i], representation_type=X._representation_type)
+            # Find elements used in representations from X
+            elements1 = get_unique(X.nuclear_charges[X._indices])
+            # Get the elements common to both X and the fitted representations
+            # stored in self
+            elements = list(set(elements1).intersection(self.elements))
+            ## Get list in the form [H_representations, C_representations, ...]
+            # And ignore constant features
+            #rep1, rep2 = self._get_elementwise_representations_transform(X._representations, X.nuclear_charges[X._indices], elements)
+            ## Get list in the form [H_representations, C_representations, ...]
+            rep1 = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices], elements)
+            rep2 = self._get_elementwise_representations(self.representations, self.nuclear_charges, elements)
+            # Sum elementwise contributions to the kernel
+            kernel = np.zeros((len(X._representations), len(self.representations)))
+            for i in range(len(rep1)):
+                kernel += self.generate(rep1[i], rep2[i], representation_type='atomic')
 
         X._kernel = kernel
+        print(kernel[:5,:5])
 
         return X
+
+    def _get_elementwise_representations_transform(self, representations, nuclear_charges, elements):
+        """
+        Create a set of lists where the each item only contain representations of a specific element
+        """
+
+        # Ignore constant features
+        flat_nuclear_charges1 = np.asarray([item for sublist in nuclear_charges for item in sublist], dtype=int)
+        flat_representations1 = np.asarray([item for sublist in representations for item in sublist])
+        flat_nuclear_charges2 = np.asarray([item for sublist in self.nuclear_charges for item in sublist], dtype=int)
+        flat_representations2 = np.asarray([item for sublist in self.representations for item in sublist])
+
+        constant_features = {element: None for element in elements}
+
+        for ele in elements:
+            rep1 = flat_representations1[flat_nuclear_charges1 == ele]
+            rep2 = flat_representations2[flat_nuclear_charges2 == ele]
+            rep = np.concatenate([rep1, rep2])
+            constant_features[ele] = (np.std(rep, axis=0) == 0)
+
+        elementwise_representations1 = [[np.atleast_2d(
+            [v[~constant_features[element]] for j,v in enumerate(representations[i]) 
+            if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))]
+            for element in elements]
+
+        elementwise_representations2 = [[np.atleast_2d(
+            [v[~constant_features[element]] for j,v in enumerate(self.representations[i]) 
+            if self.nuclear_charges[i][j] == element]) for i in range(len(self.nuclear_charges))]
+            for element in elements]
+
+        return elementwise_representations1, elementwise_representations2
+
+    def _get_elementwise_representations_fit(self, representations, nuclear_charges):
+        """
+        Create a list where the each item only contain representations of a specific element
+        """
+        elements = get_unique(nuclear_charges)
+        self.elements = elements
+
+        # Ignore constant features
+        flat_nuclear_charges = np.asarray([item for sublist in nuclear_charges for item in sublist], dtype=int)
+        flat_representations = np.asarray([item for sublist in representations for item in sublist])
+
+        constant_features = {element: None for element in elements}
+
+        for ele in elements:
+            rep = flat_representations[flat_nuclear_charges == ele]
+            constant_features[ele] = (np.std(rep, axis=0) == 0)
+            #if ele == 7:
+            #    constant_features[ele][2] = False
+
+        elementwise_representations = [[np.atleast_2d(
+            [v[~constant_features[element]] for j,v in enumerate(representations[i]) 
+            if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))]
+            for element in elements]
+
+        #rep = elementwise_representations[-1]
+        #for i, mol in enumerate(rep):
+        #    for j, atom in enumerate(mol):
+        #        if len(atom) > 0:
+        #            print(atom[0])
+        #            elementwise_representations[-1][i][j][0] = 7
+        #            print(atom[0])
+        #            print()
+
+        return elementwise_representations
 
     def _get_elementwise_representations(self, representations, nuclear_charges, elements=None):
         """
@@ -132,7 +211,6 @@ class _BaseKernel(BaseEstimator):
 
         return elementwise_representations
 
-
     def _fit_transform(self, X):
 
         self._check_data_object(X)
@@ -145,18 +223,48 @@ class _BaseKernel(BaseEstimator):
             # For FCHL to keep the documentation tidy, since self.local overrides
             # X._representation_type
             kernel = self.generate(X._representations)
+        elif X._representation_type == 'molecular':
+            # Ignore constant features
+            self._constant_features = (np.std(X._representations, axis=0) == 0)
+            kernel = self.generate(X._representations[:,~self._constant_features], representation_type='molecular')
+        elif (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
+            # Ignore constant features
+            flat_representations = np.asarray([item for sublist in X._representations for item in sublist])
+            self._constant_features = (np.std(flat_representations, axis=0) == 0)
+            representations = [np.asarray([rep[~self._constant_features] for rep in mol]) for mol in X._representations]
+            kernel = self.generate(representations, representation_type='atomic')
         else:
-            if (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
-                kernel = self.generate(X._representations, representation_type=X._representation_type)
-            else:
-                # Get list in the form [H_representations, C_representations, ...]
-                rep = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices])
-                # Sum elementwise contributions to the kernel
-                kernel = np.zeros((len(X._representations),)*2)
-                for r in rep:
-                    kernel += self.generate(r, representation_type=X._representation_type)
+            # Get list in the form [H_representations, C_representations, ...]
+            # And ignore constant features
+            #rep = self._get_elementwise_representations_fit(X._representations, X.nuclear_charges[X._indices])
+            rep = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices])
+            # Sum elementwise contributions to the kernel
+            kernel = np.zeros((len(X._representations),)*2)
+            for r in rep:
+                kernel += self.generate(r, representation_type='atomic')
+                print(kernel[:3,:3])
+            print()
+
+            # And ignore constant features
+            rep = self._get_elementwise_representations_fit(X._representations, X.nuclear_charges[X._indices])
+            for i, mol in enumerate(rep[-1]):
+                for j, atom in enumerate(mol):
+                    if len(atom) > 0:
+                        print(atom[0])
+                        #rep[-1][i][j][0] = 0
+                        #print(atom[0])
+                        #print()
+            # Sum elementwise contributions to the kernel
+            kernel2 = np.zeros((len(X._representations),)*2)
+            for r in rep:
+                kernel2 += self.generate(r, representation_type='atomic')
+                print(kernel2[:3,:3])
+            print((kernel - kernel2)[:3,:3])
+            quit()
 
 
+
+        # Store kernel
         X._kernel = kernel
 
         return X
@@ -184,6 +292,7 @@ class GaussianKernel(_BaseKernel):
 
         self.representations = None
         self._elements = None
+        self._constant_features = None
 
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """
@@ -323,7 +432,8 @@ class GaussianKernel(_BaseKernel):
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
         for i in range(nm1):
-            if n1[i] == 0 or X[i].shape[1] == 0:
+            if X[i].shape[1] == 0:
+                n1[i] = 0
                 continue
             x1[i,:n1[i]] = X[i]
 
@@ -345,7 +455,8 @@ class GaussianKernel(_BaseKernel):
             nm2 = n2.size
             x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
             for i in range(nm2):
-                if n2[i] == 0 or Y[i].shape[1] == 0:
+                if Y[i].shape[1] == 0:
+                    n2[i] = 0
                     continue
                 x2[i,:n2[i]] = Y[i]
             x2 = np.swapaxes(x2, 0, 2)
@@ -357,7 +468,7 @@ class LaplacianKernel(_BaseKernel):
     Laplacian kernel
     """
 
-    def __init__(self, sigma='auto', alchemy=True):
+    def __init__(self, sigma='auto', alchemy='auto'):
         """
         :param sigma: Scale parameter of the gaussian kernel. `sigma='auto'` will try to guess
                       a good value (very approximate).
@@ -371,6 +482,7 @@ class LaplacianKernel(_BaseKernel):
 
         self.representations = None
         self._elements = None
+        self._constant_features = None
 
     def _quick_estimate_sigma(self, X, representation_type, sigma_init=100, count=1):
         """
@@ -497,12 +609,26 @@ class LaplacianKernel(_BaseKernel):
 
         nm1 = n1.size
 
-        rep_size = X[0].shape[1]
+        for i in range(len(X)):
+            rep_size = X[0].shape[1]
+            if rep_size == 0:
+                continue
+            break
+        else:
+            if Y is None:
+                return np.zeros((nm1, nm1))
+            return np.zeros((nm1, len(Y)))
 
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
         for i in range(nm1):
+            if X[i].shape[1] == 0:
+                n1[i] = 0
+                continue
             x1[i,:n1[i]] = X[i]
+
+        #for i,j in zip(x1[:,:,2], n1):
+        #    print(i,j)
 
 
         # Reorder for Fortran speed
@@ -522,6 +648,9 @@ class LaplacianKernel(_BaseKernel):
             nm2 = n2.size
             x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
             for i in range(nm2):
+                if Y[i].shape[1] == 0:
+                    n2[i] = 0
+                    continue
                 x2[i,:n2[i]] = Y[i]
             x2 = np.swapaxes(x2, 0, 2)
             return fget_vector_kernels_laplacian(x1, x2, n1, n2, [self.sigma],
