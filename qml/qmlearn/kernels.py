@@ -118,17 +118,13 @@ class _BaseKernel(BaseEstimator):
             elements = list(set(elements1).intersection(self.elements))
             ## Get list in the form [H_representations, C_representations, ...]
             # And ignore constant features
-            #rep1, rep2 = self._get_elementwise_representations_transform(X._representations, X.nuclear_charges[X._indices], elements)
-            ## Get list in the form [H_representations, C_representations, ...]
-            rep1 = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices], elements)
-            rep2 = self._get_elementwise_representations(self.representations, self.nuclear_charges, elements)
+            rep1, rep2 = self._get_elementwise_representations_transform(X._representations, X.nuclear_charges[X._indices], elements)
             # Sum elementwise contributions to the kernel
             kernel = np.zeros((len(X._representations), len(self.representations)))
             for i in range(len(rep1)):
                 kernel += self.generate(rep1[i], rep2[i], representation_type='atomic')
 
         X._kernel = kernel
-        print(kernel[:5,:5])
 
         return X
 
@@ -179,35 +175,11 @@ class _BaseKernel(BaseEstimator):
         for ele in elements:
             rep = flat_representations[flat_nuclear_charges == ele]
             constant_features[ele] = (np.std(rep, axis=0) == 0)
-            #if ele == 7:
-            #    constant_features[ele][2] = False
 
         elementwise_representations = [[np.atleast_2d(
             [v[~constant_features[element]] for j,v in enumerate(representations[i]) 
             if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))]
             for element in elements]
-
-        #rep = elementwise_representations[-1]
-        #for i, mol in enumerate(rep):
-        #    for j, atom in enumerate(mol):
-        #        if len(atom) > 0:
-        #            print(atom[0])
-        #            elementwise_representations[-1][i][j][0] = 7
-        #            print(atom[0])
-        #            print()
-
-        return elementwise_representations
-
-    def _get_elementwise_representations(self, representations, nuclear_charges, elements=None):
-        """
-        Create a list where the each item only contain representations of a specific element
-        """
-        if elements is None:
-            elements = get_unique(nuclear_charges)
-            self.elements = elements
-
-        elementwise_representations = [[np.atleast_2d([v for j,v in enumerate(representations[i]) 
-            if nuclear_charges[i][j] == element]) for i in range(len(nuclear_charges))] for element in elements]
 
         return elementwise_representations
 
@@ -236,33 +208,11 @@ class _BaseKernel(BaseEstimator):
         else:
             # Get list in the form [H_representations, C_representations, ...]
             # And ignore constant features
-            #rep = self._get_elementwise_representations_fit(X._representations, X.nuclear_charges[X._indices])
-            rep = self._get_elementwise_representations(X._representations, X.nuclear_charges[X._indices])
+            rep = self._get_elementwise_representations_fit(X._representations, X.nuclear_charges[X._indices])
             # Sum elementwise contributions to the kernel
             kernel = np.zeros((len(X._representations),)*2)
             for r in rep:
                 kernel += self.generate(r, representation_type='atomic')
-                print(kernel[:3,:3])
-            print()
-
-            # And ignore constant features
-            rep = self._get_elementwise_representations_fit(X._representations, X.nuclear_charges[X._indices])
-            for i, mol in enumerate(rep[-1]):
-                for j, atom in enumerate(mol):
-                    if len(atom) > 0:
-                        print(atom[0])
-                        #rep[-1][i][j][0] = 0
-                        #print(atom[0])
-                        #print()
-            # Sum elementwise contributions to the kernel
-            kernel2 = np.zeros((len(X._representations),)*2)
-            for r in rep:
-                kernel2 += self.generate(r, representation_type='atomic')
-                print(kernel2[:3,:3])
-            print((kernel - kernel2)[:3,:3])
-            quit()
-
-
 
         # Store kernel
         X._kernel = kernel

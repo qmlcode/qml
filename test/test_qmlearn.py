@@ -61,7 +61,7 @@ if __name__ == "__main__":
     #print(predictions.shape)
 
     np.random.seed(42)
-    model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), LaplacianKernel(sigma=3, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
+    model = make_pipeline(AtomScaler(train_data), AtomicSLATM(), GaussianKernel(sigma=3, alchemy=False), KernelRidgeRegression(l2_reg=1e-8))
     idx = np.arange(len(train_data))
     np.random.shuffle(idx)
     model.fit(idx[:50])
