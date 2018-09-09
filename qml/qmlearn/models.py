@@ -106,8 +106,8 @@ class KernelRidgeRegression(_BaseModel):
         """
         Fit the Kernel Ridge Regression model using a cholesky solver
 
-        :param X: Data object
-        :type X: object
+        :param X: Data object or kernel
+        :type X: object or array
         :param y: Energies
         :type y: array
         """
@@ -152,6 +152,8 @@ class KernelRidgeRegression(_BaseModel):
                 raise SystemExit
         elif is_numeric_array(X) and X.ndim == 2 and X.shape[1] == self.alpha.size:
             K = X
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == self.alpha.size:
+            K = X.T
         else:
             print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
             raise SystemExit

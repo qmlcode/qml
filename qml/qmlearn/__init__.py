@@ -21,3 +21,7 @@
 # SOFTWARE.
 
 from .data import Data
+from . import representations
+from . import kernels
+from . import preprocessing
+from . import models
