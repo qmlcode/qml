@@ -30,13 +30,13 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.base import BaseEstimator
-from qml.aglaia.symm_funct import generate_parkhill_acsf
-from qml.aglaia.utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
-        is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, is_none, \
+from .symm_funct import generate_parkhill_acsf
+from ..utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
+        is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, \
         check_global_representation, check_y, check_sizes, check_dy, check_classes, is_numeric_array, is_non_zero_integer, \
     is_positive_integer_or_zero_array, check_local_representation
 
-from qml.aglaia.tf_utils import TensorBoardLogger
+from .tf_utils import TensorBoardLogger
 
 try:
     from qml.data import Compound
@@ -580,7 +580,7 @@ class _NN(BaseEstimator):
         self.slatm_parameters = {'slatm_sigma1': 0.05, 'slatm_sigma2': 0.05, 'slatm_dgrid1': 0.03, 'slatm_dgrid2': 0.03,
                                  'slatm_rcut': 4.8, 'slatm_rpower': 6, 'slatm_alchemy': False}
 
-        if not is_none(params):
+        if params is not None:
             for key, value in params.items():
                 if key in self.slatm_parameters:
                     self.slatm_parameters[key] = value
@@ -597,7 +597,7 @@ class _NN(BaseEstimator):
         self.acsf_parameters = {'radial_cutoff': 10.0, 'angular_cutoff': 10.0, 'radial_rs': (0.0, 0.1, 0.2),
                                 'angular_rs': (0.0, 0.1, 0.2), 'theta_s': (3.0, 2.0), 'zeta': 3.0, 'eta': 2.0}
 
-        if not is_none(params):
+        if params is not None:
             for key, value in params.items():
                 if key in self.acsf_parameters:
                     self.acsf_parameters[key] = value
@@ -658,7 +658,7 @@ class _NN(BaseEstimator):
         """
 
         # Check that the number of properties match the number of compounds if the properties have already been set
-        if is_none(self.properties):
+        if self.properties is None:
             pass
         else:
             if self.properties.size == len(filenames):
@@ -683,18 +683,18 @@ class _NN(BaseEstimator):
         :return: None
         """
 
-        if is_none(self.compounds) and is_none(xyz) and is_none(classes):
+        if self.compounds is None and xyz is None and classes is None:
             raise InputError("QML compounds need to be created in advance or Cartesian coordinates need to be passed in "
                              "order to generate the representation.")
 
-        if not is_none(self.representation):
+        if self.representation is not None:
             raise InputError("The representations have already been set!")
 
-        if is_none(self.compounds):
+        if self.compounds is None:
 
             self.representation, self.classes = self._generate_representations_from_data(xyz, classes)
 
-        elif is_none(xyz):
+        elif xyz is None:
             # Make representations from compounds
 
             self.representation, self.classes = self._generate_representations_from_compounds()
@@ -708,7 +708,7 @@ class _NN(BaseEstimator):
         :param y: array of properties of size (nsamples,)
         :type y: array
         """
-        if is_none(properties):
+        if properties is None:
             raise InputError("Properties cannot be set to none.")
         else:
             if is_numeric_array(properties) and np.asarray(properties).ndim == 1:
@@ -725,10 +725,10 @@ class _NN(BaseEstimator):
         :type representations: numpy array of shape (n_samples, n_features) or (n_samples, n_atoms, n_features)
         """
 
-        if not is_none(self.representation):
+        if self.representation is not None:
             raise InputError("The representations have already been set!")
 
-        if is_none(representations):
+        if representations is None:
             raise InputError("Descriptor cannot be set to none.")
         else:
             if is_numeric_array(representations):
@@ -745,7 +745,7 @@ class _NN(BaseEstimator):
         :return: None
         """
 
-        if is_none(gradients):
+        if gradients is None:
             raise InputError("Gradients cannot be set to none.")
         else:
             if is_numeric_array(gradients):
@@ -762,7 +762,7 @@ class _NN(BaseEstimator):
         :type classes: numpy array of shape (n_samples, n_atoms) of ints
         :return: None
         """
-        if is_none(classes):
+        if classes is None:
             raise InputError("Classes cannot be set to none.")
         else:
             if is_positive_integer_array(classes):
@@ -1050,7 +1050,7 @@ class MRMP(_NN):
             raise InputError("Unknown representation %s" % representation)
         self.representation_name = representation.lower()
 
-        if not is_none(parameters):
+        if parameters is not None:
             if not type(parameters) is dict:
                 raise InputError("The representation parameters passed should be either None or a dictionary.")
 
@@ -1060,7 +1060,7 @@ class MRMP(_NN):
 
         else:
 
-            if not is_none(parameters):
+            if parameters is not None:
                 raise InputError("The representation %s does not take any additional parameters." % (self.representation_name))
 
     def _set_representation(self, representation):
@@ -1098,7 +1098,7 @@ class MRMP(_NN):
         :rtype: numpy array of shape (n_samples, n_features) and None
         """
 
-        if is_none(self.compounds):
+        if self.compounds is None:
             raise InputError("This should never happen.")
 
         n_samples = len(self.compounds)
@@ -1368,18 +1368,18 @@ class MRMP(_NN):
         if not is_array_like(x):
             raise InputError("x should be an array either containing indices or data.")
 
-        if not is_none(dy) and not is_none(classes):
+        if dy is not None and classes is not None:
             raise InputError("MRMP estimator cannot predict gradients and do atomic decomposition.")
 
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.representation):
-                if is_none(self.compounds):
+            if self.representation is None:
+                if self.compounds is None:
                     raise InputError("No representations or QML compounds have been set yet.")
                 else:
                     self.representation, _ = self._generate_representations_from_compounds()
-            if is_none(self.properties):
+            if self.properties is None:
                 raise InputError("The properties need to be set in advance.")
 
             approved_x = self.representation[x]
@@ -1391,7 +1391,7 @@ class MRMP(_NN):
 
         else:
 
-            if is_none(y):
+            if y is None:
                 raise InputError("y cannot be of None type.")
 
             approved_x = check_global_representation(x)
@@ -1420,18 +1420,18 @@ class MRMP(_NN):
         if not is_array_like(x):
             raise InputError("x should be an array either containing indices or data.")
 
-        if not is_none(classes):
+        if classes is not None:
             raise InputError("MRMP estimator cannot do atomic decomposition.")
 
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.representation):
-                if is_none(self.compounds):
+            if self.representation is None:
+                if self.compounds is None:
                     raise InputError("No representations or QML compounds have been set yet.")
                 else:
                     self.representation, _ = self._generate_representations_from_compounds()
-            if is_none(self.properties):
+            if self.properties is None:
                 raise InputError("The properties need to be set in advance.")
 
             approved_x = self.representation[x]
@@ -1586,7 +1586,7 @@ class ARMP(_NN):
             raise InputError("Unknown representation %s" % representation)
         self.representation_name = representation.lower()
 
-        if not is_none(parameters):
+        if parameters is not None:
             if not type(parameters) is dict:
                 raise InputError("The representation parameters passed should be either None or a dictionary.")
             self._check_representation_parameters(parameters)
@@ -1601,7 +1601,7 @@ class ARMP(_NN):
 
         else:
 
-            if not is_none(parameters):
+            if parameters is not None:
                 raise InputError("The representation %s does not take any additional parameters." % (self.representation_name))
 
     def _set_representation(self, representation):
@@ -1624,7 +1624,7 @@ class ARMP(_NN):
         :rtype: numpy arrays of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
-        if is_none(classes):
+        if classes is None:
             raise InputError("The classes need to be provided for the ARMP estimator.")
         else:
             if len(classes.shape) > 2 or np.all(xyz.shape[:2] != classes.shape):
@@ -1743,7 +1743,7 @@ class ARMP(_NN):
         :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
         """
 
-        if is_none(self.compounds):
+        if self.compounds is None:
             raise InputError("QML compounds needs to be created in advance")
 
         if self.representation_name == 'slatm':
@@ -2028,22 +2028,22 @@ class ARMP(_NN):
         if not is_array_like(x):
             raise InputError("x should be an array either containing indices or data.")
 
-        if not is_none(dy):
+        if dy is not None:
             raise InputError("ARMP estimator cannot be used to predict gradients. Use ARMP_G estimator.")
 
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.representation):
+            if self.representation is None:
 
-                if is_none(self.compounds):
+                if self.compounds is None:
                     raise InputError("No representations or QML compounds have been set yet.")
                 else:
                     self.representation, self.classes = self._generate_representations_from_compounds()
 
-            if is_none(self.properties):
+            if self.properties is None:
                 raise InputError("The properties need to be set in advance.")
-            if is_none(self.classes):
+            if self.classes is None:
                 raise InputError("The classes need to be set in advance.")
 
             approved_x = self.representation[x]
@@ -2055,9 +2055,9 @@ class ARMP(_NN):
 
         else:
 
-            if is_none(y):
+            if y is None:
                 raise InputError("y cannot be of None type.")
-            if is_none(classes):
+            if classes is None:
                 raise InputError("ARMP estimator needs the classes to do atomic decomposition.")
 
             approved_x = check_local_representation(x)
@@ -2089,12 +2089,12 @@ class ARMP(_NN):
         # Check if x is made up of indices or data
         if is_positive_integer_or_zero_array(x):
 
-            if is_none(self.representation):
-                if is_none(self.compounds):
+            if self.representation is None:
+                if self.compounds is None:
                     raise InputError("No representations or QML compounds have been set yet.")
                 else:
                     self.representation, self.classes = self._generate_representations_from_compounds()
-            if is_none(self.properties):
+            if self.properties is None:
                 raise InputError("The properties need to be set in advance.")
 
             approved_x = self.representation[x]
@@ -2104,7 +2104,7 @@ class ARMP(_NN):
 
         else:
 
-            if is_none(classes):
+            if classes is None:
                 raise InputError("ARMP estimator needs the classes to do atomic decomposition.")
 
             approved_x = check_local_representation(x)

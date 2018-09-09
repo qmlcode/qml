@@ -44,4 +44,3 @@ class DataProvider(object):
     def read_database(self, db_filename):
 
         self.compounds = connect(db_filename)
-

@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from .fkernels import fgaussian_kernel
+from .fkernels import fgaussian_kernel, fgaussian_kernel_symmetric
 from .fkernels import flaplacian_kernel
 from .fkernels import fgaussian_kernel_symmetric
 from .fkernels import flaplacian_kernel_symmetric
@@ -34,6 +34,7 @@ from .fkernels import fmatern_kernel_l2
 
 from .fkernels import fget_local_kernels_gaussian
 from .fkernels import fget_local_kernels_laplacian
+from .fkernels import fget_vector_kernels_gaussian, fget_vector_kernels_gaussian_symmetric
 
 def laplacian_kernel(A, B, sigma):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
@@ -304,7 +305,7 @@ def get_local_kernels_gaussian(A, B, na, nb, sigmas):
 
     nma = len(na)
     nmb = len(nb)
-     
+
     sigmas = np.asarray(sigmas)
     nsigmas = len(sigmas)
 

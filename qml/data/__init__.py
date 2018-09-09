@@ -23,4 +23,3 @@
 
 from .xyzdataprovider import XYZDataProvider
 from .compound import Compound
-from .alchemy import ELEMENT_NAME, NUCLEAR_CHARGE

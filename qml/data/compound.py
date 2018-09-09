@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016-2017 Anders Steen Christensen, Felix Faber, Lars Andersen Bratholm
+# Copyright (c) 2016-2018 Anders Steen Christensen, Felix Faber, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ from __future__ import print_function
 import numpy as np
 import collections
 
-from .alchemy import NUCLEAR_CHARGE
+from ..utils import NUCLEAR_CHARGE
 
 from ..representations import generate_coulomb_matrix
 from ..representations import generate_atomic_coulomb_matrix
