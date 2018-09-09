@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2017 Anders Steen Christensen
+# Copyright (c) 2017-2018 Anders Steen Christensen, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@ import numpy as np
 import qml
 from qml.kernels import laplacian_kernel
 from qml.kernels import gaussian_kernel
+from qml.kernels import laplacian_kernel_symmetric
+from qml.kernels import gaussian_kernel_symmetric
 from qml.kernels import linear_kernel
 from qml.kernels import matern_kernel
 from qml.kernels import sargan_kernel
@@ -60,6 +62,11 @@ def test_laplacian_kernel():
     # Check for symmetry:
     assert np.allclose(Ksymm, Ksymm.T), "Error in Laplacian kernel"
 
+    Ksymm2 = laplacian_kernel_symmetric(X, sigma)
+
+    # Check for symmetry:
+    assert np.allclose(Ksymm, Ksymm2), "Error in Laplacian kernel"
+
 def test_gaussian_kernel():
 
     np.random.seed(666)
@@ -89,6 +96,10 @@ def test_gaussian_kernel():
     # Check for symmetry:
     assert np.allclose(Ksymm, Ksymm.T), "Error in Gaussian kernel"
 
+    Ksymm2 = gaussian_kernel_symmetric(X, sigma)
+
+    # Check for symmetry:
+    assert np.allclose(Ksymm, Ksymm2), "Error in Gaussian kernel"
 
 def test_linear_kernel():
 
@@ -198,12 +209,8 @@ def sargan(ngamma):
             for k, gamma in enumerate(gammas):
                 factor += gamma / sigma**(k+1) * d ** (k+1)
             Ktest[i,j] = np.exp( - d / sigma) * factor
-    print (gammas)
 
     K = sargan_kernel(X, Xs, sigma, gammas)
-
-    print (K[1])
-    print(Ktest[1])
 
     # Compare two implementations:
     assert np.allclose(K, Ktest), "Error in Sargan kernel"
