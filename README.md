@@ -9,7 +9,7 @@ QML is a Python2/3-compatible toolkit for representation learning of properties 
 * Bing Huang (University of Basel)
 * Lars A. Bratholm (University of Copenhagen)
 * Alexandre Tkatchenko (University of Luxembourg)
-* Klaus-Robert Muller (Technische Universität Berlin/Korea University)
+* Klaus-Robert Muller (Technische Universitat Berlin/Korea University)
 * O. Anatole von Lilienfeld (University of Basel)
 
 ## 1) Citing QML:

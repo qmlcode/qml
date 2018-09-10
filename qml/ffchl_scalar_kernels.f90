@@ -616,7 +616,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, n1, nneigh1, sigmas, nm1, nsig
     kernels(:,:,:) = 0.0d0
     atomic_distance(:,:) = 0.0d0
 
-    !$OMP PARALLEL DO schedule(dynamic) PRIVATE(l2dist,atomic_distance,ni,nj)
+    !$OMP PARALLEL DO schedule(dynamic) PRIVATE(l2dist,atomic_distance,ni,nj,mol_dist)
     do b = 1, nm1
         nj = n1(b)
         do a = b, nm1
@@ -884,7 +884,7 @@ subroutine fget_global_kernels_fchl(x1, x2, n1, n2, nneigh1, nneigh2, &
     kernels(:,:,:) = 0.0d0
     atomic_distance(:,:) = 0.0d0
 
-    !$OMP PARALLEL DO schedule(dynamic) PRIVATE(l2dist,atomic_distance,ni,nj)
+    !$OMP PARALLEL DO schedule(dynamic) PRIVATE(l2dist,atomic_distance,ni,nj,mol_dist)
     do b = 1, nm2
         nj = n2(b)
         do a = 1, nm1
