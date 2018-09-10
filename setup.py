@@ -146,7 +146,9 @@ def setup_qml():
             'qml.kernels',
             'qml.math',
             'qml.representations',
-            'qml.models',
+            'qml.qmlearn',
+            'qml.utils',
+            'qml.models'
             ],
 
         # metadata
