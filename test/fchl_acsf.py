@@ -28,9 +28,9 @@ from ffchl_acsf import fgenerate_fchl_acsf, fgenerate_fchl_acsf_and_gradients
 
 
 def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], 
-        nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
-        eta3 = 1, zeta = 1, rcut = 5, acut = 5, 
-        two_body_decay=4.0, three_body_decay=4.0, three_body_weight=1.0,
+        nRs2 = 3, nRs3 = 3, nTs = 2, eta2 = 1,
+        eta3 = 1, zeta = 1, rcut = 8, acut = 5, 
+        two_body_decay=4.0, three_body_decay=2.0, three_body_weight=0.2,
         gradients = False):
     """
     Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
