@@ -41,9 +41,6 @@ def is_positive_integer_or_zero(x):
 def is_string(x):
     return isinstance(x, str)
 
-def is_none(x):
-    return isinstance(x, type(None))
-
 def is_dict(x):
     return isinstance(x, dict)
 
@@ -88,9 +85,27 @@ def _is_integer_array(x):
 def is_positive_integer_array(x):
     return (_is_integer_array(x) and _is_positive_array(x))
 
-
 def is_positive_integer_or_zero_array(x):
     return (_is_integer_array(x) and _is_positive_or_zero_array(x))
+
+def get_unique(x):
+    """
+    Gets all unique elements in lists of lists
+    """
+    elements = list(set(item for l in x for item in l))
+    return elements
+
+def get_pairs(x):
+    """
+    Get all unique pairs. E.g. x = [1,2,3] will return
+    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
+    """
+    pairs = []
+    for i,v in enumerate(x):
+        for w in x[i:]:
+            pairs.append([v,w])
+    return pairs
+
 
 # ------------- ** Checking inputs ** --------------------------
 
@@ -157,14 +172,14 @@ def check_sizes(x, y=None, dy=None, classes=None):
     :return: None
     """
 
-    if is_none(dy) and is_none(classes):
+    if dy is None and classes is None:
 
         if x.shape[0] != y.shape[0]:
             raise InputError("The descriptor and the properties should have the same first number of elements in the "
                              "first dimension. Got %s and %s" % (x.shape[0], y.shape[0]))
 
-    elif is_none(y) and is_none(dy):
-        if is_none(classes):
+    elif y is None and dy is None:
+        if classes is None:
             raise InputError("Only x is not none.")
         else:
             if x.shape[0] != classes.shape[0]:
@@ -173,7 +188,7 @@ def check_sizes(x, y=None, dy=None, classes=None):
                 if x.shape[1] != classes.shape[1]:
                     raise InputError("The number of atoms in the descriptor and in the classes is different: %s and %s." % (x.shape[1], classes.shape[1]))
 
-    elif is_none(dy) and not is_none(classes):
+    elif dy is None and classes is not None:
 
         if x.shape[0] != y.shape[0] or x.shape[0] != classes.shape[0]:
             raise InputError("All x, y and classes should have the first number of elements in the first dimension. Got "
@@ -202,7 +217,7 @@ def check_dy(dy):
     :return: numpy array of floats of shape (n_samples, n_atoms, 3)
     """
 
-    if is_none(dy):
+    if dy is None:
         approved_dy = dy
     else:
         if not is_array_like(dy):
@@ -227,7 +242,7 @@ def check_classes(classes):
     :return: numpy array of ints of shape (n_samples, n_atoms)
     """
 
-    if is_none(classes):
+    if classes is None:
         approved_classes = classes
     else:
         if not is_array_like(classes):
@@ -243,13 +258,6 @@ def check_classes(classes):
         approved_classes = classes
 
     return approved_classes
-
-
-
-
-
-
-
 
 #
 #def _is_numeric_array(x):

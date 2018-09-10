@@ -37,7 +37,7 @@ from .ffchl_module import fget_atomic_local_gradient_5point_kernels_fchl
 
 from .fchl_kernel_functions import get_kernel_parameters
 
-from qml.data.alchemy import get_alchemy
+from qml.utils.alchemy import get_alchemy
 
 
 def get_gaussian_process_kernels(A, B, verbose=False, dx=0.005, \
