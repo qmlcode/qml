@@ -723,8 +723,6 @@ class FCHLKernel(_BaseKernel):
         else:
             alchemy = 'off'
 
-        print("global", alchemy)
-
         if Y is None or X is Y:
             return get_global_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
                     three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
@@ -748,7 +746,6 @@ class FCHLKernel(_BaseKernel):
         else:
             alchemy = 'off'
 
-        print("local", alchemy)
 
         if Y is None or X is Y:
             return get_local_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
