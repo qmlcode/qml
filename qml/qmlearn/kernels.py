@@ -28,19 +28,15 @@ from sklearn.base import BaseEstimator
 
 from .data import Data
 
-from ..kernels.fkernels import fgaussian_kernel
-from ..kernels.fkernels import fgaussian_kernel_symmetric
 from ..kernels.fkernels import fget_vector_kernels_gaussian
 from ..kernels.fkernels import fget_vector_kernels_gaussian_symmetric
-from ..kernels.fkernels import flaplacian_kernel
-from ..kernels.fkernels import flaplacian_kernel_symmetric
 from ..kernels.fkernels import fget_vector_kernels_laplacian
 from ..kernels.fkernels import fget_vector_kernels_laplacian_symmetric
 
-from ..fchl.ffchl_module import fget_kernels_fchl
-from ..fchl.ffchl_module import fget_symmetric_kernels_fchl
-from ..fchl.ffchl_module import fget_global_kernels_fchl
-from ..fchl.ffchl_module import fget_global_symmetric_kernels_fchl
+from ..fchl import get_global_symmetric_kernels
+from ..fchl import get_global_kernels
+from ..fchl import get_local_symmetric_kernels
+from ..fchl import get_local_kernels
 
 from ..utils.alchemy import get_alchemy
 from ..utils import get_unique
@@ -344,24 +340,11 @@ class GaussianKernel(_BaseKernel):
         return kernel
 
     def _generate_molecular(self, X, Y=None):
-
-        X = np.asarray(X)
-
-        # Note: Transposed for Fortran
-        n = X.shape[0]
-
         if Y is None or X is Y:
             # Do symmetric matrix
-            K = np.empty((n, n), order='F')
-            fgaussian_kernel_symmetric(X.T, n, K, self.sigma)
+            return gaussian_kernel_symmetric(X, self.sigma)
         else:
-            Y = np.asarray(Y)
-            # Do asymmetric matrix
-            m = Y.shape[0]
-            K = np.empty((n, m), order='F')
-            fgaussian_kernel(X.T, n, Y.T, m, K, self.sigma)
-
-        return K
+            return gaussian_kernel(X, Y, self.sigma)
 
     def _generate_atomic(self, X, Y=None):
 
@@ -371,6 +354,8 @@ class GaussianKernel(_BaseKernel):
 
         nm1 = n1.size
 
+        # This is a bit of a mess to get kernels without
+        # alchemy working
         for i in range(len(X)):
             rep_size = X[0].shape[1]
             if rep_size == 0:
@@ -383,6 +368,8 @@ class GaussianKernel(_BaseKernel):
 
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
+        # This is a bit of a mess to get kernels without
+        # alchemy working
         for i in range(nm1):
             if X[i].shape[1] == 0:
                 n1[i] = 0
@@ -406,6 +393,8 @@ class GaussianKernel(_BaseKernel):
             max2 = np.max(n2)
             nm2 = n2.size
             x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
+            # This is a bit of a mess to get kernels without
+            # alchemy working
             for i in range(nm2):
                 if Y[i].shape[1] == 0:
                     n2[i] = 0
@@ -534,24 +523,11 @@ class LaplacianKernel(_BaseKernel):
         return kernel
 
     def _generate_molecular(self, X, Y=None):
-
-        X = np.asarray(X)
-
-        # Note: Transposed for Fortran
-        n = X.shape[0]
-
         if Y is None or X is Y:
             # Do symmetric matrix
-            K = np.empty((n, n), order='F')
-            flaplacian_kernel_symmetric(X.T, n, K, self.sigma)
+            return laplacian_kernel_symmetric(X, self.sigma)
         else:
-            Y = np.asarray(Y)
-            # Do asymmetric matrix
-            m = Y.shape[0]
-            K = np.empty((n, m), order='F')
-            flaplacian_kernel(X.T, n, Y.T, m, K, self.sigma)
-
-        return K
+            return laplacian_kernel(X, Y, self.sigma)
 
     def _generate_atomic(self, X, Y=None):
 
@@ -561,6 +537,8 @@ class LaplacianKernel(_BaseKernel):
 
         nm1 = n1.size
 
+        # This is a bit of a mess to get kernels without
+        # alchemy working
         for i in range(len(X)):
             rep_size = X[0].shape[1]
             if rep_size == 0:
@@ -573,6 +551,8 @@ class LaplacianKernel(_BaseKernel):
 
         x1 = np.zeros((nm1, max1, rep_size), dtype=np.float64, order="F")
 
+        # This is a bit of a mess to get kernels without
+        # alchemy working
         for i in range(nm1):
             if X[i].shape[1] == 0:
                 n1[i] = 0
@@ -599,6 +579,8 @@ class LaplacianKernel(_BaseKernel):
             max2 = np.max(n2)
             nm2 = n2.size
             x2 = np.zeros((nm2, max2, rep_size), dtype=np.float64, order="F")
+            # This is a bit of a mess to get kernels without
+            # alchemy working
             for i in range(nm2):
                 if Y[i].shape[1] == 0:
                     n2[i] = 0
@@ -613,9 +595,9 @@ class FCHLKernel(_BaseKernel):
     FCHL kernel
     """
 
-    def __init__(self, sigma='auto', alchemy=True, two_body_scaling=np.sqrt(8),
-            three_body_scaling=1.6, two_body_width=0.2, three_body_width=np.pi,
-            two_body_power=4.0, three_body_power=2.0, damping_start=1.0, cutoff=5.0,
+    def __init__(self, sigma='auto', alchemy=True, two_body_scaling=-np.sqrt(8),
+            three_body_scaling=-1.6, two_body_width=0.2, three_body_width=np.pi,
+            two_body_power=-4.0, three_body_power=-2.0, damping_start=1.0, cutoff=5.0,
             fourier_order=1, alchemy_period_width=1.6, alchemy_group_width=1.6,
             local=True):
         """
@@ -736,102 +718,54 @@ class FCHLKernel(_BaseKernel):
 
     def _generate_molecular(self, X, Y=None):
 
-        atoms_max = X.shape[1]
-        neighbors_max = X.shape[3]
-        nm1 = X.shape[0]
-        N1 = np.zeros((nm1),dtype=np.int32)
-
-        for a in range(nm1):
-            N1[a] = len(np.where(X[a,:,1,0] > 0.0001)[0])
-
-        neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
-
-        for a, representation in enumerate(X):
-            ni = N1[a]
-            for i, x in enumerate(representation[:ni]):
-                neighbors1[a,i] = len(np.where(x[0] < self.cutoff)[0])
-
         if self.alchemy:
             alchemy = 'periodic-table'
         else:
             alchemy = 'off'
 
-        doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
+        print("global", alchemy)
 
         if Y is None or X is Y:
-            # Do symmetric kernel
-            return fget_global_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
-                        nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
-                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
-                        doalchemy, self.two_body_power, self.three_body_power)[0]
+            return get_global_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
+                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
+                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+                    cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
+                    alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
+                    kernel_args={'sigma': [self.sigma]})[0]
         else:
-            # Do asymmetric kernel
-            nm2 = Y.shape[0]
-            N2 = np.zeros((nm2),dtype=np.int32)
-
-            for a in range(nm2):
-                N2[a] = len(np.where(Y[a,:,1,0] > 0.0001)[0])
-
-            neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
-
-            for a, representation in enumerate(Y):
-                ni = N2[a]
-                for i, x in enumerate(representation[:ni]):
-                    neighbors2[a,i] = len(np.where(x[0] < self.cutoff)[0])
-
-            return fget_global_kernels_fchl(X, Y, N1, N2, neighbors1, neighbors2, [self.sigma],
-                        nm1, nm2, 1, self.three_body_width, self.two_body_width, self.damping_start,
-                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
-                        doalchemy, self.two_body_power, self.three_body_power)[0]
+            return get_global_kernels(X, Y, two_body_scaling=-self.two_body_scaling,
+                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
+                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+                    cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
+                    alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
+                    kernel_args={'sigma': [self.sigma]})[0]
 
     def _generate_atomic(self, X, Y=None):
-
-        atoms_max = X.shape[1]
-        neighbors_max = X.shape[3]
-
-        nm1 = X.shape[0]
-        N1 = np.zeros((nm1),dtype=np.int32)
-
-        for a in range(nm1):
-            N1[a] = len(np.where(X[a,:,1,0] > 0.0001)[0])
-
-        neighbors1 = np.zeros((nm1, atoms_max), dtype=np.int32)
-
-        for a, representation in enumerate(X):
-            ni = N1[a]
-            for i, x in enumerate(representation[:ni]):
-                neighbors1[a,i] = len(np.where(x[0] < self.cutoff)[0])
-
         if self.alchemy:
             alchemy = 'periodic-table'
         else:
             alchemy = 'off'
 
-        doalchemy, pd = get_alchemy(alchemy, emax=100, r_width=self.alchemy_group_width, c_width=self.alchemy_period_width)
+        print("local", alchemy)
 
         if Y is None or X is Y:
-            return fget_symmetric_kernels_fchl(X, N1, neighbors1, [self.sigma],
-                        nm1, 1, self.three_body_width, self.two_body_width, self.damping_start,
-                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling,
-                        doalchemy, self.two_body_power, self.three_body_power)[0]
+            return get_local_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
+                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
+                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+                    cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
+                    alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
+                    kernel_args={'sigma': [self.sigma]})[0]
         else:
-            nm2 = Y.shape[0]
-            N2 = np.zeros((nm2),dtype=np.int32)
-
-            for a in range(nm2):
-                N2[a] = len(np.where(Y[a,:,1,0] > 0.0001)[0])
-
-            neighbors2 = np.zeros((nm2, atoms_max), dtype=np.int32)
-
-            for a, representation in enumerate(Y):
-                ni = N2[a]
-                for i, x in enumerate(representation[:ni]):
-                    neighbors2[a,i] = len(np.where(x[0] < self.cutoff)[0])
-
-            return fget_kernels_fchl(X, Y, N1, N2, neighbors1, neighbors2, [self.sigma],
-                        nm1, nm2, 1, self.three_body_width, self.two_body_width, self.damping_start, 
-                        self.cutoff, self.fourier_order, pd, self.two_body_scaling, self.three_body_scaling, 
-                        doalchemy, self.two_body_power, self.three_body_power)[0]
+            return get_local_kernels(X, Y, two_body_scaling=-self.two_body_scaling,
+                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
+                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+                    cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
+                    alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
+                    kernel_args={'sigma': [self.sigma]})[0]
 
     def fit_transform(self, X, y=None):
 
