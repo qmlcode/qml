@@ -2401,9 +2401,6 @@ class ARMP(_NN):
             optimisation_op = graph.get_operation_by_name("optimisation_op")
             dataset_init_op = graph.get_operation_by_name("dataset_init")
 
-        if self.tensorboard:
-            cost_summary = self.tensorboard_logger_training.write_cost_summary(cost)
-
         for i in range(self.iterations):
 
             if i % 2 == 0:
