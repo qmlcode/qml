@@ -2395,7 +2395,6 @@ class ARMP(_NN):
             tf_x = graph.get_tensor_by_name("Data/Descriptors:0")
             tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
             tf_ene = graph.get_tensor_by_name("Data/Properties:0")
-            cost = graph.get_tensor_by_name("Cost_func/add_13:0")
             tf_buffer = graph.get_tensor_by_name("Data/buffer:0")
 
             optimisation_op = graph.get_operation_by_name("optimisation_op")
