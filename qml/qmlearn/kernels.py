@@ -668,7 +668,7 @@ class FCHLKernel(_BaseKernel):
 
         # Generate kernel for a random subset
         indices = np.random.choice(np.arange(len(X)), size=n, replace=False)
-        kernel = self.generate(X)#[indices])
+        kernel = self.generate([X[i] for i in indices])
 
         if not self.local:
             # min smallest kernel element
