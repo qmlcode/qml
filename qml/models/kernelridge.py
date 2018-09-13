@@ -110,5 +110,3 @@ class GenericKRR(MLModel):
         if save_kernel:
             np.save(path + "/K.npy")
 
-        
-

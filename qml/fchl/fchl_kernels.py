@@ -52,7 +52,7 @@ from .ffchl_module import fget_kernels_fchl_ef_field
 
 from .fchl_kernel_functions import get_kernel_parameters
 
-from qml.data.alchemy import get_alchemy
+from qml.utils.alchemy import get_alchemy
 
 
 def get_local_kernels(A, B, \

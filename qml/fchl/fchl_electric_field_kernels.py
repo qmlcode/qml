@@ -31,7 +31,7 @@ from .ffchl_module import fget_ef_atomic_local_gradient_kernels_fchl
 
 from .fchl_kernel_functions import get_kernel_parameters
 
-from qml.data.alchemy import get_alchemy
+from qml.utils.alchemy import get_alchemy
 
 
 # def get_local_kernels_ef(A, B, verbose=False, df=0.01, ef_scaling=0.01,\
