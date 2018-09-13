@@ -38,6 +38,7 @@ from ..utils.utils import InputError, ceil, is_positive_or_zero, is_positive_int
 
 from qml.aglaia.tf_utils import TensorBoardLogger
 from qml.representations import generate_acsf
+from qml.aglaia.graceful_killer import GracefulKiller
 
 try:
     from qml.data import Compound
@@ -2323,6 +2324,9 @@ class ARMP(_NN):
 
         self.session.run(init)
 
+        # Initialising the object that enables graceful killing of the training
+        killer = GracefulKiller()
+
         for i in range(self.iterations):
 
             if i % 2 == 0:
@@ -2342,9 +2346,11 @@ class ARMP(_NN):
 
                 avg_cost += c
 
-            # This seems to run the iterator.get_next() op, which gives problems with end of sequence
-            # Hence why I re-initialise the iterator
+                if killer.kill_now:
+                    self.save_nn("emergency_save")
+                    exit()
 
+            # This seems to run the iterator.get_next() op, which gives problems with end of sequence, hence why I re-initialise the iterator
             if self.tensorboard:
                 if i % self.tensorboard_logger_training.store_frequency == 0:
                     self.session.run(iterator_init,
@@ -2403,6 +2409,9 @@ class ARMP(_NN):
             optimisation_op = graph.get_operation_by_name("optimisation_op")
             dataset_init_op = graph.get_operation_by_name("dataset_init")
 
+        # Initialising the object that enables graceful killing of the training
+        killer = GracefulKiller()
+
         for i in range(self.iterations):
 
             if i % 2 == 0:
@@ -2418,6 +2427,11 @@ class ARMP(_NN):
                                      run_metadata=self.tensorboard_logger_training.run_metadata)
                 else:
                     self.session.run(optimisation_op)
+
+                if killer.kill_now:
+                    self.save_nn("emergency_save")
+                    exit()
+
 
             if self.tensorboard:
                 if i % self.tensorboard_logger_training.store_frequency == 0:
