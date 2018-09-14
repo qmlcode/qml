@@ -213,6 +213,32 @@ def pipelines():
     print("*** End pipelines examples ***")
     print()
 
+def pipelines_2():
+
+    print("\n *** Begin pipelines example with Neural Network ***")
+
+    data = qmlearn.Data("../test/qm7/*.xyz")
+    energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
+    data.set_energies(energies)
+
+    # Create model
+    model = sklearn.pipeline.make_pipeline(
+        qmlearn.preprocessing.AtomScaler(data),
+        qmlearn.representations.CoulombMatrix(),
+        qmlearn.models.MolecularNeuralNetwork(iterations=100000, batch_size=50, learning_rate=0.005),
+    )
+
+    indices = np.arange(1000)
+    # np.random.shuffle(indices)
+
+    model.fit(indices[:100])
+
+    scores = model.score(indices[:100])
+    print("Negative MAE:", scores)
+
+    print("*** End pipelines example with Neural Network *** \n")
+
+
 def cross_validation():
     """
     Doing cross validation with qmlearn
@@ -278,10 +304,11 @@ def cross_validation():
     print("*** End CV examples ***")
 
 if __name__ == '__main__':
-    data()
-    preprocessing()
-    representations()
-    kernels()
-    models()
-    pipelines()
-    cross_validation()
+    # data()
+    # preprocessing()
+    # representations()
+    # kernels()
+    # models()
+    # pipelines()
+    # cross_validation()
+    pipelines_2()

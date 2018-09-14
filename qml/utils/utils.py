@@ -22,6 +22,7 @@
 
 
 import numpy as np
+import tensorflow as tf
 
 def is_positive(x):
     return (not is_array_like(x) and _is_numeric(x) and x > 0)
@@ -258,6 +259,92 @@ def check_classes(classes):
         approved_classes = classes
 
     return approved_classes
+
+def check_hl(hl1, hl2, hl3, hl4):
+
+    layers = [hl1, hl2, hl3, hl4]
+    approved_layers = []
+
+    for item in layers:
+        is_positive_integer(item)
+        approved_layers.append(int(item))
+
+    return approved_layers[0], approved_layers[1], approved_layers[2], approved_layers[3]
+
+def check_batchsize(bs):
+    is_positive_integer(bs)
+    if bs == 1:
+        raise InputError("Batch size should be larger than 1.")
+    return int(bs)
+
+def check_learningrate(lr):
+    if not is_positive(lr):
+        raise InputError("Expected positive float value for variable learning_rate. Got %s" % str(lr))
+    return float(lr)
+
+def check_iterations(it):
+    if not is_positive_integer(it):
+        raise InputError("Expected positive integer value for variable iterations. Got %s" % str(it))
+    return int(it)
+
+def check_reg(l1_reg, l2_reg):
+    if not is_positive_or_zero(l1_reg) or not is_positive_or_zero(l2_reg):
+        raise InputError("Expected positive float value for regularisation variables 'l1_reg' and 'l2_reg. Got %s and %s" % (str(l1_reg), str(l2_reg)))
+    return float(l1_reg), float(l2_reg)
+
+def check_scoring(scoring):
+    if not scoring in ['mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae']:
+        raise InputError("Unknown scoring function")
+    return scoring
+
+# ------------- ** Neural network utils inputs ** --------------------------
+
+def generate_weights(n_in, n_out, hl):
+
+    weights = []
+    biases = []
+
+    # Weights from input layer to first hidden layer
+    w = tf.Variable(tf.truncated_normal([hl[0], n_in], stddev = 1.0 / np.sqrt(hl[0]), dtype = tf.float32),
+                dtype = tf.float32, name = "weights_in")
+    b = tf.Variable(tf.zeros([hl[0]], dtype = tf.float32), name="bias_in", dtype = tf.float32)
+
+    weights.append(w)
+    biases.append(b)
+
+    # Weights from one hidden layer to the next
+    for i in range(1, len(hl)):
+        w = tf.Variable(tf.truncated_normal([hl[i], hl[i-1]], stddev=1.0 / np.sqrt(hl[i-1]), dtype=tf.float32),
+                        dtype=tf.float32, name="weights_hidden_%d" % i)
+        b = tf.Variable(tf.zeros([hl[i]], dtype=tf.float32), name="bias_hidden_%d" % i, dtype=tf.float32)
+
+        weights.append(w)
+        biases.append(b)
+
+
+    # Weights from last hidden layer to output layer
+    w = tf.Variable(tf.truncated_normal([n_out, hl[-1]],
+                                        stddev=1.0 / np.sqrt(hl[-1]), dtype=tf.float32),
+                    dtype=tf.float32, name="weights_out")
+    b = tf.Variable(tf.zeros([n_out], dtype=tf.float32), name="bias_out", dtype=tf.float32)
+
+    weights.append(w)
+    biases.append(b)
+
+    return weights, biases
+
+def get_batch_size(batch_size, n_samples):
+
+    if batch_size > n_samples:
+        print("Warning: batch_size larger than sample size. It is going to be clipped")
+        return min(n_samples, batch_size)
+
+        # see if the batch size can be modified slightly to make sure the last batch is similar in size
+        # to the rest of the batches
+        # This is always less that the requested batch size, so no memory issues should arise
+
+    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
+    return better_batch_size
 
 #
 #def _is_numeric_array(x):
