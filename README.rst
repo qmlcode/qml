@@ -17,7 +17,7 @@ Current list of contributors:
 - Bing Huang (University of Basel)
 - David R. Glowacki (University of Bristol)
 - Alexandre Tkatchenko (University of Luxembourg)
-- Klaus-Robert Müller (Technische Universitat Berlin/Korea University)
+- Klaus-Robert Muller (Technische Universitat Berlin/Korea University)
 - \O. Anatole von Lilienfeld (University of Basel)
 
 1) Citing QML:
