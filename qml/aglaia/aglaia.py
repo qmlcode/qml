@@ -1748,35 +1748,43 @@ class ARMP(_NN):
 
         initial_natoms = xyz.shape[1]
 
-        # Hack to make fortran ACSF deal with dummy atoms (only if all the molecules are the same and the padding is at the end)
-        if 0 in classes:
-            idx_zeros = np.where(classes == 0)[1]
-
-            xyz = xyz[:, :idx_zeros[0], :]
-            classes = classes[:, :idx_zeros[0]]
-
-        unpadded_natoms = xyz.shape[1]
-
         elements, _ = self._get_elements_and_pairs(classes)
 
         representation = []
 
         for i in range(xyz.shape[0]):
-            g = generate_acsf(coordinates=xyz[i], elements=elements, gradients=False, nuclear_charges=classes[i],
-                              rcut=self.acsf_parameters['rcut'],
-                              acut=self.acsf_parameters['acut'],
-                              nRs2=self.acsf_parameters['nRs2'],
-                              nRs3=self.acsf_parameters['nRs3'],
-                              nTs=self.acsf_parameters['nTs'],
-                              eta2=self.acsf_parameters['eta'],
-                              eta3=self.acsf_parameters['eta'],
-                              zeta=self.acsf_parameters['zeta'])
+            if 0 in classes[i]:
+                idx_zeros = np.where(classes == 0)[1]
+                mol_xyz = xyz[i, :idx_zeros[0], :]
+                mol_classes = classes[i, :idx_zeros[0]]
 
-            if initial_natoms - unpadded_natoms != 0:
+                g = generate_acsf(coordinates=mol_xyz, elements=elements, gradients=False, nuclear_charges=mol_classes,
+                                  rcut=self.acsf_parameters['rcut'],
+                                  acut=self.acsf_parameters['acut'],
+                                  nRs2=self.acsf_parameters['nRs2'],
+                                  nRs3=self.acsf_parameters['nRs3'],
+                                  nTs=self.acsf_parameters['nTs'],
+                                  eta2=self.acsf_parameters['eta'],
+                                  eta3=self.acsf_parameters['eta'],
+                                  zeta=self.acsf_parameters['zeta'])
+
                 padded_g = np.zeros((initial_natoms, g.shape[-1]))
-                padded_g[:unpadded_natoms, :] = g
+                padded_g[:g.shape[0], :] = g
+
                 representation.append(padded_g)
+
             else:
+
+                g = generate_acsf(coordinates=xyz[i], elements=elements, gradients=False, nuclear_charges=classes[i],
+                                  rcut=self.acsf_parameters['rcut'],
+                                  acut=self.acsf_parameters['acut'],
+                                  nRs2=self.acsf_parameters['nRs2'],
+                                  nRs3=self.acsf_parameters['nRs3'],
+                                  nTs=self.acsf_parameters['nTs'],
+                                  eta2=self.acsf_parameters['eta'],
+                                  eta3=self.acsf_parameters['eta'],
+                                  zeta=self.acsf_parameters['zeta'])
+
                 representation.append(g)
 
         return np.asarray(representation)
@@ -2186,12 +2194,14 @@ class ARMP(_NN):
         """
 
         elements = np.unique(classes)
+        elements_no_zero = np.ma.masked_equal(elements,0).compressed()
+
         element_pairs = []
-        for i, ei in enumerate(elements):
-            for ej in elements[i:]:
+        for i, ei in enumerate(elements_no_zero):
+            for ej in elements_no_zero[i:]:
                 element_pairs.append([ej, ei])
 
-        return np.asarray(elements), np.asarray(element_pairs)
+        return np.asarray(elements_no_zero), np.asarray(element_pairs)
 
     def _find_elements(self, zs):
         """
