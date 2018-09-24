@@ -161,7 +161,7 @@ class KernelRidgeRegression(_BaseModel):
 
         return np.dot(K, self.alpha)
 
-class MolecularNeuralNetwork(_BaseModel):
+class NeuralNetwork(_BaseModel):
     """
     Feed forward neural network that takes molecular representations and molecular properties.
     """
@@ -203,8 +203,15 @@ class MolecularNeuralNetwork(_BaseModel):
             ene = np.reshape(ene, (ene.shape[0], 1))
 
 
-        # Generating the model
-        self._generate_model(g.shape[1])
+        if X._representation_type == 'molecular':
+
+            self._generate_molecular_model(g.shape[-1])
+
+        elif X._representation_type == 'atomic':
+            zs = X.nuclear_charges
+            # TODO make it deal with padding
+            elements = np.unique(zs)
+            self._generate_atomic_model(g.shape[1], g.shape[-1], elements)
 
         # Training the model
         self._train(g, ene)
@@ -218,9 +225,9 @@ class MolecularNeuralNetwork(_BaseModel):
 
         return y_pred
 
-    def _generate_model(self, n_features):
+    def _generate_molecular_model(self, n_features):
         """
-        This function generates the tensorflow graph.
+        This function generates the tensorflow graph for the molecular feed forward neural net.
         """
 
         tf.reset_default_graph()
@@ -269,6 +276,106 @@ class MolecularNeuralNetwork(_BaseModel):
 
         iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
 
+    def _generate_atomic_model(self, n_atoms, n_features, elements):
+        """
+        This function generates the atomic feed forward neural network.
+        :return:
+        """
+        #TODO actually make these into different graphs
+        tf.reset_default_graph()
+
+        hidden_layers = []
+        for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
+            if item != 0:
+                hidden_layers.append(item)
+
+        hidden_layers = tuple(hidden_layers)
+
+        # Initial set up of the NN
+        with tf.name_scope("Data"):
+            ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
+            ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
+            ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
+            batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
+            buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
+
+            dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
+            dataset = dataset.shuffle(buffer_size=buffer_tf)
+            dataset = dataset.batch(batch_size_tf)
+
+            iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
+            tf_x, tf_zs, tf_y = iterator.get_next()
+
+        element_weights = {}
+        element_biases = {}
+
+        with tf.name_scope("Weights"):
+            for i in range(elements.shape[0]):
+                weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
+                element_weights[elements[i]] = weights
+                element_biases[elements[i]] = biases
+
+        with tf.name_scope("Model"):
+            all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
+
+            for el in elements:
+                # Obtaining the indices of where in Zs there is the current element
+                current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
+                where_element = tf.cast(tf.where(tf.equal(tf_zs, current_element)), dtype=tf.int32)
+
+                # Extract the descriptor corresponding to the right element
+                current_element_in_x = tf.gather_nd(tf_x, where_element)
+
+                # Calculate the atomic energy of all the atoms of type equal to the current element
+                atomic_ene = self._atomic_nn(current_element_in_x, hidden_layers, element_weights[el],
+                                                element_biases[el])
+
+                # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
+                updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(tf_zs))
+                all_atomic_energies = tf.add(all_atomic_energies, updates)
+
+            # Summing the energies of all the atoms
+            total_energies = tf.reduce_sum(all_atomic_energies, axis=-1, name="Predicted_energies", keepdims=True)
+
+        with tf.name_scope("Cost_func"):
+            cost = self._cost(total_energies, tf_y, element_weights)
+
+        with tf.name_scope("Optimiser"):
+            optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
+
+        iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
+
+    def _atomic_nn(self, x, hidden_layer_sizes, weights, biases):
+        """
+        Constructs the atomic part of the network. It calculates the output for all atoms as if they all were the same
+        element.
+
+        :param x: Atomic representation
+        :type x: tf tensor of shape (n_samples, n_atoms, n_features)
+        :param weights: Weights used in the network for a particular element.
+        :type weights: list of tf.Variables of length hidden_layer_sizes.size + 1
+        :param biases: Biases used in the network for a particular element.
+        :type biases: list of tf.Variables of length hidden_layer_sizes.size + 1
+        :return: Output
+        :rtype: tf.Variable of size (n_samples, n_atoms)
+        """
+
+        # Calculate the activation of the first hidden layer
+        z = tf.add(tf.tensordot(x, tf.transpose(weights[0]), axes=1), biases[0])
+        h = tf.sigmoid(z)
+
+        # Calculate the activation of the remaining hidden layers
+        for i in range(len(hidden_layer_sizes) - 1):
+            z = tf.add(tf.tensordot(h, tf.transpose(weights[i + 1]), axes=1), biases[i + 1])
+            h = tf.sigmoid(z)
+
+        # Calculating the output of the last layer
+        z = tf.add(tf.tensordot(h, tf.transpose(weights[-1]), axes=1), biases[-1])
+
+        z_squeezed = tf.squeeze(z, axis=[-1])
+
+        return z_squeezed
+
     def _train(self, representations, energies):
 
         graph = tf.get_default_graph()
@@ -304,6 +411,7 @@ class MolecularNeuralNetwork(_BaseModel):
                 except tf.errors.OutOfRangeError:
                     break
 
+    # TODO modify so that it works with the atomic model as well
     def _cost(self, y_pred, y, weights):
         """
         Constructs the cost function
