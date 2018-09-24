@@ -1733,7 +1733,6 @@ class ARMP(_NN):
 
         return representation_conc
 
-    # TODO Make tensorflow and fortran consistent
     def _generate_acsf_from_data_fortran(self, xyz, classes):
         """
         This function uses fortran to generate the representation and the derivative of the representation with respect
