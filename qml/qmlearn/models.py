@@ -212,7 +212,7 @@ class NeuralNetwork(_BaseModel):
 
         # obtaining the representations and the energies from the data object
         if isinstance(X, Data):
-            g, zs, ene = X._representations, X.nuclear_charges, X.energies[X._indices]
+            g, zs, ene = X._representations, X.nuclear_charges[X._indices], X.energies[X._indices]
             ene = np.reshape(ene, (ene.shape[0], 1))
         else:
             raise NotImplementedError
@@ -239,7 +239,7 @@ class NeuralNetwork(_BaseModel):
         """
 
         if isinstance(X, Data):
-            g, zs = X._representations, X.nuclear_charges
+            g, zs = X._representations, X.nuclear_charges[X._indices]
 
         if X._representation_type == "molecular":
             y_pred = self._predict(g, zs, "molecular")
