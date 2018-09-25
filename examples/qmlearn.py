@@ -214,8 +214,11 @@ def pipelines():
     print()
 
 def pipelines_2():
+    """
+    Scikit learn pipeline with a molecular neural network
+    """
 
-    print("\n *** Begin pipelines example with Neural Network ***")
+    print("\n *** Begin pipelines example with molecular Neural Network ***")
 
     data = qmlearn.Data("../test/qm7/*.xyz")
     energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
@@ -225,19 +228,46 @@ def pipelines_2():
     model = sklearn.pipeline.make_pipeline(
         qmlearn.preprocessing.AtomScaler(data),
         qmlearn.representations.CoulombMatrix(),
-        qmlearn.models.MolecularNeuralNetwork(iterations=100000, batch_size=50, learning_rate=0.005),
+        qmlearn.models.NeuralNetwork(iterations=500, batch_size=50, learning_rate=0.005),
     )
 
     indices = np.arange(1000)
-    # np.random.shuffle(indices)
+    np.random.shuffle(indices)
 
     model.fit(indices[:100])
 
     scores = model.score(indices[:100])
     print("Negative MAE:", scores)
 
-    print("*** End pipelines example with Neural Network *** \n")
+    print("*** End pipelines example with molecular Neural Network *** \n")
 
+def pipelines_3():
+    """
+    Scikit learn pipeline with an atomic neural network
+    """
+
+    print("\n *** Begin pipelines example with atomic Neural Network ***")
+
+    data = qmlearn.Data("../test/qm7/*.xyz")
+    energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
+    data.set_energies(energies)
+
+    # Create model
+    model = sklearn.pipeline.make_pipeline(
+        qmlearn.preprocessing.AtomScaler(data),
+        qmlearn.representations.AtomCenteredSymmetryFunctions(),
+        qmlearn.models.NeuralNetwork(iterations=500, batch_size=50, learning_rate=0.005),
+    )
+
+    indices = np.arange(1000)
+    np.random.shuffle(indices)
+
+    model.fit(indices[:100])
+
+    scores = model.score(indices[:100])
+    print("Negative MAE:", scores)
+
+    print("*** End pipelines example with atomic Neural Network *** \n")
 
 def cross_validation():
     """
@@ -312,3 +342,4 @@ if __name__ == '__main__':
     # pipelines()
     # cross_validation()
     pipelines_2()
+    pipelines_3()

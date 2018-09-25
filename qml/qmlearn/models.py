@@ -163,7 +163,7 @@ class KernelRidgeRegression(_BaseModel):
 
 class NeuralNetwork(_BaseModel):
     """
-    Feed forward neural network that takes molecular representations and molecular properties.
+    Feed forward neural network that takes molecular or atomic representations for predicting molecular properties.
     """
 
     def __init__(self, hl1=20, hl2=10, hl3=5, hl4=0, batch_size=200, learning_rate=0.001, iterations=500, l1_reg=0.0,
@@ -171,15 +171,26 @@ class NeuralNetwork(_BaseModel):
         """
 
         :param hl1: number of nodes in the 1st hidden layer
+        :type hl1: int
         :param hl2: number of nodes in the 2nd hidden layer
+        :type hl2: int
         :param hl3: number of nodes in the 3rd hidden layer
+        :type hl3: int
         :param hl4: number of nodes in the 4th hidden layer
+        :type hl4: int
         :param batch_size: Number of samples to have in each batch during training
+        :type batch_size: int
         :param learning_rate: step size in optimisation algorithm
+        :type learning_rate: float
         :param iterations: number of iterations to do during training
+        :type iterations: int
         :param l1_reg: L1 regularisation parameter
+        :type l1_reg: float
         :param l2_reg: L2 regularisation parameter
-        :param scoring: What function to use for scoring
+        :type l2_reg: float
+        :param scoring: What function to use for scoring. Available options are "neg_mae", "mae", "rmsd", "neg_rmsd",
+        "neg_log_mae"
+        :type scoring: string
         """
 
         self.hl1, self.hl2, self.hl3, self.hl4 = check_hl(hl1, hl2, hl3, hl4)
@@ -194,40 +205,56 @@ class NeuralNetwork(_BaseModel):
         Fit a feedforward neural network.
 
         :param X: Data object
+        :type X: object from the class Data
         :param y: Energies
+        :type y: numpy array of shape (n_samples,)
         """
 
         # obtaining the representations and the energies from the data object
         if isinstance(X, Data):
-            g, ene = X._representations, X.energies[X._indices]
+            g, zs, ene = X._representations, X.nuclear_charges, X.energies[X._indices]
             ene = np.reshape(ene, (ene.shape[0], 1))
-
+        else:
+            raise NotImplementedError
 
         if X._representation_type == 'molecular':
 
             self._generate_molecular_model(g.shape[-1])
+            self._train(g, ene, zs, "molecular")
 
         elif X._representation_type == 'atomic':
-            zs = X.nuclear_charges
-            # TODO make it deal with padding
-            elements = np.unique(zs)
-            self._generate_atomic_model(g.shape[1], g.shape[-1], elements)
 
-        # Training the model
-        self._train(g, ene)
+            g, zs = self._padding(g, zs)
+            self._generate_atomic_model(g.shape[1], g.shape[-1], X.unique_elements)
+            self._train(g, ene, zs, "atomic")
 
     def predict(self, X):
+        """
+        Function that predicts the molecular properties from a trained model.
+
+        :param X: Data object
+        :type X: object from class Data
+        :return: predicted properties
+        :rtype: numpy array of shape (n_samples,)
+        """
 
         if isinstance(X, Data):
-            g = X._representations
+            g, zs = X._representations, X.nuclear_charges
 
-        y_pred = self._predict(g)
+        if X._representation_type == "molecular":
+            y_pred = self._predict(g, zs, "molecular")
+        elif X._representation_type == "atomic":
+            g, zs = self._padding(g, zs)
+            y_pred = self._predict(g, zs, "atomic")
 
         return y_pred
 
     def _generate_molecular_model(self, n_features):
         """
         This function generates the tensorflow graph for the molecular feed forward neural net.
+
+        :param n_features: number of features in the representation
+        :type n_features: int
         """
 
         tf.reset_default_graph()
@@ -279,7 +306,13 @@ class NeuralNetwork(_BaseModel):
     def _generate_atomic_model(self, n_atoms, n_features, elements):
         """
         This function generates the atomic feed forward neural network.
-        :return:
+
+        :param n_atoms: maximum number of atoms in the molecules
+        :type n_atoms: int
+        :param n_features: number of features in the representation
+        :type n_features: int
+        :param elements: unique elements in the data set
+        :type elements: array of ints
         """
         #TODO actually make these into different graphs
         tf.reset_default_graph()
@@ -310,7 +343,7 @@ class NeuralNetwork(_BaseModel):
         element_biases = {}
 
         with tf.name_scope("Weights"):
-            for i in range(elements.shape[0]):
+            for i in range(len(elements)):
                 weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
                 element_weights[elements[i]] = weights
                 element_biases[elements[i]] = biases
@@ -347,8 +380,8 @@ class NeuralNetwork(_BaseModel):
 
     def _atomic_nn(self, x, hidden_layer_sizes, weights, biases):
         """
-        Constructs the atomic part of the network. It calculates the output for all atoms as if they all were the same
-        element.
+        Constructs the atomic part of the network. It calculates the atomic property for all atoms and then sums them
+        together to obtain the molecular property.
 
         :param x: Atomic representation
         :type x: tf tensor of shape (n_samples, n_atoms, n_features)
@@ -376,13 +409,27 @@ class NeuralNetwork(_BaseModel):
 
         return z_squeezed
 
-    def _train(self, representations, energies):
+    def _train(self, representations, energies, zs, representation_type):
+        """
+        This function trains the neural network.
+
+        :param representations: the representations of the molecules (either atomic or molecular)
+        :type representations: numpy array of shape (n_samples, max_n_atoms, n_features) or (n_samples, n_features)
+        :param energies: the true molecular properties to be learnt
+        :type energies: numpy array of shape (n_samples, )
+        :param zs: the nuclear charges of all the atoms in the molecules
+        :type zs: numpy array of shape (n_samples, max_n_atoms)
+        :param representation_type: flag setting whether the representation is "atomic" or "molecular".
+        :type representation_type: string
+        """
 
         graph = tf.get_default_graph()
 
         with graph.as_default():
             tf_x = graph.get_tensor_by_name("Data/Representation:0")
             tf_y = graph.get_tensor_by_name("Data/True_energies:0")
+            if representation_type == "atomic":
+                tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = graph.get_tensor_by_name("Data/Buffer:0")
 
@@ -402,8 +449,12 @@ class NeuralNetwork(_BaseModel):
             else:
                 buff = int(4.5 * batch_size)
 
-            self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, buffer_tf: buff,
-                              batch_size_tf:batch_size})
+            if representation_type == "atomic":
+                self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: zs, buffer_tf: buff,
+                                                          batch_size_tf: batch_size})
+            else:
+                self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, buffer_tf: buff,
+                                  batch_size_tf:batch_size})
 
             while True:
                 try:
@@ -411,7 +462,6 @@ class NeuralNetwork(_BaseModel):
                 except tf.errors.OutOfRangeError:
                     break
 
-    # TODO modify so that it works with the atomic model as well
     def _cost(self, y_pred, y, weights):
         """
         Constructs the cost function
@@ -426,15 +476,29 @@ class NeuralNetwork(_BaseModel):
         :rtype: tf.Variable of size (1,)
         """
 
-        err = tf.square(tf.subtract(y,y_pred))
+        err = tf.square(tf.subtract(y, y_pred))
         loss = tf.reduce_mean(err, name="loss")
-        cost = loss
-        if self.l2_reg > 0:
-            l2_loss = self._l2_loss(weights)
-            cost = cost + l2_loss
-        if self.l1_reg > 0:
-            l1_loss = self._l1_loss(weights)
-            cost = cost + l1_loss
+
+        if isinstance(weights, dict):
+            cost = loss
+            if self.l2_reg > 0:
+                l2_loss = 0
+                for element in weights:
+                    l2_loss += self._l2_loss(weights[element])
+                cost += l2_loss
+            if self.l1_reg > 0:
+                l1_loss = 0
+                for element in weights:
+                    l1_loss += self._l1_loss(weights[element])
+                cost += l1_loss
+        else:
+            cost = loss
+            if self.l2_reg > 0:
+                l2_loss = self._l2_loss(weights)
+                cost = cost + l2_loss
+            if self.l1_reg > 0:
+                l1_loss = self._l1_loss(weights)
+                cost = cost + l1_loss
 
         return cost
 
@@ -472,7 +536,19 @@ class NeuralNetwork(_BaseModel):
 
         return self.l1_reg * reg_term
 
-    def _predict(self, representation):
+    def _predict(self, representation, zs, representation_type):
+        """
+        This function predicts the molecular properties from the representations.
+
+        :param representation: representation of the molecules, can be atomic or molecular
+        :type representation: numpy array of shape (n_samples, n_max_atoms, n_features) or (n_samples, n_features)
+        :param zs: nuclear charges of the molecules
+        :type zs: numpy array of shape (n_samples, n_max_atoms)
+        :param representation_type: flag saying whether the representation is the "molecular" or "atomic"
+        :type representation_type: string
+        :return: molecular properties predictions
+        :rtype: numpy array of shape (n_samples,)
+        """
 
         graph = tf.get_default_graph()
 
@@ -481,15 +557,21 @@ class NeuralNetwork(_BaseModel):
         with graph.as_default():
             tf_x = graph.get_tensor_by_name("Data/Representation:0")
             tf_y = graph.get_tensor_by_name("Data/True_energies:0")
+            if representation_type == "atomic":
+                tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = graph.get_tensor_by_name("Data/Buffer:0")
             iter_init_op = graph.get_operation_by_name("dataset_init")
 
             y_pred = graph.get_tensor_by_name("Model/Predicted_energies:0")
 
-            self.session.run(iter_init_op,
-                             feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
-                                        batch_size_tf: batch_size, buffer_tf:1})
+            if representation_type == "atomic":
+                self.session.run(iter_init_op, feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
+                                                          tf_zs: zs, buffer_tf: 1, batch_size_tf: batch_size})
+            else:
+                self.session.run(iter_init_op,
+                                 feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
+                                            batch_size_tf: batch_size, buffer_tf:1})
 
         tot_y_pred = []
 
@@ -501,6 +583,33 @@ class NeuralNetwork(_BaseModel):
                 break
 
         return np.concatenate(tot_y_pred, axis=0).ravel()
+
+    def _padding(self, representation, nuclear_charges):
+        """
+        This function  takes atomic representations for molecules of different sizes and pads them with 0 so that they
+        all have the same size.
+
+        :param representation: list of numby arrays of shape (n_atoms, n_features)
+        :param nuclear_charges: list of numpy arrays of shape (n_atoms,)
+        :return: numpy array of shape (n_samples, max_n_atoms, n_features) and (n_samples, max_n_atoms)
+        """
+
+        max_n_atoms = 0
+
+        for i in range(len(representation)):
+            n_atoms = representation[i].shape[0]
+            if n_atoms > max_n_atoms:
+                max_n_atoms = n_atoms
+
+        padded_rep = np.zeros((len(representation), max_n_atoms, representation[0].shape[1]))
+        padded_zs = np.zeros((len(representation), max_n_atoms))
+
+        for i in range(len(representation)):
+            n_atoms = representation[i].shape[0]
+            padded_rep[i, :n_atoms] = representation[i]
+            padded_zs[i, :n_atoms] = nuclear_charges[i]
+
+        return padded_rep, padded_zs
 
 
 
