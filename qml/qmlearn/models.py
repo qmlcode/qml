@@ -257,7 +257,7 @@ class NeuralNetwork(_BaseModel):
         :type n_features: int
         """
 
-        tf.reset_default_graph()
+        self.graph = tf.Graph()
 
         hidden_layers = []
         for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
@@ -267,41 +267,42 @@ class NeuralNetwork(_BaseModel):
         hidden_layers = tuple(hidden_layers)
 
         # Initial set up of the NN
-        with tf.name_scope("Data"):
-            ph_x = tf.placeholder(tf.float32, [None, n_features], name="Representation")
-            ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
-            batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
-            buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
+        with self.graph.as_default():
+            with tf.name_scope("Data"):
+                ph_x = tf.placeholder(tf.float32, [None, n_features], name="Representation")
+                ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
+                batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
+                buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
 
-            dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_y))
-            dataset = dataset.shuffle(buffer_size=buffer_tf)
-            dataset = dataset.batch(batch_size_tf)
+                dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_y))
+                dataset = dataset.shuffle(buffer_size=buffer_tf)
+                dataset = dataset.batch(batch_size_tf)
 
-            iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
-            tf_x, tf_y = iterator.get_next()
+                iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
+                tf_x, tf_y = iterator.get_next()
 
-        with tf.name_scope("Weights"):
-            weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
+            with tf.name_scope("Weights"):
+                weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
 
-        with tf.name_scope("Model"):
-            z = tf.add(tf.matmul(tf_x, tf.transpose(weights[0])), biases[0])
-            h = tf.sigmoid(z)
-
-            # Calculate the activation of the remaining hidden layers
-            for i in range(1, len(weights) - 1):
-                z = tf.add(tf.matmul(h, tf.transpose(weights[i])), biases[i])
+            with tf.name_scope("Model"):
+                z = tf.add(tf.matmul(tf_x, tf.transpose(weights[0])), biases[0])
                 h = tf.sigmoid(z)
 
-            # Calculating the output of the last layer
-            y_pred = tf.add(tf.matmul(h, tf.transpose(weights[-1])), biases[-1], name="Predicted_energies")
+                # Calculate the activation of the remaining hidden layers
+                for i in range(1, len(weights) - 1):
+                    z = tf.add(tf.matmul(h, tf.transpose(weights[i])), biases[i])
+                    h = tf.sigmoid(z)
 
-        with tf.name_scope("Cost_func"):
-            cost = self._cost(y_pred, tf_y, weights)
+                # Calculating the output of the last layer
+                y_pred = tf.add(tf.matmul(h, tf.transpose(weights[-1])), biases[-1], name="Predicted_energies")
 
-        with tf.name_scope("Optimiser"):
-            optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
+            with tf.name_scope("Cost_func"):
+                cost = self._cost(y_pred, tf_y, weights)
 
-        iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
+            with tf.name_scope("Optimiser"):
+                optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
+
+            iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
 
     def _generate_atomic_model(self, n_atoms, n_features, elements):
         """
@@ -314,8 +315,7 @@ class NeuralNetwork(_BaseModel):
         :param elements: unique elements in the data set
         :type elements: array of ints
         """
-        #TODO actually make these into different graphs
-        tf.reset_default_graph()
+        self.graph = tf.Graph()
 
         hidden_layers = []
         for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
@@ -325,58 +325,59 @@ class NeuralNetwork(_BaseModel):
         hidden_layers = tuple(hidden_layers)
 
         # Initial set up of the NN
-        with tf.name_scope("Data"):
-            ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
-            ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
-            ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
-            batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
-            buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
+        with self.graph.as_default():
+            with tf.name_scope("Data"):
+                ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
+                ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
+                ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
+                batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
+                buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
 
-            dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
-            dataset = dataset.shuffle(buffer_size=buffer_tf)
-            dataset = dataset.batch(batch_size_tf)
+                dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
+                dataset = dataset.shuffle(buffer_size=buffer_tf)
+                dataset = dataset.batch(batch_size_tf)
 
-            iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
-            tf_x, tf_zs, tf_y = iterator.get_next()
+                iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
+                tf_x, tf_zs, tf_y = iterator.get_next()
 
-        element_weights = {}
-        element_biases = {}
+            element_weights = {}
+            element_biases = {}
 
-        with tf.name_scope("Weights"):
-            for i in range(len(elements)):
-                weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
-                element_weights[elements[i]] = weights
-                element_biases[elements[i]] = biases
+            with tf.name_scope("Weights"):
+                for i in range(len(elements)):
+                    weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
+                    element_weights[elements[i]] = weights
+                    element_biases[elements[i]] = biases
 
-        with tf.name_scope("Model"):
-            all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
+            with tf.name_scope("Model"):
+                all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
 
-            for el in elements:
-                # Obtaining the indices of where in Zs there is the current element
-                current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
-                where_element = tf.cast(tf.where(tf.equal(tf_zs, current_element)), dtype=tf.int32)
+                for el in elements:
+                    # Obtaining the indices of where in Zs there is the current element
+                    current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
+                    where_element = tf.cast(tf.where(tf.equal(tf_zs, current_element)), dtype=tf.int32)
 
-                # Extract the descriptor corresponding to the right element
-                current_element_in_x = tf.gather_nd(tf_x, where_element)
+                    # Extract the descriptor corresponding to the right element
+                    current_element_in_x = tf.gather_nd(tf_x, where_element)
 
-                # Calculate the atomic energy of all the atoms of type equal to the current element
-                atomic_ene = self._atomic_nn(current_element_in_x, hidden_layers, element_weights[el],
-                                                element_biases[el])
+                    # Calculate the atomic energy of all the atoms of type equal to the current element
+                    atomic_ene = self._atomic_nn(current_element_in_x, hidden_layers, element_weights[el],
+                                                    element_biases[el])
 
-                # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
-                updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(tf_zs))
-                all_atomic_energies = tf.add(all_atomic_energies, updates)
+                    # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
+                    updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(tf_zs))
+                    all_atomic_energies = tf.add(all_atomic_energies, updates)
 
-            # Summing the energies of all the atoms
-            total_energies = tf.reduce_sum(all_atomic_energies, axis=-1, name="Predicted_energies", keepdims=True)
+                # Summing the energies of all the atoms
+                total_energies = tf.reduce_sum(all_atomic_energies, axis=-1, name="Predicted_energies", keepdims=True)
 
-        with tf.name_scope("Cost_func"):
-            cost = self._cost(total_energies, tf_y, element_weights)
+            with tf.name_scope("Cost_func"):
+                cost = self._cost(total_energies, tf_y, element_weights)
 
-        with tf.name_scope("Optimiser"):
-            optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
+            with tf.name_scope("Optimiser"):
+                optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
 
-        iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
+            iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
 
     def _atomic_nn(self, x, hidden_layer_sizes, weights, biases):
         """
@@ -423,44 +424,42 @@ class NeuralNetwork(_BaseModel):
         :type representation_type: string
         """
 
-        graph = tf.get_default_graph()
-
-        with graph.as_default():
-            tf_x = graph.get_tensor_by_name("Data/Representation:0")
-            tf_y = graph.get_tensor_by_name("Data/True_energies:0")
-            if representation_type == "atomic":
-                tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
-            batch_size_tf = graph.get_tensor_by_name("Data/Batch_size:0")
-            buffer_tf = graph.get_tensor_by_name("Data/Buffer:0")
-
-            optimisation_op = graph.get_operation_by_name("Optimiser/Adam")
-            iter_init_op = graph.get_operation_by_name("dataset_init")
-
         batch_size = get_batch_size(self.batch_size, representations.shape[0])
 
-        self.session = tf.Session(graph=graph)
-
-        self.session.run(tf.global_variables_initializer())
-
-        for i in range(self.iterations):
-
-            if i % 2 == 0:
-                buff = int(3.5 * batch_size)
-            else:
-                buff = int(4.5 * batch_size)
-
+        with self.graph.as_default():
+            tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
+            tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
             if representation_type == "atomic":
-                self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: zs, buffer_tf: buff,
-                                                          batch_size_tf: batch_size})
-            else:
-                self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, buffer_tf: buff,
-                                  batch_size_tf:batch_size})
+                tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
+            batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
+            buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
 
-            while True:
-                try:
-                    self.session.run(optimisation_op)
-                except tf.errors.OutOfRangeError:
-                    break
+            optimisation_op = self.graph.get_operation_by_name("Optimiser/Adam")
+            iter_init_op = self.graph.get_operation_by_name("dataset_init")
+
+            self.session = tf.Session(graph=self.graph)
+
+            self.session.run(tf.global_variables_initializer())
+
+            for i in range(self.iterations):
+
+                if i % 2 == 0:
+                    buff = int(3.5 * batch_size)
+                else:
+                    buff = int(4.5 * batch_size)
+
+                if representation_type == "atomic":
+                    self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: zs, buffer_tf: buff,
+                                                              batch_size_tf: batch_size})
+                else:
+                    self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, buffer_tf: buff,
+                                      batch_size_tf:batch_size})
+
+                while True:
+                    try:
+                        self.session.run(optimisation_op)
+                    except tf.errors.OutOfRangeError:
+                        break
 
     def _cost(self, y_pred, y, weights):
         """
@@ -550,20 +549,18 @@ class NeuralNetwork(_BaseModel):
         :rtype: numpy array of shape (n_samples,)
         """
 
-        graph = tf.get_default_graph()
-
         batch_size = get_batch_size(self.batch_size, representation.shape[0])
 
-        with graph.as_default():
-            tf_x = graph.get_tensor_by_name("Data/Representation:0")
-            tf_y = graph.get_tensor_by_name("Data/True_energies:0")
+        with self.graph.as_default():
+            tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
+            tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
             if representation_type == "atomic":
-                tf_zs = graph.get_tensor_by_name("Data/Atomic-numbers:0")
-            batch_size_tf = graph.get_tensor_by_name("Data/Batch_size:0")
-            buffer_tf = graph.get_tensor_by_name("Data/Buffer:0")
-            iter_init_op = graph.get_operation_by_name("dataset_init")
+                tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
+            batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
+            buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
+            iter_init_op = self.graph.get_operation_by_name("dataset_init")
 
-            y_pred = graph.get_tensor_by_name("Model/Predicted_energies:0")
+            y_pred = self.graph.get_tensor_by_name("Model/Predicted_energies:0")
 
             if representation_type == "atomic":
                 self.session.run(iter_init_op, feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
