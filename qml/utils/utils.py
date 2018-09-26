@@ -25,10 +25,10 @@ import numpy as np
 import tensorflow as tf
 
 def is_positive(x):
-    return (not is_array_like(x) and _is_numeric(x) and x > 0)
+    return (not is_array_like(x) and is_numeric(x) and x > 0)
 
 def is_positive_or_zero(x):
-    return (not is_array_like(x) and _is_numeric(x) and x >= 0)
+    return (not is_array_like(x) and is_numeric(x) and x >= 0)
 
 def is_array_like(x):
     return isinstance(x, (tuple, list, np.ndarray))
@@ -45,7 +45,7 @@ def is_string(x):
 def is_dict(x):
     return isinstance(x, dict)
 
-def _is_numeric(x):
+def is_numeric(x):
     return isinstance(x, (float, int))
 
 def is_numeric_array(x):
@@ -58,7 +58,7 @@ def is_numeric_array(x):
     return False
 
 def _is_integer(x):
-    return (_is_numeric(x) and (float(x) == int(x)))
+    return (is_numeric(x) and (float(x) == int(x)))
 
 # will intentionally accept 0, 1 as well
 def is_bool(x):
@@ -345,85 +345,6 @@ def get_batch_size(batch_size, n_samples):
 
     better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
     return better_batch_size
-
-#
-#def _is_numeric_array(x):
-#    try:
-#        arr = np.asarray(x, dtype = float)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def _is_numeric_scalar(x):
-#    try:
-#        float(x)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def is_positive(x):
-#    if is_array(x) and _is_numeric_array(x):
-#        return _is_positive_scalar(x)
-#
-#def _is_positive_scalar(x):
-#    return float(x) > 0
-#
-#def _is_positive_array(x):
-#    return np.asarray(x, dtype = float) > 0
-#
-#def is_positive_or_zero(x):
-#    if is_numeric(x):
-#        if is_array(x):
-#            return is_positive_or_zero_array(x)
-#        else:
-#            return is_positive_or_zero_scalar(x)
-#    else:
-#        return False
-#
-#def is_positive_or_zero_array(x):
-#
-#
-#def is_positive_or_zero_scalar(x):
-#    return float(x) >= 0
-#
-#def is_integer(x):
-#    if is_array(x)
-#        return is_integer_array(x)
-#    else:
-#        return is_integer_scalar(x)
-#
-## will intentionally accept floats with integer values
-#def is_integer_array(x):
-#    if is_numeric(x):
-#        return (np.asarray(x) == np.asarray(y)).all()
-#    else:
-#        return False
-#
-## will intentionally accept floats with integer values
-#def is_integer_scalar(x):
-#    if is_numeric(x):
-#        return int(float(x)) == float(x)
-#    else:
-#        return False
-#
-#
-#def is_string(x):
-#    return isinstance(x, str)
-#
-#def is_positive_integer(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive(x))
-#
-#def is_positive_integer_or_zero(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive_or_zero(x))
-#
-#def is_negative_integer(x):
-#    if is_integer(x):
-#        return not is_positive(x)
-#    else:
-#        return False
-#
-#def is_non_zero_integer(x):
-#    return (is_positive_integer(x) or is_negative_integer(x))
 
 
 # Custom exception to raise when we intentinoally catch an error
