@@ -29,7 +29,6 @@ class Data(object):
         self.nuclear_charges = None
         self.natoms = None
         self.energies = None
-        self.unique_elements = None
 
         if isinstance(filenames, str):
             filenames = sorted(glob.glob(filenames))
@@ -109,7 +108,6 @@ class Data(object):
         self.coordinates = np.empty(self.ncompounds, dtype=object)
         self.nuclear_charges = np.empty(self.ncompounds, dtype=object)
         self.natoms = np.empty(self.ncompounds, dtype = int)
-        self.unique_elements = []
 
         for i, filename in enumerate(filenames):
             with open(filename, "r") as f:
@@ -128,8 +126,6 @@ class Data(object):
 
                 self.nuclear_charges[i][j] = NUCLEAR_CHARGE[tokens[0]]
                 self.coordinates[i][j] = np.asarray(tokens[1:4], dtype=float)
-                if not NUCLEAR_CHARGE[tokens[0]] in self.unique_elements:
-                    self.unique_elements.append(NUCLEAR_CHARGE[tokens[0]])
 
         # Try to convert dtype to int/float in cases where you have the
         # same molecule, just different conformers
