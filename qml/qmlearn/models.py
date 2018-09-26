@@ -23,13 +23,18 @@
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
-import tensorflow as tf
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error
 
-from ..utils import *
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
+
+from ..utils import is_numeric_array
 from .data import Data
 from ..math import cho_solve
+
 
 class _BaseModel(BaseEstimator):
     """
@@ -169,29 +174,31 @@ class NeuralNetwork(_BaseModel):
     def __init__(self, hl1=20, hl2=10, hl3=5, hl4=0, batch_size=200, learning_rate=0.001, iterations=500, l1_reg=0.0,
                  l2_reg=0.0, scoring="neg_mae"):
         """
-
-        :param hl1: number of nodes in the 1st hidden layer
+        :param hl1: number of hidden nodes in the 1st hidden layer
         :type hl1: int
-        :param hl2: number of nodes in the 2nd hidden layer
+        :param hl2: number of hidden nodes in the 2nd hidden layer
         :type hl2: int
-        :param hl3: number of nodes in the 3rd hidden layer
+        :param hl3: number of hidden nodes in the 3rd hidden layer
         :type hl3: int
-        :param hl4: number of nodes in the 4th hidden layer
+        :param hl4: number of hidden nodes in the 4th hidden layer
         :type hl4: int
         :param batch_size: Number of samples to have in each batch during training
         :type batch_size: int
-        :param learning_rate: step size in optimisation algorithm
+        :param learning_rate: Step size in optimisation algorithm
         :type learning_rate: float
-        :param iterations: number of iterations to do during training
+        :param iterations: Number of iterations to do during training
         :type iterations: int
         :param l1_reg: L1 regularisation parameter
         :type l1_reg: float
         :param l2_reg: L2 regularisation parameter
         :type l2_reg: float
         :param scoring: What function to use for scoring. Available options are "neg_mae", "mae", "rmsd", "neg_rmsd",
-        "neg_log_mae"
+            "neg_log_mae"
         :type scoring: string
         """
+
+        # Check if tensorflow is available
+        self.tf_check()
 
         self.hl1, self.hl2, self.hl3, self.hl4 = check_hl(hl1, hl2, hl3, hl4)
         self.batch_size = check_batchsize(batch_size)
@@ -608,8 +615,7 @@ class NeuralNetwork(_BaseModel):
 
         return padded_rep, padded_zs
 
-
-
-
-
-
+    def tf_check(self):
+        if tf is None:
+            print("Tensorflow not found but is needed for %s" % self.__class__.__name__)
+            raise SystemExit
