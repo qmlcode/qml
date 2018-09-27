@@ -57,6 +57,13 @@ def is_numeric_array(x):
             return False
     return False
 
+def is_numeric_1d_array(x):
+    return is_numeric_array(x) and is_1d_array(x)
+
+# Accepts 2d arrays of shape (n,1) and (1,n) as well
+def is_1d_array(x):
+    return is_array_like(x) and (np.asarray(x).ndim == 1 or np.asarray(x).ndim == 2 and 1 in np.asarray(x).shape)
+
 def _is_integer(x):
     return (is_numeric(x) and (float(x) == int(x)))
 
@@ -82,6 +89,9 @@ def _is_integer_array(x):
         if (np.asarray(x, dtype = float) == np.asarray(x, dtype = int)).all():
             return True
     return False
+
+def is_positive_integer_1d_array(x):
+    return is_positive_integer_array(x) and is_1d_array(x)
 
 def is_positive_integer_array(x):
     return (_is_integer_array(x) and _is_positive_array(x))
