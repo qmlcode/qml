@@ -77,6 +77,18 @@ def generate_weights(n_in, n_out, hl):
     weights = []
     biases = []
 
+    # Support for linear models
+    if len(hl) == 0:
+        # Weights from input layer to first hidden layer
+        w = tf.Variable(tf.truncated_normal([n_out, n_in], stddev = 1.0, dtype = tf.float32),
+                    dtype = tf.float32, name = "weights_in")
+        b = tf.Variable(tf.zeros([n_out], dtype = tf.float32), name="bias_in", dtype = tf.float32)
+
+        weights.append(w)
+        biases.append(b)
+
+        return weights, biases
+
     # Weights from input layer to first hidden layer
     w = tf.Variable(tf.truncated_normal([hl[0], n_in], stddev = 1.0 / np.sqrt(hl[0]), dtype = tf.float32),
                 dtype = tf.float32, name = "weights_in")
