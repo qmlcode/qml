@@ -26,7 +26,9 @@ Various routines related to tensorflow
 """
 
 import os
+import numpy as np
 import tensorflow as tf
+from qml.utils import ceil
 
 class TensorBoardLogger(object):
     """
@@ -124,9 +126,9 @@ def get_batch_size(batch_size, n_samples):
         print("Warning: batch_size larger than sample size. It is going to be clipped")
         return min(n_samples, batch_size)
 
-        # see if the batch size can be modified slightly to make sure the last batch is similar in size
-        # to the rest of the batches
-        # This is always less that the requested batch size, so no memory issues should arise
+    # see if the batch size can be modified slightly to make sure the last batch is similar in size
+    # to the rest of the batches
+    # This is always less that the requested batch size, so no memory issues should arise
 
     better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
     return better_batch_size
