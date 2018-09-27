@@ -71,3 +71,51 @@ class TensorBoardLogger(object):
 
     def write_cost_summary(self, cost):
         tf.summary.scalar('cost', cost)
+
+def generate_weights(n_in, n_out, hl):
+
+    weights = []
+    biases = []
+
+    # Weights from input layer to first hidden layer
+    w = tf.Variable(tf.truncated_normal([hl[0], n_in], stddev = 1.0 / np.sqrt(hl[0]), dtype = tf.float32),
+                dtype = tf.float32, name = "weights_in")
+    b = tf.Variable(tf.zeros([hl[0]], dtype = tf.float32), name="bias_in", dtype = tf.float32)
+
+    weights.append(w)
+    biases.append(b)
+
+    # Weights from one hidden layer to the next
+    for i in range(1, len(hl)):
+        w = tf.Variable(tf.truncated_normal([hl[i], hl[i-1]], stddev=1.0 / np.sqrt(hl[i-1]), dtype=tf.float32),
+                        dtype=tf.float32, name="weights_hidden_%d" % i)
+        b = tf.Variable(tf.zeros([hl[i]], dtype=tf.float32), name="bias_hidden_%d" % i, dtype=tf.float32)
+
+        weights.append(w)
+        biases.append(b)
+
+
+    # Weights from last hidden layer to output layer
+    w = tf.Variable(tf.truncated_normal([n_out, hl[-1]],
+                                        stddev=1.0 / np.sqrt(hl[-1]), dtype=tf.float32),
+                    dtype=tf.float32, name="weights_out")
+    b = tf.Variable(tf.zeros([n_out], dtype=tf.float32), name="bias_out", dtype=tf.float32)
+
+    weights.append(w)
+    biases.append(b)
+
+    return weights, biases
+
+def get_batch_size(batch_size, n_samples):
+
+    if batch_size > n_samples:
+        print("Warning: batch_size larger than sample size. It is going to be clipped")
+        return min(n_samples, batch_size)
+
+        # see if the batch size can be modified slightly to make sure the last batch is similar in size
+        # to the rest of the batches
+        # This is always less that the requested batch size, so no memory issues should arise
+
+    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
+    return better_batch_size
+
