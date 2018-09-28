@@ -217,11 +217,10 @@ class NeuralNetwork(_BaseModel):
         self.size = check_size(size)
 
         # Will be overwritten at fit time
-        self.elements = [1,6,7,8,16]
-        self.representation_type = None
+        self.elements = None
+        self._representation_type = None
+        self._constant_features = None
 
-    # TODO add removal of unused features
-    # TODO get elements
     def fit(self, X, y=None, nuclear_charges=None):
         """
         Fit the neural network. A molecular/atomic network will be fit if
@@ -246,7 +245,7 @@ class NeuralNetwork(_BaseModel):
             nuclear_charges = X.nuclear_charges[X._indices]
             # 2D for tensorflow
             energies = np.reshape(X.energies[X._indices], (-1,1))
-            self.representation_type = X._representation_type
+            self._representation_type = X._representation_type
         else:
             # y must be an array
             if not is_numeric_1d_array(y):
@@ -261,9 +260,9 @@ class NeuralNetwork(_BaseModel):
             if len(representations) > 0 and len(representations[0]) > 0:
                 item = representations[0][0]
                 if is_numeric(item):
-                    self.representation_type = 'molecular'
+                    self._representation_type = 'molecular'
                 elif is_numeric_1d_array(item):
-                    self.representation_type = 'atomic'
+                    self._representation_type = 'atomic'
                 else:
                     print("Could not recognise format of representations (parameter 'X')")
                     raise SystemExit
@@ -272,20 +271,48 @@ class NeuralNetwork(_BaseModel):
                 raise SystemExit
 
             # Check that nuclear charges are also provided if the representation is atomic
-            if self.representation_type == 'atomic' and nuclear_charges is None:
+            if self._representation_type == 'atomic' and nuclear_charges is None:
                 print("Expected parameter 'nuclear_charges' to be a numeric array.")
                 raise SystemExit
 
-        if self.representation_type == 'atomic':
+        if self._representation_type == 'atomic':
             representations, nuclear_charges = self._padding(representations, nuclear_charges)
 
         # Get all unique elements
         self.elements = get_unique(nuclear_charges)
 
+        # Remove constant features
+        representations = self._remove_constant_features(representations)
+
         # Generate the model
         self._generate_model(representations.shape)
         # Train the model
         self._train(representations, energies, nuclear_charges)
+
+    def _remove_constant_features(self, representations):
+        """
+        Removes constant features of the representations, and stores
+        which features should be removed at predict time.
+        """
+
+        if self._representation_type == 'atomic':
+            # Due to how the atomic neural network iś constructed,
+            # this cannot be done elementwise
+            rep = representations.reshape(-1, representations.shape[-1])
+            if self._constant_features is None:
+                self._constant_features = np.all(rep == rep[0], axis=0)
+
+            rep = rep[:,~self._constant_features]
+            rep = rep.reshape(representations.shape[0:2] + (-1,))
+
+            return rep
+
+        else:
+            if self._constant_features is None:
+                self._constant_features = np.all(representations == representations[0], axis=0)
+
+            return representations[:,~self._constant_features]
+
 
     def predict(self, X, nuclear_charges=None):
         """
@@ -299,12 +326,12 @@ class NeuralNetwork(_BaseModel):
         :rtype: numpy array of shape (n_samples,)
         """
 
-        if self.representation_type is None:
+        if self._representation_type is None:
             print("The model have not been fitted")
             raise SystemExit
 
         if isinstance(X, Data):
-            if self.representation_type == 'molecular' and nuclear_charges is not None:
+            if self._representation_type == 'molecular' and nuclear_charges is not None:
                 print("Parameter 'nuclear_charges' is expected to be 'None'",
                       "when 'X' is a Data object")
                 raise SystemExit
@@ -313,15 +340,17 @@ class NeuralNetwork(_BaseModel):
         else:
             representations = X
 
-            if self.representation_type == 'atomic' and nuclear_charges is None:
+            if self._representation_type == 'atomic' and nuclear_charges is None:
                 print("Parameter 'nuclear_charges' is expected to be numeric array")
                 raise SystemExit
 
-        if self.representation_type == "molecular":
-            y_pred = self._predict(representations)
-        else:
+        if self._representation_type == "atomic":
             representations, nuclear_charges = self._padding(representations, nuclear_charges)
-            y_pred = self._predict(representations, nuclear_charges)
+
+        # Remove constant features
+        representations = self._remove_constant_features(representations)
+
+        y_pred = self._predict(representations, nuclear_charges)
 
         return y_pred
 
@@ -349,7 +378,7 @@ class NeuralNetwork(_BaseModel):
         with self.graph.as_default():
             with tf.name_scope("Data"):
                 ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
-                if self.representation_type == 'atomic':
+                if self._representation_type == 'atomic':
                     n_atoms = shape[1]
                     ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
                     ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
@@ -359,7 +388,7 @@ class NeuralNetwork(_BaseModel):
                 batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
                 buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
 
-                if self.representation_type == 'atomic':
+                if self._representation_type == 'atomic':
                     dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
                 else:
                     dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_y))
@@ -369,13 +398,13 @@ class NeuralNetwork(_BaseModel):
 
                 iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
 
-                if self.representation_type == 'atomic':
+                if self._representation_type == 'atomic':
                     tf_x, tf_zs, tf_y = iterator.get_next()
                 else:
                     tf_x, tf_y = iterator.get_next()
 
             with tf.name_scope("Weights"):
-                if self.representation_type == 'atomic':
+                if self._representation_type == 'atomic':
                     weights = {}
                     biases = {}
 
@@ -387,7 +416,7 @@ class NeuralNetwork(_BaseModel):
                     weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
 
             with tf.name_scope("Model"):
-                if self.representation_type == 'atomic':
+                if self._representation_type == 'atomic':
                     all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
 
                     for el in self.elements:
@@ -480,7 +509,7 @@ class NeuralNetwork(_BaseModel):
         with self.graph.as_default():
             tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
             tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
-            if self.representation_type == "atomic":
+            if self._representation_type == "atomic":
                 tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
@@ -500,7 +529,7 @@ class NeuralNetwork(_BaseModel):
                 else:
                     buff = int(4.5 * batch_size)
 
-                if self.representation_type == "atomic":
+                if self._representation_type == "atomic":
                     self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: nuclear_charges, buffer_tf: buff,
                                                               batch_size_tf: batch_size})
                 else:
@@ -531,7 +560,7 @@ class NeuralNetwork(_BaseModel):
         err = tf.square(tf.subtract(y, y_pred))
         loss = tf.reduce_mean(err, name="loss")
 
-        if self.representation_type == 'atomic':
+        if self._representation_type == 'atomic':
             cost = loss
             if self.l2_reg > 0:
                 l2_loss = 0
@@ -605,7 +634,7 @@ class NeuralNetwork(_BaseModel):
         with self.graph.as_default():
             tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
             tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
-            if self.representation_type == "atomic":
+            if self._representation_type == "atomic":
                 tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
@@ -613,7 +642,7 @@ class NeuralNetwork(_BaseModel):
 
             y_pred = self.graph.get_tensor_by_name("Model/Predicted_energies:0")
 
-            if self.representation_type == "atomic":
+            if self._representation_type == "atomic":
                 self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: np.empty((representations.shape[0], 1)),
                                                           tf_zs: nuclear_charges, buffer_tf: 1, batch_size_tf: batch_size})
             else:
