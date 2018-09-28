@@ -28,12 +28,19 @@ from sklearn.metrics import mean_absolute_error
 
 try:
     import tensorflow as tf
+    from ..aglaia.tf_utils import generate_weights, get_batch_size
 except ImportError:
     tf = None
 
-from ..utils import is_numeric_array
+from ..utils import is_numeric_array, is_numeric, is_numeric_1d_array, is_positive_integer_1d_array
+from ..utils import get_unique
 from .data import Data
 from ..math import cho_solve
+
+#TODO remove
+from ..utils import check_hl, check_batchsize, check_learningrate, check_iterations, check_reg, check_scoring
+def check_size(size):
+    return size
 
 
 class _BaseModel(BaseEstimator):
@@ -65,7 +72,7 @@ class _BaseModel(BaseEstimator):
         y_pred = self.predict(X)
 
         # Get the true values
-        if is_numeric_array(y):
+        if is_numeric_1d_array(y):
             pass
 
         elif isinstance(X, Data):
@@ -93,16 +100,14 @@ class _BaseModel(BaseEstimator):
 
 class KernelRidgeRegression(_BaseModel):
     """
-    Standard Kernel Ridge Regression using a cholesky solver
+    Standard Kernel Ridge Regression using a Cholesky solver
+    :param l2_reg: l2 regularization
+    :type l2_reg: float
+    :param scoring: Metric used for scoring ('mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae')
+    :type scoring: string
     """
 
     def __init__(self, l2_reg=1e-10, scoring='neg_mae'):
-        """
-        :param l2_reg: l2 regularization
-        :type l2_reg: float
-        :param scoring: Metric used for scoring ('mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae')
-        :type scoring: string
-        """
         self.l2_reg = l2_reg
         self.scoring = scoring
 
@@ -169,100 +174,167 @@ class KernelRidgeRegression(_BaseModel):
 class NeuralNetwork(_BaseModel):
     """
     Feed forward neural network that takes molecular or atomic representations for predicting molecular properties.
+
+    :param hl1: number of hidden nodes in the 1st hidden layer
+    :type hl1: int
+    :param hl2: number of hidden nodes in the 2nd hidden layer
+    :type hl2: int
+    :param hl3: number of hidden nodes in the 3rd hidden layer
+    :type hl3: int
+    :param hl4: number of hidden nodes in the 4th hidden layer
+    :type hl4: int
+    :param batch_size: Number of samples to have in each batch during training
+    :type batch_size: int
+    :param learning_rate: Step size in optimisation algorithm
+    :type learning_rate: float
+    :param iterations: Number of iterations to do during training
+    :type iterations: int
+    :param l1_reg: L1 regularisation parameter
+    :type l1_reg: float
+    :param l2_reg: L2 regularisation parameter
+    :type l2_reg: float
+    :param scoring: What function to use for scoring. Available options are "neg_mae", "mae", "rmsd", "neg_rmsd",
+        "neg_log_mae"
+    :type scoring: string
+    :param size: Maximum number of atoms in a molecule to support. 'auto' will determine this automatically.
+        Is ignored when using molecular representations.
+    :type size: int
     """
 
     def __init__(self, hl1=20, hl2=10, hl3=5, hl4=0, batch_size=200, learning_rate=0.001, iterations=500, l1_reg=0.0,
-                 l2_reg=0.0, scoring="neg_mae"):
-        """
-        :param hl1: number of hidden nodes in the 1st hidden layer
-        :type hl1: int
-        :param hl2: number of hidden nodes in the 2nd hidden layer
-        :type hl2: int
-        :param hl3: number of hidden nodes in the 3rd hidden layer
-        :type hl3: int
-        :param hl4: number of hidden nodes in the 4th hidden layer
-        :type hl4: int
-        :param batch_size: Number of samples to have in each batch during training
-        :type batch_size: int
-        :param learning_rate: Step size in optimisation algorithm
-        :type learning_rate: float
-        :param iterations: Number of iterations to do during training
-        :type iterations: int
-        :param l1_reg: L1 regularisation parameter
-        :type l1_reg: float
-        :param l2_reg: L2 regularisation parameter
-        :type l2_reg: float
-        :param scoring: What function to use for scoring. Available options are "neg_mae", "mae", "rmsd", "neg_rmsd",
-            "neg_log_mae"
-        :type scoring: string
-        """
+                 l2_reg=0.0, scoring="neg_mae", size='auto'):
 
         # Check if tensorflow is available
         self.tf_check()
 
+        # TODO this needs to be changed due to scikit-learn reasons
         self.hl1, self.hl2, self.hl3, self.hl4 = check_hl(hl1, hl2, hl3, hl4)
         self.batch_size = check_batchsize(batch_size)
         self.learning_rate = check_learningrate(learning_rate)
         self.iterations = check_iterations(iterations)
         self.l1_reg, self.l2_reg = check_reg(l1_reg, l2_reg)
         self.scoring = check_scoring(scoring)
+        self.size = check_size(size)
 
-    def fit(self, X, y=None):
+        # Will be overwritten at fit time
+        self.elements = [1,6,7,8,16]
+        self.representation_type = None
+
+    # TODO add removal of unused features
+    # TODO get elements
+    def fit(self, X, y=None, nuclear_charges=None):
         """
-        Fit a feedforward neural network.
+        Fit the neural network. A molecular/atomic network will be fit if
+        molecular/atomic representations are given.
 
-        :param X: Data object
-        :type X: object from the class Data
-        :param y: Energies
+        :param X: Data object or representations
+        :type X: Data object or array
+        :param y: Energies. Only used if X is representations.
         :type y: numpy array of shape (n_samples,)
+        :param nuclear_charges: Nuclear charges. Only used if X is representations.
+        :type nuclear_charges: array
         """
 
-        # obtaining the representations and the energies from the data object
+        # Obtaining the representations and the energies from the data object
         if isinstance(X, Data):
-            g, zs, ene = X._representations, X.nuclear_charges[X._indices], X.energies[X._indices]
-            ene = np.reshape(ene, (ene.shape[0], 1))
+            if y is not None or nuclear_charges is not None:
+                print("Parameter 'y' and 'nuclear_charges' are expected to be 'None'",
+                      "when 'X' is a Data object")
+                raise SystemExit
+
+            representations = X._representations
+            nuclear_charges = X.nuclear_charges[X._indices]
+            # 2D for tensorflow
+            energies = np.reshape(X.energies[X._indices], (-1,1))
+            self.representation_type = X._representation_type
         else:
-            raise NotImplementedError
+            # y must be an array
+            if not is_numeric_1d_array(y):
+                print("Expected parameter 'y' to be a numeric 1d-array. Got %s" % type(y))
+                raise SystemExit
 
-        if X._representation_type == 'molecular':
+            # 2D for tensorflow
+            energies = np.reshape(y, (-1,1))
+            representations = np.asarray(X)
 
-            self._generate_molecular_model(g.shape[-1])
-            self._train(g, ene, zs, "molecular")
+            # Check if the representations are molecular or atomic
+            if len(representations) > 0 and len(representations[0]) > 0:
+                item = representations[0][0]
+                if is_numeric(item):
+                    self.representation_type = 'molecular'
+                elif is_numeric_1d_array(item):
+                    self.representation_type = 'atomic'
+                else:
+                    print("Could not recognise format of representations (parameter 'X')")
+                    raise SystemExit
+            else:
+                print("Could not recognise format of representations (parameter 'X')")
+                raise SystemExit
 
-        elif X._representation_type == 'atomic':
+            # Check that nuclear charges are also provided if the representation is atomic
+            if self.representation_type == 'atomic' and nuclear_charges is None:
+                print("Expected parameter 'nuclear_charges' to be a numeric array.")
+                raise SystemExit
 
-            g, zs = self._padding(g, zs)
-            self._generate_atomic_model(g.shape[1], g.shape[-1], X.unique_elements)
-            self._train(g, ene, zs, "atomic")
+        if self.representation_type == 'atomic':
+            representations, nuclear_charges = self._padding(representations, nuclear_charges)
 
-    def predict(self, X):
+        # Get all unique elements
+        self.elements = get_unique(nuclear_charges)
+
+        # Generate the model
+        self._generate_model(representations.shape)
+        # Train the model
+        self._train(representations, energies, nuclear_charges)
+
+    def predict(self, X, nuclear_charges=None):
         """
-        Function that predicts the molecular properties from a trained model.
+        Predict the molecular properties from a trained model.
 
         :param X: Data object
         :type X: object from class Data
+        :param nuclear_charges: Nuclear charges. Only used if X is representations.
+        :type nuclear_charges: array
         :return: predicted properties
         :rtype: numpy array of shape (n_samples,)
         """
 
-        if isinstance(X, Data):
-            g, zs = X._representations, X.nuclear_charges[X._indices]
+        if self.representation_type is None:
+            print("The model have not been fitted")
+            raise SystemExit
 
-        if X._representation_type == "molecular":
-            y_pred = self._predict(g, zs, "molecular")
-        elif X._representation_type == "atomic":
-            g, zs = self._padding(g, zs)
-            y_pred = self._predict(g, zs, "atomic")
+        if isinstance(X, Data):
+            if self.representation_type == 'molecular' and nuclear_charges is not None:
+                print("Parameter 'nuclear_charges' is expected to be 'None'",
+                      "when 'X' is a Data object")
+                raise SystemExit
+
+            representations, nuclear_charges = X._representations, X.nuclear_charges[X._indices]
+        else:
+            representations = X
+
+            if self.representation_type == 'atomic' and nuclear_charges is None:
+                print("Parameter 'nuclear_charges' is expected to be numeric array")
+                raise SystemExit
+
+        if self.representation_type == "molecular":
+            y_pred = self._predict(representations)
+        else:
+            representations, nuclear_charges = self._padding(representations, nuclear_charges)
+            y_pred = self._predict(representations, nuclear_charges)
 
         return y_pred
 
-    def _generate_molecular_model(self, n_features):
+    # TODO support for different activation functions
+    def _generate_model(self, shape):
         """
-        This function generates the tensorflow graph for the molecular feed forward neural net.
+        Generate the Tensorflow graph for the molecular feed forward neural net.
 
-        :param n_features: number of features in the representation
-        :type n_features: int
+        :param shape: Shape of representations
+        :type shape: tuple
         """
+
+        n_features = shape[-1]
 
         self.graph = tf.Graph()
 
@@ -270,116 +342,88 @@ class NeuralNetwork(_BaseModel):
         for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
             if item != 0:
                 hidden_layers.append(item)
-
-        hidden_layers = tuple(hidden_layers)
+            else:
+                break
 
         # Initial set up of the NN
         with self.graph.as_default():
             with tf.name_scope("Data"):
-                ph_x = tf.placeholder(tf.float32, [None, n_features], name="Representation")
                 ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
+                if self.representation_type == 'atomic':
+                    n_atoms = shape[1]
+                    ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
+                    ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
+                else:
+                    ph_x = tf.placeholder(tf.float32, [None, n_features], name="Representation")
+                # Has to be int64 for tf.data.Dataset
                 batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
                 buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
 
-                dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_y))
+                if self.representation_type == 'atomic':
+                    dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
+                else:
+                    dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_y))
+
                 dataset = dataset.shuffle(buffer_size=buffer_tf)
                 dataset = dataset.batch(batch_size_tf)
 
                 iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
-                tf_x, tf_y = iterator.get_next()
+
+                if self.representation_type == 'atomic':
+                    tf_x, tf_zs, tf_y = iterator.get_next()
+                else:
+                    tf_x, tf_y = iterator.get_next()
 
             with tf.name_scope("Weights"):
-                weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
+                if self.representation_type == 'atomic':
+                    weights = {}
+                    biases = {}
+
+                    for i, element in enumerate(self.elements):
+                        w, b = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
+                        weights[element] = w
+                        biases[element] = b
+                else:
+                    weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
 
             with tf.name_scope("Model"):
-                z = tf.add(tf.matmul(tf_x, tf.transpose(weights[0])), biases[0])
-                h = tf.sigmoid(z)
+                if self.representation_type == 'atomic':
+                    all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
 
-                # Calculate the activation of the remaining hidden layers
-                for i in range(1, len(weights) - 1):
-                    z = tf.add(tf.matmul(h, tf.transpose(weights[i])), biases[i])
-                    h = tf.sigmoid(z)
+                    for el in self.elements:
+                        # Obtaining the indices where the current element occurs
+                        current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
+                        where_element = tf.cast(tf.where(tf.equal(tf_zs, current_element)), dtype=tf.int32)
 
-                # Calculating the output of the last layer
-                y_pred = tf.add(tf.matmul(h, tf.transpose(weights[-1])), biases[-1], name="Predicted_energies")
+                        # Extract the descriptor corresponding to the right element
+                        current_element_in_x = tf.gather_nd(tf_x, where_element)
+
+                        # Calculate the atomic energy of all the atoms of type equal to the current element
+                        atomic_ene = self._atomic_nn(current_element_in_x, hidden_layers, weights[el],
+                                                        biases[el])
+
+                        # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
+                        updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(tf_zs))
+                        all_atomic_energies = tf.add(all_atomic_energies, updates)
+
+                    # Summing the energies of all the atoms
+                    y_pred = tf.reduce_sum(all_atomic_energies, axis=-1, name="Predicted_energies", keepdims=True)
+
+                else:
+                    if len(hidden_layers) > 0:
+                        z = tf.add(tf.matmul(tf_x, tf.transpose(weights[0])), biases[0])
+                        h = tf.sigmoid(z)
+
+                        # Calculate the activation of the remaining hidden layers
+                        for i in range(1, len(weights) - 1):
+                            z = tf.add(tf.matmul(h, tf.transpose(weights[i])), biases[i])
+                            h = tf.sigmoid(z)
+
+                    # Calculating the output of the last layer
+                    y_pred = tf.add(tf.matmul(h, tf.transpose(weights[-1])), biases[-1], name="Predicted_energies")
 
             with tf.name_scope("Cost_func"):
                 cost = self._cost(y_pred, tf_y, weights)
-
-            with tf.name_scope("Optimiser"):
-                optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
-
-            iter_init_op = iterator.make_initializer(dataset, name="dataset_init")
-
-    def _generate_atomic_model(self, n_atoms, n_features, elements):
-        """
-        This function generates the atomic feed forward neural network.
-
-        :param n_atoms: maximum number of atoms in the molecules
-        :type n_atoms: int
-        :param n_features: number of features in the representation
-        :type n_features: int
-        :param elements: unique elements in the data set
-        :type elements: array of ints
-        """
-        self.graph = tf.Graph()
-
-        hidden_layers = []
-        for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
-            if item != 0:
-                hidden_layers.append(item)
-
-        hidden_layers = tuple(hidden_layers)
-
-        # Initial set up of the NN
-        with self.graph.as_default():
-            with tf.name_scope("Data"):
-                ph_x = tf.placeholder(tf.float32, [None, n_atoms, n_features], name="Representation")
-                ph_y = tf.placeholder(tf.float32, [None, 1], name="True_energies")
-                ph_zs = tf.placeholder(dtype=tf.int32, shape=[None, n_atoms], name="Atomic-numbers")
-                batch_size_tf = tf.placeholder(dtype=tf.int64, name="Batch_size")
-                buffer_tf = tf.placeholder(dtype=tf.int64, name="Buffer")
-
-                dataset = tf.data.Dataset.from_tensor_slices((ph_x, ph_zs, ph_y))
-                dataset = dataset.shuffle(buffer_size=buffer_tf)
-                dataset = dataset.batch(batch_size_tf)
-
-                iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
-                tf_x, tf_zs, tf_y = iterator.get_next()
-
-            element_weights = {}
-            element_biases = {}
-
-            with tf.name_scope("Weights"):
-                for i in range(len(elements)):
-                    weights, biases = generate_weights(n_in=n_features, n_out=1, hl=hidden_layers)
-                    element_weights[elements[i]] = weights
-                    element_biases[elements[i]] = biases
-
-            with tf.name_scope("Model"):
-                all_atomic_energies = tf.zeros_like(tf_zs, dtype=tf.float32)
-
-                for el in elements:
-                    # Obtaining the indices of where in Zs there is the current element
-                    current_element = tf.expand_dims(tf.constant(el, dtype=tf.int32), axis=0)
-                    where_element = tf.cast(tf.where(tf.equal(tf_zs, current_element)), dtype=tf.int32)
-
-                    # Extract the descriptor corresponding to the right element
-                    current_element_in_x = tf.gather_nd(tf_x, where_element)
-
-                    # Calculate the atomic energy of all the atoms of type equal to the current element
-                    atomic_ene = self._atomic_nn(current_element_in_x, hidden_layers, element_weights[el],
-                                                    element_biases[el])
-
-                    # Put the atomic energies in a zero array with shape equal to zs and then add it to all the atomic energies
-                    updates = tf.scatter_nd(where_element, atomic_ene, tf.shape(tf_zs))
-                    all_atomic_energies = tf.add(all_atomic_energies, updates)
-
-                # Summing the energies of all the atoms
-                total_energies = tf.reduce_sum(all_atomic_energies, axis=-1, name="Predicted_energies", keepdims=True)
-
-            with tf.name_scope("Cost_func"):
-                cost = self._cost(total_energies, tf_y, element_weights)
 
             with tf.name_scope("Optimiser"):
                 optimisation_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
@@ -417,16 +461,16 @@ class NeuralNetwork(_BaseModel):
 
         return z_squeezed
 
-    def _train(self, representations, energies, zs, representation_type):
+    def _train(self, representations, energies, nuclear_charges):
         """
-        This function trains the neural network.
+        Train the neural network.
 
         :param representations: the representations of the molecules (either atomic or molecular)
         :type representations: numpy array of shape (n_samples, max_n_atoms, n_features) or (n_samples, n_features)
         :param energies: the true molecular properties to be learnt
         :type energies: numpy array of shape (n_samples, )
-        :param zs: the nuclear charges of all the atoms in the molecules
-        :type zs: numpy array of shape (n_samples, max_n_atoms)
+        :param nuclear_charges: the nuclear charges of all the atoms in the molecules
+        :type nuclear_charges: numpy array of shape (n_samples, max_n_atoms)
         :param representation_type: flag setting whether the representation is "atomic" or "molecular".
         :type representation_type: string
         """
@@ -436,7 +480,7 @@ class NeuralNetwork(_BaseModel):
         with self.graph.as_default():
             tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
             tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
-            if representation_type == "atomic":
+            if self.representation_type == "atomic":
                 tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
@@ -450,18 +494,20 @@ class NeuralNetwork(_BaseModel):
 
             for i in range(self.iterations):
 
+                # Alternate buffer size to improve global shuffling (Not sure that this is needed)
                 if i % 2 == 0:
                     buff = int(3.5 * batch_size)
                 else:
                     buff = int(4.5 * batch_size)
 
-                if representation_type == "atomic":
-                    self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: zs, buffer_tf: buff,
+                if self.representation_type == "atomic":
+                    self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, tf_zs: nuclear_charges, buffer_tf: buff,
                                                               batch_size_tf: batch_size})
                 else:
                     self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: energies, buffer_tf: buff,
                                       batch_size_tf:batch_size})
 
+                # Iterate to the end of the given data
                 while True:
                     try:
                         self.session.run(optimisation_op)
@@ -485,7 +531,7 @@ class NeuralNetwork(_BaseModel):
         err = tf.square(tf.subtract(y, y_pred))
         loss = tf.reduce_mean(err, name="loss")
 
-        if isinstance(weights, dict):
+        if self.representation_type == 'atomic':
             cost = loss
             if self.l2_reg > 0:
                 l2_loss = 0
@@ -501,10 +547,10 @@ class NeuralNetwork(_BaseModel):
             cost = loss
             if self.l2_reg > 0:
                 l2_loss = self._l2_loss(weights)
-                cost = cost + l2_loss
+                cost += l2_loss
             if self.l1_reg > 0:
                 l1_loss = self._l1_loss(weights)
-                cost = cost + l1_loss
+                cost += l1_loss
 
         return cost
 
@@ -542,26 +588,24 @@ class NeuralNetwork(_BaseModel):
 
         return self.l1_reg * reg_term
 
-    def _predict(self, representation, zs, representation_type):
+    def _predict(self, representations, nuclear_charges=None):
         """
-        This function predicts the molecular properties from the representations.
+        Predicts the molecular properties from the representations.
 
-        :param representation: representation of the molecules, can be atomic or molecular
-        :type representation: numpy array of shape (n_samples, n_max_atoms, n_features) or (n_samples, n_features)
-        :param zs: nuclear charges of the molecules
-        :type zs: numpy array of shape (n_samples, n_max_atoms)
-        :param representation_type: flag saying whether the representation is the "molecular" or "atomic"
-        :type representation_type: string
+        :param representations: representations of the molecules, can be atomic or molecular
+        :type representations: numpy array of shape (n_samples, n_max_atoms, n_features) or (n_samples, n_features)
+        :param nuclear_charges: nuclear charges of the molecules. Only required for atomic representations.
+        :type nuclear_charges: numpy array of shape (n_samples, n_max_atoms)
         :return: molecular properties predictions
         :rtype: numpy array of shape (n_samples,)
         """
 
-        batch_size = get_batch_size(self.batch_size, representation.shape[0])
+        batch_size = get_batch_size(self.batch_size, representations.shape[0])
 
         with self.graph.as_default():
             tf_x = self.graph.get_tensor_by_name("Data/Representation:0")
             tf_y = self.graph.get_tensor_by_name("Data/True_energies:0")
-            if representation_type == "atomic":
+            if self.representation_type == "atomic":
                 tf_zs = self.graph.get_tensor_by_name("Data/Atomic-numbers:0")
             batch_size_tf = self.graph.get_tensor_by_name("Data/Batch_size:0")
             buffer_tf = self.graph.get_tensor_by_name("Data/Buffer:0")
@@ -569,16 +613,17 @@ class NeuralNetwork(_BaseModel):
 
             y_pred = self.graph.get_tensor_by_name("Model/Predicted_energies:0")
 
-            if representation_type == "atomic":
-                self.session.run(iter_init_op, feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
-                                                          tf_zs: zs, buffer_tf: 1, batch_size_tf: batch_size})
+            if self.representation_type == "atomic":
+                self.session.run(iter_init_op, feed_dict={tf_x: representations, tf_y: np.empty((representations.shape[0], 1)),
+                                                          tf_zs: nuclear_charges, buffer_tf: 1, batch_size_tf: batch_size})
             else:
                 self.session.run(iter_init_op,
-                                 feed_dict={tf_x: representation, tf_y: np.empty((representation.shape[0], 1)),
+                                 feed_dict={tf_x: representations, tf_y: np.empty((representations.shape[0], 1)),
                                             batch_size_tf: batch_size, buffer_tf:1})
 
         tot_y_pred = []
 
+        # Predict until reaching the end of the iterator
         while True:
             try:
                 ene_predictions = self.session.run(y_pred)
@@ -604,6 +649,13 @@ class NeuralNetwork(_BaseModel):
             n_atoms = representation[i].shape[0]
             if n_atoms > max_n_atoms:
                 max_n_atoms = n_atoms
+
+        if self.size == 'auto':
+            self.size = max_n_atoms
+
+        elif max_n_atoms > self.size:
+            print("Trying to predict on larger molecules than given by the 'size' parameter at initialization")
+            raise SystemExit
 
         padded_rep = np.zeros((len(representation), max_n_atoms, representation[0].shape[1]))
         padded_zs = np.zeros((len(representation), max_n_atoms))

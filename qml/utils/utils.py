@@ -104,7 +104,7 @@ def get_unique(x):
     Gets all unique elements in lists of lists
     """
     elements = list(set(item for l in x for item in l))
-    return elements
+    return sorted(elements)
 
 def get_pairs(x):
     """
