@@ -28,19 +28,15 @@ from sklearn.metrics import mean_absolute_error
 
 try:
     import tensorflow as tf
-    from ..aglaia.tf_utils import generate_weights, get_batch_size
+    from ..aglaia.tf_utils import generate_weights
 except ImportError:
     tf = None
 
 from ..utils import is_numeric_array, is_numeric, is_numeric_1d_array, is_positive_integer_1d_array
-from ..utils import get_unique
+from ..utils import get_unique, is_positive_integer_or_zero, get_batch_size, is_positive_integer
+from ..utils import is_positive, is_positive_or_zero
 from .data import Data
 from ..math import cho_solve
-
-#TODO remove
-from ..utils import check_hl, check_batchsize, check_learningrate, check_iterations, check_reg, check_scoring
-def check_size(size):
-    return size
 
 
 class _BaseModel(BaseEstimator):
@@ -97,6 +93,12 @@ class _BaseModel(BaseEstimator):
             return - np.sqrt(mean_squared_error(y, y_pred))
         elif self.scoring == 'neg_log_mae':
             return - np.log(mean_absolute_error(y, y_pred))
+
+    def _set_scoring(self, scoring):
+        if not scoring in ['mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae']:
+            raise InputError("Unknown scoring function")
+
+        self.scoring = scoring
 
 class KernelRidgeRegression(_BaseModel):
     """
@@ -207,19 +209,65 @@ class NeuralNetwork(_BaseModel):
         # Check if tensorflow is available
         self.tf_check()
 
-        # TODO this needs to be changed due to scikit-learn reasons
-        self.hl1, self.hl2, self.hl3, self.hl4 = check_hl(hl1, hl2, hl3, hl4)
-        self.batch_size = check_batchsize(batch_size)
-        self.learning_rate = check_learningrate(learning_rate)
-        self.iterations = check_iterations(iterations)
-        self.l1_reg, self.l2_reg = check_reg(l1_reg, l2_reg)
-        self.scoring = check_scoring(scoring)
-        self.size = check_size(size)
+        self._set_hl(hl1, hl2, hl3, hl4)
+        self._set_batch_size(batch_size)
+        self._set_learning_rate(learning_rate)
+        self._set_iterations(iterations)
+        self._set_reg(l1_reg, l2_reg)
+        self._set_scoring(scoring)
+        self._set_size(size)
 
         # Will be overwritten at fit time
         self.elements = None
         self._representation_type = None
         self._constant_features = None
+
+    def _set_hl(self, hl1, hl2, hl3, hl4):
+
+        for hl in hl1, hl2, hl3, hl4:
+            if not is_positive_integer_or_zero(hl1):
+                print("Error: Expected the number of hidden nodes in a layer to be positive. Got %s" % str(hl))
+                raise SystemExit
+
+        self.hl1 = hl1
+        self.hl2 = hl2
+        self.hl3 = hl3
+        self.hl4 = hl4
+
+    def _set_batch_size(self, bs):
+        if not is_positive_integer(bs) or int(bs) == 1:
+            print("'batch_size' should be larger than 1.")
+            raise SystemExit
+
+        self.batch_size = bs
+
+    def _set_size(self, size):
+        if not is_positive_integer(size) and size != 'auto':
+            print("Variable 'size' should be a positive integer. Got %s" % str(size))
+            raise SystemExit
+
+        self.size = size
+
+    def _set_learning_rate(self, lr):
+        if not is_positive(lr):
+            print("Expected positive float value for variable 'learning_rate'. Got %s" % str(lr))
+            raise SystemExit
+
+        self.learning_rate = lr
+
+    def _set_iterations(self, it):
+        if not is_positive_integer(it):
+            print("Expected positive integer value for variable 'iterations'. Got %s" % str(it))
+            raise SystemExit
+
+        self.iterations = it
+
+    def _set_reg(self, l1_reg, l2_reg):
+        if not is_positive_or_zero(l1_reg) or not is_positive_or_zero(l2_reg):
+            raise InputError("Expected positive float value for regularisation variables 'l1_reg' and 'l2_reg. Got %s and %s" % (str(l1_reg), str(l2_reg)))
+
+        self.l1_reg = l1_reg
+        self.l2_reg = l2_reg
 
     def fit(self, X, y=None, nuclear_charges=None):
         """
@@ -313,7 +361,6 @@ class NeuralNetwork(_BaseModel):
 
             return representations[:,~self._constant_features]
 
-
     def predict(self, X, nuclear_charges=None):
         """
         Predict the molecular properties from a trained model.
@@ -370,7 +417,7 @@ class NeuralNetwork(_BaseModel):
         hidden_layers = []
         for item in [self.hl1, self.hl2, self.hl3, self.hl4]:
             if item != 0:
-                hidden_layers.append(item)
+                hidden_layers.append(int(item))
             else:
                 break
 

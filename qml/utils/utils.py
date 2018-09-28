@@ -64,8 +64,10 @@ def is_numeric_1d_array(x):
 def is_1d_array(x):
     return is_array_like(x) and (np.asarray(x).ndim == 1 or np.asarray(x).ndim == 2 and 1 in np.asarray(x).shape)
 
+# Doesn't accept floats e.g. 1.0
 def _is_integer(x):
-    return (is_numeric(x) and (float(x) == int(x)))
+    return isinstance(x, int)
+    #return (is_numeric(x) and (float(x) == int(x)))
 
 # will intentionally accept 0, 1 as well
 def is_bool(x):
@@ -98,25 +100,6 @@ def is_positive_integer_array(x):
 
 def is_positive_integer_or_zero_array(x):
     return (_is_integer_array(x) and _is_positive_or_zero_array(x))
-
-def get_unique(x):
-    """
-    Gets all unique elements in lists of lists
-    """
-    elements = list(set(item for l in x for item in l))
-    return sorted(elements)
-
-def get_pairs(x):
-    """
-    Get all unique pairs. E.g. x = [1,2,3] will return
-    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
-    """
-    pairs = []
-    for i,v in enumerate(x):
-        for w in x[i:]:
-            pairs.append([v,w])
-    return pairs
-
 
 # ------------- ** Checking inputs ** --------------------------
 
@@ -270,42 +253,26 @@ def check_classes(classes):
 
     return approved_classes
 
-def check_hl(hl1, hl2, hl3, hl4):
+# ------------ ** Utility functions ** ----------------
 
-    layers = [hl1, hl2, hl3, hl4]
-    approved_layers = []
+def get_unique(x):
+    """
+    Gets all unique elements in lists of lists
+    """
+    elements = list(set(item for l in x for item in l))
+    return sorted(elements)
 
-    for item in layers:
-        is_positive_integer(item)
-        approved_layers.append(int(item))
+def get_pairs(x):
+    """
+    Get all unique pairs. E.g. x = [1,2,3] will return
+    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
+    """
+    pairs = []
+    for i,v in enumerate(x):
+        for w in x[i:]:
+            pairs.append([v,w])
+    return pairs
 
-    return approved_layers[0], approved_layers[1], approved_layers[2], approved_layers[3]
-
-def check_batchsize(bs):
-    is_positive_integer(bs)
-    if bs == 1:
-        raise InputError("Batch size should be larger than 1.")
-    return int(bs)
-
-def check_learningrate(lr):
-    if not is_positive(lr):
-        raise InputError("Expected positive float value for variable learning_rate. Got %s" % str(lr))
-    return float(lr)
-
-def check_iterations(it):
-    if not is_positive_integer(it):
-        raise InputError("Expected positive integer value for variable iterations. Got %s" % str(it))
-    return int(it)
-
-def check_reg(l1_reg, l2_reg):
-    if not is_positive_or_zero(l1_reg) or not is_positive_or_zero(l2_reg):
-        raise InputError("Expected positive float value for regularisation variables 'l1_reg' and 'l2_reg. Got %s and %s" % (str(l1_reg), str(l2_reg)))
-    return float(l1_reg), float(l2_reg)
-
-def check_scoring(scoring):
-    if not scoring in ['mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae']:
-        raise InputError("Unknown scoring function")
-    return scoring
 
 # Custom exception to raise when we intentinoally catch an error
 # This way we can test that the right error was raised in test cases
@@ -323,3 +290,17 @@ def ceil(a, b):
 
     """
     return -(-a//b)
+
+def get_batch_size(batch_size, n_samples):
+
+    if batch_size > n_samples:
+        print("Warning: batch_size larger than sample size. It is going to be clipped")
+        return min(n_samples, batch_size)
+
+    # see if the batch size can be modified slightly to make sure the last batch is similar in size
+    # to the rest of the batches
+    # This is always less that the requested batch size, so no memory issues should arise
+
+    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
+    return better_batch_size
+
