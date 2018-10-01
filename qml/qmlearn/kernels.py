@@ -595,9 +595,9 @@ class FCHLKernel(_BaseKernel):
     FCHL kernel
     """
 
-    def __init__(self, sigma='auto', alchemy=True, two_body_scaling=-np.sqrt(8),
-            three_body_scaling=-1.6, two_body_width=0.2, three_body_width=np.pi,
-            two_body_power=-4.0, three_body_power=-2.0, damping_start=1.0, cutoff=5.0,
+    def __init__(self, sigma='auto', alchemy=True, two_body_scaling=np.sqrt(8),
+            three_body_scaling=1.6, two_body_width=0.2, three_body_width=np.pi,
+            two_body_power=4.0, three_body_power=2.0, damping_start=1.0, cutoff=5.0,
             fourier_order=1, alchemy_period_width=1.6, alchemy_group_width=1.6,
             local=True):
         """
@@ -724,18 +724,18 @@ class FCHLKernel(_BaseKernel):
             alchemy = 'off'
 
         if Y is None or X is Y:
-            return get_global_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
-                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
-                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
-                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+            return get_global_symmetric_kernels(X, two_body_scaling=self.two_body_scaling,
+                    three_body_scaling=self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=self.two_body_power,
+                    three_body_power=self.three_body_power, cut_start=self.damping_start,
                     cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
                     alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
                     kernel_args={'sigma': [self.sigma]})[0]
         else:
-            return get_global_kernels(X, Y, two_body_scaling=-self.two_body_scaling,
-                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
-                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
-                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+            return get_global_kernels(X, Y, two_body_scaling=self.two_body_scaling,
+                    three_body_scaling=self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=self.two_body_power,
+                    three_body_power=self.three_body_power, cut_start=self.damping_start,
                     cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
                     alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
                     kernel_args={'sigma': [self.sigma]})[0]
@@ -748,18 +748,18 @@ class FCHLKernel(_BaseKernel):
 
 
         if Y is None or X is Y:
-            return get_local_symmetric_kernels(X, two_body_scaling=-self.two_body_scaling,
-                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
-                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
-                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+            return get_local_symmetric_kernels(X, two_body_scaling=self.two_body_scaling,
+                    three_body_scaling=self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=self.two_body_power,
+                    three_body_power=self.three_body_power, cut_start=self.damping_start,
                     cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
                     alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
                     kernel_args={'sigma': [self.sigma]})[0]
         else:
-            return get_local_kernels(X, Y, two_body_scaling=-self.two_body_scaling,
-                    three_body_scaling=-self.three_body_scaling, two_body_width=self.two_body_width,
-                    three_body_width=self.three_body_width, two_body_power=-self.two_body_power,
-                    three_body_power=-self.three_body_power, cut_start=self.damping_start,
+            return get_local_kernels(X, Y, two_body_scaling=self.two_body_scaling,
+                    three_body_scaling=self.three_body_scaling, two_body_width=self.two_body_width,
+                    three_body_width=self.three_body_width, two_body_power=self.two_body_power,
+                    three_body_power=self.three_body_power, cut_start=self.damping_start,
                     cut_distance=self.cutoff, fourier_order=self.fourier_order, alchemy=alchemy,
                     alchemy_period_width=self.alchemy_period_width, alchemy_group_width=self.alchemy_group_width,
                     kernel_args={'sigma': [self.sigma]})[0]

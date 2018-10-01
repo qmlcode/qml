@@ -472,7 +472,7 @@ class _SLATM(object):
                         generate_slatm(xyz, charge, self.element_pairs, local=local,
                         sigmas=[self.sigma2, self.sigma3],
                         dgrids=[self.dgrid2, self.dgrid3], rcut=self.rcut,
-                        alchemy=self.alchemy, rpower=-self.rpower)))
+                        alchemy=self.alchemy, rpower=self.rpower)))
 
         data._representations = np.asarray(representations)
 
@@ -487,7 +487,7 @@ class GlobalSLATM(_SLATM, _MolecularRepresentation):
     _representation_short_name = "slatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements='auto',
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=6, elements='auto',
             element_pairs='auto'):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
@@ -563,7 +563,7 @@ class AtomicSLATM(_SLATM, _AtomicRepresentation):
     _representation_short_name = "aslatm"
 
     def __init__(self, data=None, sigma2=0.05, sigma3=0.05, dgrid2=0.03,
-            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=-6, elements='auto',
+            dgrid3=0.03, rcut=4.8, alchemy=False, rpower=6, elements='auto',
             element_pairs='auto'):
         """
         Generate Spectrum of London and Axillrod-Teller-Muto potential (SLATM) representation.
