@@ -702,7 +702,7 @@ class _NN(BaseEstimator):
         elif xyz is None:
             # Make representations from compounds
 
-            self.representation, self.classes = self._generate_representations_from_compounds()
+            self.representation, self.classes = self._generate_representations_from_compounds(method)
         else:
             raise InputError("Compounds have already been set but new xyz data is being passed.")
 
@@ -1647,13 +1647,13 @@ class ARMP(_NN):
 
         elif self.representation_name == 'acsf':
             if method == 'tf':
-                representation = self._generate_acsf_from_data_tf(xyz, classes)
+                representation = self._generate_acsf_tf(xyz, classes)
             else:
-                representation = self._generate_acsf_from_data_fortran(xyz, classes)
+                representation = self._generate_acsf_fortran(xyz, classes)
 
         return representation, classes
 
-    def _generate_acsf_from_data_tf(self, xyz, classes):
+    def _generate_acsf_tf(self, xyz, classes):
         """
         This function generates the acsf from the cartesian coordinates and the classes.
 
@@ -1733,7 +1733,7 @@ class ARMP(_NN):
 
         return representation_conc
 
-    def _generate_acsf_from_data_fortran(self, xyz, classes):
+    def _generate_acsf_fortran(self, xyz, classes):
         """
         This function uses fortran to generate the representation and the derivative of the representation with respect
         to the cartesian coordinates.
@@ -1788,7 +1788,7 @@ class ARMP(_NN):
 
         return np.asarray(representation)
 
-    def _generate_representations_from_compounds(self):
+    def _generate_representations_from_compounds(self, method):
         """
         This function generates the representations from the compounds.
         :return: the representations and the classes
@@ -1804,22 +1804,26 @@ class ARMP(_NN):
 
         elif self.representation_name == 'acsf':
 
-            representations, classes = self._generate_acsf_from_compounds()
+            xyz, zs = self._extract_and_pad()
+            if method == "tf":
+                representations, classes = self._generate_acsf_tf(xyz, zs)
+            elif method == "fortran":
+                representations, classes = self._generate_acsf_fortran(xyz, zs)
+            else:
+                raise InputError("Method not recognised.")
 
         else:
             raise InputError("This should never happen, unrecognised representation %s." % (self.representation_name))
 
         return representations, classes
 
-    def _generate_acsf_from_compounds(self):
+    def _extract_and_pad(self):
         """
-        This function generates the atom centred symmetry functions.
-
-        :return: representation acsf and classes
-        :rtype: numpy array of shape (n_samples, n_atoms, n_features) and (n_samples, n_atoms)
+        This function extracts cartesian coordinates and nuclear charges for the compounds and pads them.
+        :return: xyz and zs padded
+        :rtype: numpy arrays of shape (n_samples, max_n_atoms, 3) and (n_samples, max_n_atoms)
         """
-
-        # Obtaining the xyz and the nuclear charges
+        # Obtaining the xyz and the nuclear charges from the compounds
         xyzs = []
         zs = []
         max_n_atoms = 0
@@ -1830,80 +1834,18 @@ class ARMP(_NN):
             if len(compound.nuclear_charges) > max_n_atoms:
                 max_n_atoms = len(compound.nuclear_charges)
 
-        elements, element_pairs = self._get_elements_and_pairs(zs)
+        n_samples = len(xyzs)
 
-        # Padding so that all the samples have the same shape
-        n_samples = len(zs)
+        # Padding the xyz and the nuclear charges
+        padded_xyz = np.zeros((n_samples, max_n_atoms, 3))
+        padded_zs = np.zeros((n_samples, max_n_atoms))
+
         for i in range(n_samples):
-            current_n_atoms = len(zs[i])
-            missing_n_atoms = max_n_atoms - current_n_atoms
-            zs_padding = np.zeros(missing_n_atoms)
-            zs[i] = np.concatenate((zs[i], zs_padding))
-            xyz_padding = np.zeros((missing_n_atoms, 3))
-            xyzs[i] = np.concatenate((xyzs[i], xyz_padding))
+            current_n_atoms = xyzs[i].shape[0]
+            padded_xyz[i, :current_n_atoms, :] = xyzs[i]
+            padded_zs[i, :current_n_atoms] = zs[i]
 
-        zs = np.asarray(zs, dtype=np.int32)
-        xyzs = np.asarray(xyzs, dtype=np.float32)
-
-        if self.tensorboard:
-            self.tensorboard_logger_representation.initialise()
-            # run_metadata = tf.RunMetadata()
-            # options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-
-        # Turning the quantities into tensors
-        with tf.name_scope("Inputs"):
-            zs_tf = tf.placeholder(shape=[n_samples, max_n_atoms], dtype=tf.int32, name="zs")
-            xyz_tf = tf.placeholder(shape=[n_samples, max_n_atoms, 3], dtype=tf.float32, name="xyz")
-
-            dataset = tf.data.Dataset.from_tensor_slices((xyz_tf, zs_tf))
-            dataset = dataset.batch(20)
-            iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
-            batch_xyz, batch_zs = iterator.get_next()
-
-        representations = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
-                                                 rcut=self.acsf_parameters['rcut'],
-                                                 acut=self.acsf_parameters['acut'],
-                                                 nRs2=self.acsf_parameters['nRs2'],
-                                                 nRs3=self.acsf_parameters['nRs3'],
-                                                 nTs=self.acsf_parameters['nTs'],
-                                                 eta=self.acsf_parameters['eta'],
-                                                 zeta=self.acsf_parameters['zeta'])
-
-        sess = tf.Session()
-        sess.run(tf.global_variables_initializer())
-        sess.run(iterator.make_initializer(dataset), feed_dict={xyz_tf: xyzs, zs_tf: zs})
-
-        representations_slices = []
-
-        if self.tensorboard:
-            self.tensorboard_logger_representation.set_summary_writer(sess)
-
-            batch_counter = 0
-            while True:
-                try:
-                    representations_np = sess.run(representations, options=self.tensorboard_logger_representation.options,
-                                             run_metadata=self.tensorboard_logger_representation.run_metadata)
-                    self.tensorboard_logger_representation.write_metadata(batch_counter)
-
-                    representations_slices.append(representations_np)
-                    batch_counter += 1
-                except tf.errors.OutOfRangeError:
-                    break
-        else:
-            batch_counter = 0
-            while True:
-                try:
-                    representations_np = sess.run(representations)
-                    representations_slices.append(representations_np)
-                    batch_counter += 1
-                except tf.errors.OutOfRangeError:
-                    break
-
-        representation_conc = np.concatenate(representations_slices, axis=0)
-
-        sess.close()
-
-        return representation_conc, zs
+        return padded_xyz, padded_zs
 
     def _generate_slatm_from_compounds(self):
         """
