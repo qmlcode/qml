@@ -371,8 +371,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     allocate(radial_part(nbasis2))
     allocate(part(nbasis2))
 
-    !$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad) &
-    !$OMP SCHEDULE(dynamic)
+    !!$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad) &
+    !!$OMP SCHEDULE(dynamic)
     do i = 1, natoms
         ! The element index of atom i
         m = element_types(i)
@@ -404,7 +404,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
             endif
         enddo
     enddo
-    !$OMP END PARALLEL DO
+    !!$OMP END PARALLEL DO
 
     deallocate(radial_base)
     deallocate(radial)
