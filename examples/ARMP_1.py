@@ -39,8 +39,9 @@ filenames.sort()
 
 ## ------------- ** Setting up the estimator ** ---------------
 
-estimator = ARMP(iterations=10, representation_name='acsf', representation_params={"radial_rs": np.arange(0, 10, 1), "angular_rs": np.arange(0.5, 10.5, 1),
-"theta_s": np.arange(0, 5, 1)}, tensorboard=False)
+acsf_params = {"nRs2": 5, "nRs3": 5, "nTs": 5, "rcut": 5, "acut": 5, "zeta": 220.127, "eta": 30.8065}
+estimator = ARMP(iterations=5000, representation_name='acsf', representation_params=acsf_params, tensorboard=False,
+                 learning_rate=0.075, l1_reg=0.0, l2_reg=0.0)
 
 estimator.generate_compounds(filenames)
 estimator.set_properties(energies)

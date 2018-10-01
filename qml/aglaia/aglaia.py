@@ -1586,7 +1586,7 @@ class ARMP(_NN):
         if not is_string(representation):
             raise InputError("Expected string for variable 'representation'. Got %s" % str(representation))
         if representation.lower() not in ['slatm', 'acsf']:
-            raise InputError("Unknown representation %s" % representation)
+            raise InputError("Representation %s not implemented." % representation)
         self.representation_name = representation.lower()
 
         if parameters is not None:
@@ -1753,7 +1753,7 @@ class ARMP(_NN):
 
         for i in range(xyz.shape[0]):
             if 0 in classes[i]:
-                idx_zeros = np.where(classes == 0)[1]
+                idx_zeros = np.where(classes[i] == 0)[0]
                 mol_xyz = xyz[i, :idx_zeros[0], :]
                 mol_classes = classes[i, :idx_zeros[0]]
 
@@ -1804,11 +1804,11 @@ class ARMP(_NN):
 
         elif self.representation_name == 'acsf':
 
-            xyz, zs = self._extract_and_pad()
+            xyz, classes = self._extract_and_pad()
             if method == "tf":
-                representations, classes = self._generate_acsf_tf(xyz, zs)
+                representations = self._generate_acsf_tf(xyz, classes)
             elif method == "fortran":
-                representations, classes = self._generate_acsf_fortran(xyz, zs)
+                representations = self._generate_acsf_fortran(xyz, classes)
             else:
                 raise InputError("Method not recognised.")
 
