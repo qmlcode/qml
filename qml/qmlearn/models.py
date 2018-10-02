@@ -35,6 +35,7 @@ except ImportError:
 from ..utils import is_numeric_array, is_numeric, is_numeric_1d_array, is_positive_integer_1d_array
 from ..utils import get_unique, is_positive_integer_or_zero, get_batch_size, is_positive_integer
 from ..utils import is_positive, is_positive_or_zero
+from ..utils import InputError
 from .data import Data
 from ..math import cho_solve
 

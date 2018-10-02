@@ -1087,10 +1087,12 @@ class MRMP(_NN):
         # TODO implement
         raise InputError("Not implemented yet. Use compounds.")
 
-    def _generate_representations_from_compounds(self):
+    def _generate_representations_from_compounds(self, method):
         """
         This function generates the representations from the compounds.
 
+        :param method: flag that tells whether to use fortran or tensrflow implementation when there is a choice (here there is only fortran)
+        :type method: string
         :return: the representation and None (in the ARMP class this would be the classes for atomic decomposition)
         :rtype: numpy array of shape (n_samples, n_features) and None
         """
