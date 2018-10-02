@@ -40,16 +40,10 @@ from qml.aglaia.tf_utils import TensorBoardLogger
 from qml.representations import generate_acsf
 from qml.aglaia.graceful_killer import GracefulKiller
 
-try:
-    from qml.data import Compound
-    from qml import representations as qml_rep
-except ImportError:
-    raise ImportError("The module qml is required")
+from qml.data import Compound
+from qml import representations as qml_rep
 
-try:
-    import tensorflow
-except ImportError:
-    raise ImportError("Tensorflow 1.8 is required to run neural networks.")
+import tensorflow
 
 class _NN(BaseEstimator):
 
