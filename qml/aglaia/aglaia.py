@@ -1651,7 +1651,11 @@ class ARMP(_NN):
             else:
                 representation = self._generate_acsf_fortran(xyz, classes)
 
-        return representation, classes
+        # Hotfix t make sure the representation is single precision
+        single_precision_representation = representation.astype(dtype=np.float32)
+        del representation
+
+        return single_precision_representation, classes
 
     def _generate_acsf_tf(self, xyz, classes):
         """
@@ -1815,7 +1819,11 @@ class ARMP(_NN):
         else:
             raise InputError("This should never happen, unrecognised representation %s." % (self.representation_name))
 
-        return representations, classes
+        # Hotfix t make sure the representation is single precision
+        single_precision_representation = representations.astype(dtype=np.float32)
+        del representations
+
+        return single_precision_representation, classes
 
     def _extract_and_pad(self):
         """
