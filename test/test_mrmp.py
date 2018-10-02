@@ -31,6 +31,11 @@ from qml.utils import InputError
 import glob
 import os
 import shutil
+try:
+    import tensorflow as tf
+except ImportError:
+    print("Tensorflow not found but is needed for mrmp class.")
+    raise SystemExit
 
 def test_set_representation():
     """
@@ -214,6 +219,7 @@ def test_load_external():
     This function tests if a model that has been trained on a different computer can be loaded and used on a different
     computer.
     """
+    tf.reset_default_graph()
 
     x = np.linspace(-10.0, 10.0, 2000)
     y = x ** 2
