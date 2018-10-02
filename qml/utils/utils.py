@@ -25,10 +25,10 @@ import numpy as np
 import tensorflow as tf
 
 def is_positive(x):
-    return (not is_array_like(x) and _is_numeric(x) and x > 0)
+    return (not is_array_like(x) and is_numeric(x) and x > 0)
 
 def is_positive_or_zero(x):
-    return (not is_array_like(x) and _is_numeric(x) and x >= 0)
+    return (not is_array_like(x) and is_numeric(x) and x >= 0)
 
 def is_array_like(x):
     return isinstance(x, (tuple, list, np.ndarray))
@@ -45,7 +45,7 @@ def is_string(x):
 def is_dict(x):
     return isinstance(x, dict)
 
-def _is_numeric(x):
+def is_numeric(x):
     return isinstance(x, (float, int))
 
 def is_numeric_array(x):
@@ -57,8 +57,17 @@ def is_numeric_array(x):
             return False
     return False
 
+def is_numeric_1d_array(x):
+    return is_numeric_array(x) and is_1d_array(x)
+
+# Accepts 2d arrays of shape (n,1) and (1,n) as well
+def is_1d_array(x):
+    return is_array_like(x) and (np.asarray(x).ndim == 1 or np.asarray(x).ndim == 2 and 1 in np.asarray(x).shape)
+
+# Doesn't accept floats e.g. 1.0
 def _is_integer(x):
-    return (_is_numeric(x) and (float(x) == int(x)))
+    return isinstance(x, int)
+    #return (is_numeric(x) and (float(x) == int(x)))
 
 # will intentionally accept 0, 1 as well
 def is_bool(x):
@@ -83,30 +92,14 @@ def _is_integer_array(x):
             return True
     return False
 
+def is_positive_integer_1d_array(x):
+    return is_positive_integer_array(x) and is_1d_array(x)
+
 def is_positive_integer_array(x):
     return (_is_integer_array(x) and _is_positive_array(x))
 
 def is_positive_integer_or_zero_array(x):
     return (_is_integer_array(x) and _is_positive_or_zero_array(x))
-
-def get_unique(x):
-    """
-    Gets all unique elements in lists of lists
-    """
-    elements = list(set(item for l in x for item in l))
-    return elements
-
-def get_pairs(x):
-    """
-    Get all unique pairs. E.g. x = [1,2,3] will return
-    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
-    """
-    pairs = []
-    for i,v in enumerate(x):
-        for w in x[i:]:
-            pairs.append([v,w])
-    return pairs
-
 
 # ------------- ** Checking inputs ** --------------------------
 
@@ -260,170 +253,25 @@ def check_classes(classes):
 
     return approved_classes
 
-def check_hl(hl1, hl2, hl3, hl4):
+# ------------ ** Utility functions ** ----------------
 
-    layers = [hl1, hl2, hl3, hl4]
-    approved_layers = []
+def get_unique(x):
+    """
+    Gets all unique elements in lists of lists
+    """
+    elements = list(set(item for l in x for item in l))
+    return sorted(elements)
 
-    for item in layers:
-        is_positive_integer(item)
-        approved_layers.append(int(item))
-
-    return approved_layers[0], approved_layers[1], approved_layers[2], approved_layers[3]
-
-def check_batchsize(bs):
-    is_positive_integer(bs)
-    if bs == 1:
-        raise InputError("Batch size should be larger than 1.")
-    return int(bs)
-
-def check_learningrate(lr):
-    if not is_positive(lr):
-        raise InputError("Expected positive float value for variable learning_rate. Got %s" % str(lr))
-    return float(lr)
-
-def check_iterations(it):
-    if not is_positive_integer(it):
-        raise InputError("Expected positive integer value for variable iterations. Got %s" % str(it))
-    return int(it)
-
-def check_reg(l1_reg, l2_reg):
-    if not is_positive_or_zero(l1_reg) or not is_positive_or_zero(l2_reg):
-        raise InputError("Expected positive float value for regularisation variables 'l1_reg' and 'l2_reg. Got %s and %s" % (str(l1_reg), str(l2_reg)))
-    return float(l1_reg), float(l2_reg)
-
-def check_scoring(scoring):
-    if not scoring in ['mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae']:
-        raise InputError("Unknown scoring function")
-    return scoring
-
-# ------------- ** Neural network utils inputs ** --------------------------
-
-def generate_weights(n_in, n_out, hl):
-
-    weights = []
-    biases = []
-
-    # Weights from input layer to first hidden layer
-    w = tf.Variable(tf.truncated_normal([hl[0], n_in], stddev = 1.0 / np.sqrt(hl[0]), dtype = tf.float32),
-                dtype = tf.float32, name = "weights_in")
-    b = tf.Variable(tf.zeros([hl[0]], dtype = tf.float32), name="bias_in", dtype = tf.float32)
-
-    weights.append(w)
-    biases.append(b)
-
-    # Weights from one hidden layer to the next
-    for i in range(1, len(hl)):
-        w = tf.Variable(tf.truncated_normal([hl[i], hl[i-1]], stddev=1.0 / np.sqrt(hl[i-1]), dtype=tf.float32),
-                        dtype=tf.float32, name="weights_hidden_%d" % i)
-        b = tf.Variable(tf.zeros([hl[i]], dtype=tf.float32), name="bias_hidden_%d" % i, dtype=tf.float32)
-
-        weights.append(w)
-        biases.append(b)
-
-
-    # Weights from last hidden layer to output layer
-    w = tf.Variable(tf.truncated_normal([n_out, hl[-1]],
-                                        stddev=1.0 / np.sqrt(hl[-1]), dtype=tf.float32),
-                    dtype=tf.float32, name="weights_out")
-    b = tf.Variable(tf.zeros([n_out], dtype=tf.float32), name="bias_out", dtype=tf.float32)
-
-    weights.append(w)
-    biases.append(b)
-
-    return weights, biases
-
-def get_batch_size(batch_size, n_samples):
-
-    if batch_size > n_samples:
-        print("Warning: batch_size larger than sample size. It is going to be clipped")
-        return min(n_samples, batch_size)
-
-        # see if the batch size can be modified slightly to make sure the last batch is similar in size
-        # to the rest of the batches
-        # This is always less that the requested batch size, so no memory issues should arise
-
-    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
-    return better_batch_size
-
-#
-#def _is_numeric_array(x):
-#    try:
-#        arr = np.asarray(x, dtype = float)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def _is_numeric_scalar(x):
-#    try:
-#        float(x)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def is_positive(x):
-#    if is_array(x) and _is_numeric_array(x):
-#        return _is_positive_scalar(x)
-#
-#def _is_positive_scalar(x):
-#    return float(x) > 0
-#
-#def _is_positive_array(x):
-#    return np.asarray(x, dtype = float) > 0
-#
-#def is_positive_or_zero(x):
-#    if is_numeric(x):
-#        if is_array(x):
-#            return is_positive_or_zero_array(x)
-#        else:
-#            return is_positive_or_zero_scalar(x)
-#    else:
-#        return False
-#
-#def is_positive_or_zero_array(x):
-#
-#
-#def is_positive_or_zero_scalar(x):
-#    return float(x) >= 0
-#
-#def is_integer(x):
-#    if is_array(x)
-#        return is_integer_array(x)
-#    else:
-#        return is_integer_scalar(x)
-#
-## will intentionally accept floats with integer values
-#def is_integer_array(x):
-#    if is_numeric(x):
-#        return (np.asarray(x) == np.asarray(y)).all()
-#    else:
-#        return False
-#
-## will intentionally accept floats with integer values
-#def is_integer_scalar(x):
-#    if is_numeric(x):
-#        return int(float(x)) == float(x)
-#    else:
-#        return False
-#
-#
-#def is_string(x):
-#    return isinstance(x, str)
-#
-#def is_positive_integer(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive(x))
-#
-#def is_positive_integer_or_zero(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive_or_zero(x))
-#
-#def is_negative_integer(x):
-#    if is_integer(x):
-#        return not is_positive(x)
-#    else:
-#        return False
-#
-#def is_non_zero_integer(x):
-#    return (is_positive_integer(x) or is_negative_integer(x))
+def get_pairs(x):
+    """
+    Get all unique pairs. E.g. x = [1,2,3] will return
+    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
+    """
+    pairs = []
+    for i,v in enumerate(x):
+        for w in x[i:]:
+            pairs.append([v,w])
+    return pairs
 
 
 # Custom exception to raise when we intentinoally catch an error
@@ -442,3 +290,17 @@ def ceil(a, b):
 
     """
     return -(-a//b)
+
+def get_batch_size(batch_size, n_samples):
+
+    if batch_size > n_samples:
+        print("Warning: batch_size larger than sample size. It is going to be clipped")
+        return min(n_samples, batch_size)
+
+    # see if the batch size can be modified slightly to make sure the last batch is similar in size
+    # to the rest of the batches
+    # This is always less that the requested batch size, so no memory issues should arise
+
+    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
+    return better_batch_size
+

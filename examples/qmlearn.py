@@ -236,6 +236,7 @@ def pipelines_2():
 
     model.fit(indices[:100])
 
+    # Score on the TRAINING set, since you won't get good predictions in 500 iterations
     scores = model.score(indices[:100])
     print("Negative MAE:", scores)
 
@@ -264,6 +265,7 @@ def pipelines_3():
 
     model.fit(indices[:100])
 
+    # Score on the TRAINING set, since you won't get good predictions in 500 iterations
     scores = model.score(indices[:100])
     print("Negative MAE:", scores)
 
