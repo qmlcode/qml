@@ -221,12 +221,14 @@ def test_load_external():
     """
     tf.reset_default_graph()
 
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     x = np.linspace(-10.0, 10.0, 2000)
     y = x ** 2
     x = np.reshape(x, (x.shape[0], 1))
 
     estimator = MRMP()
-    estimator.load_nn("saved_model")
+    estimator.load_nn(test_dir + "/saved_model")
 
     score_after_loading = estimator.score(x, y)
     score_on_other_machine = -24.101043
