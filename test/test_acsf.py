@@ -30,6 +30,7 @@ import numpy as np
 
 from qml.aglaia import symm_funct
 from qml.aglaia import np_symm_funct
+import os
 
 
 def test_acsf_1():
@@ -39,6 +40,8 @@ def test_acsf_1():
     :return: None
     """
 
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     nRs2 = 3
     nRs3 = 3
     nTs = 3
@@ -47,7 +50,7 @@ def test_acsf_1():
     zeta = 220.127
     eta = 30.8065
 
-    input_data = "/Volumes/Transcend/repositories/my_qml_fork/qml/test/data/data_test_acsf.npz"
+    input_data = test_dir + "/data/data_test_acsf.npz"
     data = np.load(input_data)
 
     xyzs = data["arr_0"]
@@ -85,6 +88,8 @@ def test_acsf_2():
     The test system consists of 10 molecules from the QM7 data set.
     :return: None
     """
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     nRs2 = 3
     nRs3 = 3
     nTs = 3
@@ -93,7 +98,7 @@ def test_acsf_2():
     zeta = 220.127
     eta = 30.8065
 
-    input_data = "/Volumes/Transcend/repositories/my_qml_fork/qml/test/data/qm7_testdata.npz"
+    input_data = test_dir + "/data/qm7_testdata.npz"
     data = np.load(input_data)
 
     xyzs = data["arr_0"]
