@@ -128,7 +128,7 @@ def tf_acsf(mols, path, elements):
         zs_tf = tf.placeholder(shape=[n_samples, max_n_atoms], dtype=tf.int32, name="zs")
         xyz_tf = tf.placeholder(shape=[n_samples, max_n_atoms, 3], dtype=tf.float32, name="xyz")
 
-    acsf_tf_t = symm_funct.generate_parkhill_acsf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, n_radial_rs, n_angular_rs, n_theta_s, zeta, eta)
+    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, n_radial_rs, n_angular_rs, n_theta_s, zeta, eta)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())

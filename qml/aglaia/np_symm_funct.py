@@ -187,8 +187,8 @@ def acsf_ang(xyzs, Zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta,
 
     return np.asarray(total_descriptor)
 
-def generate_acsf(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
-                  nRs3, nTs, zeta, eta):
+def generate_acsf_np(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
+                     nRs3, nTs, zeta, eta):
     """
     This function calculates the symmetry functions used in the tensormol paper.
 
@@ -216,35 +216,3 @@ def generate_acsf(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
     acsf = np.concatenate((rad_term, ang_term), axis=-1)
 
     return acsf
-
-if __name__ == "__main__":
-    xyzs = np.array([[[0.0, 0.0, 0.0],
-                      [1.0, 0.0, 0.0],
-                      [0.0, 1.0, 0.0],
-                      [0.0, 0.0, 1.0]]])
-
-    zs = [[7, 2, 1, 1]]
-
-    elements = [1, 2, 7]
-    element_pairs = [[1, 1], [2, 1], [7, 1], [7, 2]]
-
-    # # input_data = "/Volumes/Transcend/repositories/Aglaia/aglaia/tests/data_test_acsf.npz"
-    # input_data = "/Volumes/Transcend/repositories/Aglaia/aglaia/tests/qm7_testdata.npz"
-    # data = np.load(input_data)
-    #
-    # xyzs = data["arr_0"]
-    # zs = data["arr_1"]
-    # elements = data["arr_2"]
-    # element_pairs = data["arr_3"]
-
-    radial_cutoff = 1000.0
-    angular_cutoff = 1000.0
-    radial_rs = [0.0, 1.0]
-    angular_rs = [0.0, 1.0]
-    theta_s = [np.pi, np.pi * 0.5]
-    zeta = 0.0
-    eta = 1.0
-
-    rad_term = acsf_rad(xyzs, zs, elements, radial_cutoff, nRs2, eta)
-    ang_term = acsf_ang(xyzs, zs, element_pairs, angular_cutoff, nRs3, nTs, zeta, eta)
-    print(rad_term)

@@ -30,7 +30,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.base import BaseEstimator
-from .symm_funct import generate_parkhill_acsf
+from .symm_funct import generate_acsf_tf
 from ..utils.utils import InputError, ceil, is_positive_or_zero, is_positive_integer, is_positive, \
         is_bool, is_positive_integer_or_zero, is_string, is_positive_integer_array, is_array_like, \
         check_global_representation, check_y, check_sizes, check_dy, check_classes, is_numeric_array, is_non_zero_integer, \
@@ -38,7 +38,7 @@ from ..utils.utils import InputError, ceil, is_positive_or_zero, is_positive_int
 
 from qml.aglaia.tf_utils import TensorBoardLogger
 from qml.representations import generate_acsf
-from qml.aglaia.graceful_killer import GracefulKiller
+from qml.aglaia.graceful_killer import _GracefulKiller
 
 from qml.data import Compound
 from qml import representations as qml_rep
@@ -1689,13 +1689,13 @@ class ARMP(_NN):
             iterator = tf.data.Iterator.from_structure(dataset.output_types, dataset.output_shapes)
             batch_xyz, batch_zs = iterator.get_next()
 
-        representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
-                                            rcut=self.acsf_parameters['rcut'],
-                                            acut=self.acsf_parameters['acut'],
-                                            nRs2=self.acsf_parameters['nRs2'],
-                                            nRs3=self.acsf_parameters['nRs3'],
-                                            nTs=self.acsf_parameters['nTs'], eta=self.acsf_parameters['eta'],
-                                            zeta=self.acsf_parameters['zeta'])
+        representation = generate_acsf_tf(xyzs=batch_xyz, Zs=batch_zs, elements=elements, element_pairs=element_pairs,
+                                          rcut=self.acsf_parameters['rcut'],
+                                          acut=self.acsf_parameters['acut'],
+                                          nRs2=self.acsf_parameters['nRs2'],
+                                          nRs3=self.acsf_parameters['nRs3'],
+                                          nTs=self.acsf_parameters['nTs'], eta=self.acsf_parameters['eta'],
+                                          zeta=self.acsf_parameters['zeta'])
 
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
@@ -2280,7 +2280,7 @@ class ARMP(_NN):
         self.session.run(init)
 
         # Initialising the object that enables graceful killing of the training
-        killer = GracefulKiller()
+        killer = _GracefulKiller()
 
         for i in range(self.iterations):
 
@@ -2365,7 +2365,7 @@ class ARMP(_NN):
             dataset_init_op = graph.get_operation_by_name("dataset_init")
 
         # Initialising the object that enables graceful killing of the training
-        killer = GracefulKiller()
+        killer = _GracefulKiller()
 
         for i in range(self.iterations):
 
@@ -2415,15 +2415,15 @@ class ARMP(_NN):
             iterator_init = iterator.make_initializer(dataset, name="dataset_init_pred")
 
         with tf.name_scope("Descriptor_pred"):
-            batch_representation = generate_parkhill_acsf(xyzs=batch_xyz, Zs=batch_zs, elements=self.elements,
-                                                          element_pairs=self.element_pairs,
-                                                          rcut=self.acsf_parameters['rcut'],
-                                                          acut=self.acsf_parameters['acut'],
-                                                          nRs2=self.acsf_parameters['nRs2'],
-                                                          nRs3=self.acsf_parameters['nRs3'],
-                                                          nTs=self.acsf_parameters['nTs'],
-                                                          eta=self.acsf_parameters['eta'],
-                                                          zeta=self.acsf_parameters['zeta'])
+            batch_representation = generate_acsf_tf(xyzs=batch_xyz, Zs=batch_zs, elements=self.elements,
+                                                    element_pairs=self.element_pairs,
+                                                    rcut=self.acsf_parameters['rcut'],
+                                                    acut=self.acsf_parameters['acut'],
+                                                    nRs2=self.acsf_parameters['nRs2'],
+                                                    nRs3=self.acsf_parameters['nRs3'],
+                                                    nTs=self.acsf_parameters['nTs'],
+                                                    eta=self.acsf_parameters['eta'],
+                                                    zeta=self.acsf_parameters['zeta'])
 
         with tf.name_scope("Model_pred"):
             batch_energies_nn = self._model(batch_representation, batch_zs, element_weights, element_biases)

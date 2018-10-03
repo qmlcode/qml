@@ -22,7 +22,6 @@
 
 
 import numpy as np
-import tensorflow as tf
 
 def is_positive(x):
     return (not is_array_like(x) and is_numeric(x) and x > 0)

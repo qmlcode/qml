@@ -27,7 +27,6 @@ import copy
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge
 
 from .data import Data
 from ..utils import is_numeric_array, get_unique, is_positive_integer_or_zero_array
@@ -51,8 +50,7 @@ class AtomScaler(BaseEstimator):
         self.elements = elements
 
         # Initialize model
-        # self.model = LinearRegression()
-        self.model = Ridge(alpha=1e-6)
+        self.model = LinearRegression()
 
     def _preprocess_input(self, X):
         """

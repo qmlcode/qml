@@ -37,13 +37,19 @@ def acsf_rad(xyzs, Zs, radial_cutoff, radial_rs, eta):
     This does the radial part of the symmetry function (G2 function in Behler's papers). It works only for datasets where
     all samples are the same molecule but in different configurations.
 
-    :param xyzs: tf tensor of shape (n_samples, n_atoms, 3) contaning the coordinates of each atom in each data sample
-    :param Zs: tf tensor of shape (n_samples, n_atoms) containing the atomic number of each atom in each data sample
-    :param radial_cutoff: scalar tensor
-    :param radial_rs: tf tensor of shape (n_rs,) with the R_s values
-    :param eta: tf scalar
+    :param xyzs: Coordinates of each atom in each data sample
+    :type xyzs: tf tensor of shape (n_samples, n_atoms, 3)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param radial_cutoff: cut off used in the radial term
+    :type radial_cutoff: scalar tensor
+    :param radial_rs:  R_s values
+    :type radial_rs: tf tensor of shape (n_rs,)
+    :param eta: parameter in the radial term
+    :type eta: tf scalar
 
-    :return: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
+    :return: pre-sum radial term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
     """
 
     # Calculating the distance matrix between the atoms of each sample
@@ -92,14 +98,23 @@ def acsf_ang(xyzs, Zs, angular_cutoff, angular_rs, theta_s, zeta, eta):
     This does the angular part of the symmetry function as mentioned here: https://arxiv.org/pdf/1711.06385.pdf
     It only works for systems where all the samples are the same molecule but in different configurations.
 
-    :param xyzs: tf tensor of shape (n_samples, n_atoms, 3) contaning the coordinates of each atom in each data sample
-    :param Zs: tf tensor of shape (n_samples, n_atoms) containing the atomic number of each atom in each data sample
-    :param angular_cutoff: scalar tensor
-    :param angular_rs: tf tensor of shape (n_ang_rs,) with the equivalent of the R_s values from the G2
-    :param theta_s: tf tensor of shape (n_thetas,)
-    :param zeta: tf tensor of shape (1,)
-    :param eta: tf tensor of shape (1,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_atoms, n_atoms, n_ang_rs * n_thetas)
+    :param xyzs:  Coordinates of each atom in each data sample
+    :type xyzs: tf tensor of shape (n_samples, n_atoms, 3)
+    :param Zs:  Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param angular_cutoff: cut off used in the angular term
+    :type angular_cutoff: scalar tensor
+    :param angular_rs:  angular R_s values
+    :type angular_rs: tf tensor of shape (n_ang_rs,)
+    :param theta_s: angular theta_s values
+    :type theta_s: tf tensor of shape (n_thetas,)
+    :param zeta: parameter in the angular term
+    :type zeta: tf tensor of shape (1,)
+    :param eta: parameter in the angular term
+    :type eta: tf tensor of shape (1,)
+
+    :return: pre-sum angular term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_atoms, n_atoms, n_ang_rs * n_thetas)
     """
 
     # Finding the R_ij + R_ik term
@@ -228,11 +243,17 @@ def sum_rad(pre_sum, Zs, elements_list, radial_rs):
     Sum of the terms in the radial part of the symmetry function. The terms corresponding to the same neighbour identity
     are summed together.
 
-    :param pre_sum: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
-    :param Zs: tf tensor of shape (n_samples, n_atoms)
-    :param elements_list: np.array of shape (n_elements,)
-    :param radial_rs: tf tensor of shape (n_rad_rs,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_rad_rd * n_elements)
+    :param pre_sum: pre-sum radial term
+    :type pre_sum: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param elements_list: unique atoms in all of the samples
+    :type elements_list: np.array of shape (n_elements,)
+    :param radial_rs: radial R_s values
+    :type radial_rs: tf tensor of shape (n_rad_rs,)
+
+    :return: the radial term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_rad_rd * n_elements)
     """
     n_atoms = Zs.get_shape().as_list()[1]
     n_elements = len(elements_list)
@@ -270,12 +291,19 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
     This function does the sum of the terms in the radial part of the symmetry function. Three body interactions where
     the two neighbours are the same elements are summed together.
 
-    :param pre_sumterm: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas)
-    :param Zs: tf tensor of shape (n_samples, n_atoms)
-    :param element_pairs_list: np array of shape (n_elementpairs, 2)
-    :param angular_rs: tf tensor of shape (n_ang_rs,)
-    :param theta_s: tf tensor of shape (n_thetas,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas * n_elementpairs)
+    :param pre_sumterm: pre-sum angular term
+    :type pre_sumterm: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param element_pairs_list: list of all the atom element pairs
+    :type element_pairs_list: np array of shape (n_elementpairs, 2)
+    :param angular_rs: angular R_s values
+    :type angular_rs: tf tensor of shape (n_ang_rs,)
+    :param theta_s: angular theta_s values
+    :type theta_s: tf tensor of shape (n_thetas,)
+
+    :return: the angular term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas * n_elementpairs)
     """
 
     n_atoms = Zs.get_shape().as_list()[1]
@@ -352,26 +380,39 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
 
     return clean_final_term
 
-def generate_parkhill_acsf(xyzs, Zs, elements, element_pairs, rcut, acut,
-                           nRs2, nRs3, nTs, zeta, eta):
+def generate_acsf_tf(xyzs, Zs, elements, element_pairs, rcut, acut,
+                     nRs2, nRs3, nTs, zeta, eta):
     """
     This function generates the atom centred symmetry function as used in the Tensormol paper. Currently only tested for
     single systems with many conformations. It requires the coordinates of all the atoms in each data sample, the atomic
     charges for each atom (in the same order as the xyz), the overall elements and overall element pairs. Then it
     requires the parameters for the ACSF that are used in the Tensormol paper: https://arxiv.org/pdf/1711.06385.pdf
 
-    :param xyzs: tensor of shape (n_samples, n_atoms, 3)
-    :param Zs: tensor of shape (n_samples, n_atoms)
-    :param elements: np.array of shape (n_elements,)
-    :param element_pairs: np.array of shape (n_elementpairs, 2)
-    :param rcut: scalar float
-    :param acut: scalar float
-    :param nRs2: positive integer
-    :param nRs3: positive integer
-    :param nTs: positive integer
-    :param zeta: scalar float
-    :param eta2: scalar float
-    :return: a tf tensor of shape a tf tensor of shape (n_samples, n_atoms, nRs2 * n_elements + nRs3 * nTs * n_elementpairs)
+    :param xyzs: Coordinates of each atom in each data sample
+    :type xyzs: tensor of shape (n_samples, n_atoms, 3)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tensor of shape (n_samples, n_atoms)
+    :param elements: unique atoms in all of the samples
+    :type elements: np.array of shape (n_elements,)
+    :param element_pairs: list of all the atom element pairs
+    :type element_pairs: np.array of shape (n_elementpairs, 2)
+    :param rcut: radial cut off length
+    :type rcut: scalar float
+    :param acut: angular cut off length
+    :type acut: scalar float
+    :param nRs2: number of distance bins to use in the radial term
+    :type nRs2: positive integer
+    :param nRs3: number of distance bins to use in the angular term
+    :type nRs3: positive integer
+    :param nTs: number of angle bins to use in the angular term
+    :type nTs: positive integer
+    :param zeta: parameter in the cosine term
+    :type zeta: scalar float
+    :param eta: parameter in the exponential terms
+    :type eta: scalar float
+
+    :return: the atom centred symmetry functions
+    :rtype: a tf tensor of shape a tf tensor of shape (n_samples, n_atoms, nRs2 * n_elements + nRs3 * nTs * n_elementpairs)
     """
 
     radial_rs = np.linspace(0, rcut, nRs2)

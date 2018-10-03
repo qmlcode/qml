@@ -2,7 +2,7 @@
 This example shows how to use ARMP to overfit 100 data-points for the QM7 data set. It uses the Atom Centred Symmetry
 functions as the representation.
 
-This example takes about 3.5 min to run.
+This example takes about 3.5 min to run on a mac.
 """
 
 from qml.aglaia.aglaia import ARMP
