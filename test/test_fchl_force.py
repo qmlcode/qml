@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import ast
 import time
+import os
 
 import scipy
 import scipy.stats
@@ -31,9 +32,11 @@ from qml.fchl import get_atomic_local_gradient_kernels
 from qml.fchl import get_atomic_local_gradient_5point_kernels
 from qml.fchl import get_atomic_local_kernels
 
+test_dir = os.path.dirname(os.path.realpath(__file__))
+
 FORCE_KEY = "forces"
 ENERGY_KEY = "om2_energy"
-CSV_FILE = "data/amons_small.csv"
+CSV_FILE = test_dir + "/data/amons_small.csv"
 SIGMAS = [0.64]
 
 TRAINING = 13
