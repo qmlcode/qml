@@ -24,10 +24,10 @@
 import numpy as np
 
 def is_positive(x):
-    return (not is_array_like(x) and _is_numeric(x) and x > 0)
+    return (not is_array_like(x) and is_numeric(x) and x > 0)
 
 def is_positive_or_zero(x):
-    return (not is_array_like(x) and _is_numeric(x) and x >= 0)
+    return (not is_array_like(x) and is_numeric(x) and x >= 0)
 
 def is_array_like(x):
     return isinstance(x, (tuple, list, np.ndarray))
@@ -44,7 +44,7 @@ def is_string(x):
 def is_dict(x):
     return isinstance(x, dict)
 
-def _is_numeric(x):
+def is_numeric(x):
     return isinstance(x, (float, int))
 
 def is_numeric_array(x):
@@ -56,8 +56,17 @@ def is_numeric_array(x):
             return False
     return False
 
+def is_numeric_1d_array(x):
+    return is_numeric_array(x) and is_1d_array(x)
+
+# Accepts 2d arrays of shape (n,1) and (1,n) as well
+def is_1d_array(x):
+    return is_array_like(x) and (np.asarray(x).ndim == 1 or np.asarray(x).ndim == 2 and 1 in np.asarray(x).shape)
+
+# Doesn't accept floats e.g. 1.0
 def _is_integer(x):
-    return (_is_numeric(x) and (float(x) == int(x)))
+    return isinstance(x, int)
+    #return (is_numeric(x) and (float(x) == int(x)))
 
 # will intentionally accept 0, 1 as well
 def is_bool(x):
@@ -82,30 +91,14 @@ def _is_integer_array(x):
             return True
     return False
 
+def is_positive_integer_1d_array(x):
+    return is_positive_integer_array(x) and is_1d_array(x)
+
 def is_positive_integer_array(x):
     return (_is_integer_array(x) and _is_positive_array(x))
 
 def is_positive_integer_or_zero_array(x):
     return (_is_integer_array(x) and _is_positive_or_zero_array(x))
-
-def get_unique(x):
-    """
-    Gets all unique elements in lists of lists
-    """
-    elements = list(set(item for l in x for item in l))
-    return elements
-
-def get_pairs(x):
-    """
-    Get all unique pairs. E.g. x = [1,2,3] will return
-    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
-    """
-    pairs = []
-    for i,v in enumerate(x):
-        for w in x[i:]:
-            pairs.append([v,w])
-    return pairs
-
 
 # ------------- ** Checking inputs ** --------------------------
 
@@ -248,7 +241,7 @@ def check_classes(classes):
         if not is_array_like(classes):
             raise InputError("classes should be array like.")
 
-        if not is_positive_integer_array(classes):
+        if not is_positive_integer_or_zero_array(classes):
             raise InputError("classes should be an array of ints.")
 
         classes = np.asarray(classes)
@@ -259,84 +252,25 @@ def check_classes(classes):
 
     return approved_classes
 
-#
-#def _is_numeric_array(x):
-#    try:
-#        arr = np.asarray(x, dtype = float)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def _is_numeric_scalar(x):
-#    try:
-#        float(x)
-#        return True
-#    except (ValueError, TypeError):
-#        return False
-#
-#def is_positive(x):
-#    if is_array(x) and _is_numeric_array(x):
-#        return _is_positive_scalar(x)
-#
-#def _is_positive_scalar(x):
-#    return float(x) > 0
-#
-#def _is_positive_array(x):
-#    return np.asarray(x, dtype = float) > 0
-#
-#def is_positive_or_zero(x):
-#    if is_numeric(x):
-#        if is_array(x):
-#            return is_positive_or_zero_array(x)
-#        else:
-#            return is_positive_or_zero_scalar(x)
-#    else:
-#        return False
-#
-#def is_positive_or_zero_array(x):
-#
-#
-#def is_positive_or_zero_scalar(x):
-#    return float(x) >= 0
-#
-#def is_integer(x):
-#    if is_array(x)
-#        return is_integer_array(x)
-#    else:
-#        return is_integer_scalar(x)
-#
-## will intentionally accept floats with integer values
-#def is_integer_array(x):
-#    if is_numeric(x):
-#        return (np.asarray(x) == np.asarray(y)).all()
-#    else:
-#        return False
-#
-## will intentionally accept floats with integer values
-#def is_integer_scalar(x):
-#    if is_numeric(x):
-#        return int(float(x)) == float(x)
-#    else:
-#        return False
-#
-#
-#def is_string(x):
-#    return isinstance(x, str)
-#
-#def is_positive_integer(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive(x))
-#
-#def is_positive_integer_or_zero(x):
-#    return (is_numeric(x) and is_integer(x) and is_positive_or_zero(x))
-#
-#def is_negative_integer(x):
-#    if is_integer(x):
-#        return not is_positive(x)
-#    else:
-#        return False
-#
-#def is_non_zero_integer(x):
-#    return (is_positive_integer(x) or is_negative_integer(x))
+# ------------ ** Utility functions ** ----------------
+
+def get_unique(x):
+    """
+    Gets all unique elements in lists of lists
+    """
+    elements = list(set(item for l in x for item in l))
+    return sorted(elements)
+
+def get_pairs(x):
+    """
+    Get all unique pairs. E.g. x = [1,2,3] will return
+    [[1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]]
+    """
+    pairs = []
+    for i,v in enumerate(x):
+        for w in x[i:]:
+            pairs.append([v,w])
+    return pairs
 
 
 # Custom exception to raise when we intentinoally catch an error
@@ -355,3 +289,17 @@ def ceil(a, b):
 
     """
     return -(-a//b)
+
+def get_batch_size(batch_size, n_samples):
+
+    if batch_size > n_samples:
+        print("Warning: batch_size larger than sample size. It is going to be clipped")
+        return min(n_samples, batch_size)
+
+    # see if the batch size can be modified slightly to make sure the last batch is similar in size
+    # to the rest of the batches
+    # This is always less that the requested batch size, so no memory issues should arise
+
+    better_batch_size = ceil(n_samples, ceil(n_samples, batch_size))
+    return better_batch_size
+

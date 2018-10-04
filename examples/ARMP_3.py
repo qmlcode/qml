@@ -39,7 +39,7 @@ energies = data["arr_2"]
 
 ## ------------- ** Setting up the estimator ** ---------------
 
-estimator = ARMP(iterations=150, l2_reg=0.0, learning_rate=0.005, hidden_layer_sizes=(40, 20, 10))
+estimator = ARMP(iterations=3000, learning_rate=0.075, l1_reg=0.0, l2_reg=0.0, tensorboard=True, store_frequency=50)
 
 ##  ------------- ** Fitting to the data ** ---------------
 

@@ -235,14 +235,15 @@ def test_multiple_operators():
 
 def test_generate_representation():
 
-   
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     coords = np.array([[1.464, 0.707, 1.056],
                        [0.878, 1.218, 0.498],
                        [2.319, 1.126, 0.952]])
 
     nuclear_charges = np.array([8, 1, 1], dtype=np.int32)
 
-    rep_ref = np.loadtxt("data/fchl_ef_rep.txt").reshape((3, 6, 3))
+    rep_ref = np.loadtxt(test_dir + "/data/fchl_ef_rep.txt").reshape((3, 6, 3))
 
     # Test with fictitious charges from a numpy array
     fic_charges1 = np.array([-0.41046649,  0.20523324,  0.20523324])
