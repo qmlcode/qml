@@ -35,22 +35,19 @@ subroutine get_indices(natoms, nuclear_charges, type1, n, type1_indices)
     integer, dimension(:), intent(out) :: type1_indices
     integer :: j
 
-    !$OMP PARALLEL DO REDUCTION(+:n)
     do j = 1, natoms
         if (nuclear_charges(j) == type1) then
-            ! this shouldn't be a race condition
             n = n + 1
             type1_indices(n) = j
         endif
     enddo
-    !$OMP END PARALLEL DO
 
 end subroutine get_indices
 
 end module representations
 
 subroutine fgenerate_coulomb_matrix(atomic_charges, coordinates, nmax, cm)
-    
+
     implicit none
 
     double precision, dimension(:), intent(in) :: atomic_charges
@@ -364,23 +361,23 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
     allocate(sorted_atoms_all(natoms, central_natoms))
 
     !$OMP PARALLEL DO PRIVATE(k)
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
-            row_norms(k,l) = huge_double
-        enddo
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        row_norms(k,l) = huge_double
+    enddo
     !$OMP END PARALLEL DO
 
     !$OMP PARALLEL DO PRIVATE(j,k)
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
-            !$OMP CRITICAL
-                do i = 1, cutoff_count(k)
-                    j = maxloc(row_norms(:,l), dim=1)
-                    sorted_atoms_all(i, l) = j
-                    row_norms(j,l) = 0.0d0
-                enddo
-            !$OMP END CRITICAL
-        enddo
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        !$OMP CRITICAL
+            do i = 1, cutoff_count(k)
+                j = maxloc(row_norms(:,l), dim=1)
+                sorted_atoms_all(i, l) = j
+                row_norms(j,l) = 0.0d0
+            enddo
+        !$OMP END CRITICAL
+    enddo
     !$OMP END PARALLEL DO
 
     ! Clean up
@@ -541,11 +538,11 @@ subroutine fgenerate_atomic_coulomb_matrix(central_atom_indices, central_natoms,
     do l = 1, central_natoms
         k = central_atom_indices(l)
         !$OMP CRITICAL
-            do i = 1, cutoff_count(k)
-                j = minloc(distance_matrix_tmp(:,k), dim=1)
-                sorted_atoms_all(i, l) = j
-                distance_matrix_tmp(j, k) = huge_double
-            enddo
+        do i = 1, cutoff_count(k)
+            j = minloc(distance_matrix_tmp(:,k), dim=1)
+            sorted_atoms_all(i, l) = j
+            distance_matrix_tmp(j, k) = huge_double
+        enddo
         !$OMP END CRITICAL
     enddo
     !$OMP END PARALLEL DO
@@ -735,12 +732,12 @@ subroutine fgenerate_bob(atomic_charges, coordinates, nuclear_charges, id, &
 
     n = 0
     !$OMP PARALLEL DO REDUCTION(+:n)
-        do i = 1, nid
-            n = n + nmax(i) * (1 + nmax(i))
-            do j = 1, i - 1
-                n = n + 2 * nmax(i) * nmax(j)
-            enddo
+    do i = 1, nid
+        n = n + nmax(i) * (1 + nmax(i))
+        do j = 1, i - 1
+            n = n + 2 * nmax(i) * nmax(j)
         enddo
+    enddo
     !$OMP END PARALLEL DO
 
     if (n /= 2*ncm) then
