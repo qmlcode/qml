@@ -30,25 +30,26 @@ from qml.aglaia.aglaia import ARMP
 from qml.utils import InputError
 import glob
 import os
+import shutil
 
 def test_set_representation():
     """
     This function tests the function _set_representation.
     """
     try:
-        ARMP(representation='slatm', representation_params={'slatm_sigma12': 0.05})
+        ARMP(representation_name='slatm', representation_params={'slatm_sigma12': 0.05})
         raise Exception
     except InputError:
         pass
 
     try:
-        ARMP(representation='coulomb_matrix')
+        ARMP(representation_name='coulomb_matrix')
         raise Exception
     except InputError:
         pass
 
     try:
-        ARMP(representation='slatm', representation_params={'slatm_alchemy': 0.05})
+        ARMP(representation_name='slatm', representation_params={'slatm_alchemy': 0.05})
         raise Exception
     except InputError:
         pass
@@ -56,7 +57,7 @@ def test_set_representation():
     parameters = {'slatm_sigma1': 0.07, 'slatm_sigma2': 0.04, 'slatm_dgrid1': 0.02, 'slatm_dgrid2': 0.06,
                   'slatm_rcut': 5.0, 'slatm_rpower': 7, 'slatm_alchemy': True}
 
-    estimator = ARMP(representation='slatm', representation_params=parameters)
+    estimator = ARMP(representation_name='slatm', representation_params=parameters)
 
     assert estimator.representation_name == 'slatm'
     assert estimator.slatm_parameters == parameters
@@ -71,7 +72,7 @@ def test_set_properties():
     energies = np.loadtxt(test_dir + '/CN_isobutane/prop_kjmol_training.txt',
                           usecols=[1])
 
-    estimator = ARMP(representation='slatm')
+    estimator = ARMP(representation_name='slatm')
 
     assert estimator.properties == None
 
@@ -119,7 +120,7 @@ def test_fit_1():
                           usecols=[1])
     filenames.sort()
 
-    estimator = ARMP(representation="acsf")
+    estimator = ARMP(representation_name="acsf")
     estimator.generate_compounds(filenames[:50])
     estimator.set_properties(energies[:50])
     estimator.generate_representation()
@@ -198,6 +199,103 @@ def test_predict_3():
 
     assert energies.shape == energies_pred.shape
 
+def test_predict_fromxyz():
+    """
+    This test checks that the predictions from the "predict" and the "predict_from_xyz" functions are the same.
+    It also checks that if the model is saved, when the model is reloaded the predictions are still the same.
+    """
+
+    xyz = np.array([[[0, 1, 0], [0, 1, 1], [1, 0, 1]],
+           [[1, 2, 2], [3, 1, 2], [1, 3, 4]],
+           [[4, 1, 2], [0.5, 5, 6], [-1, 2, 3]]])
+    zs = np.array([[1, 2, 3],
+          [1, 2, 3],
+          [1, 2, 3]])
+
+    ene_true = np.array([0.5, 0.9, 1.0])
+
+    acsf_param = {"nRs2": 5, "nRs3": 5, "nTs": 5, "rcut": 5, "acut": 5, "zeta": 220.127, "eta": 30.8065}
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                     representation_params=acsf_param)
+
+    estimator.set_properties(ene_true)
+    estimator.generate_representation(xyz, zs)
+
+    idx = list(range(xyz.shape[0]))
+
+    estimator.fit(idx)
+
+    pred1 = estimator.predict(idx)
+    pred2 = estimator.predict_from_xyz(xyz, zs)
+
+    assert np.all(np.isclose(pred1, pred2, rtol=1.e-6))
+
+    estimator.save_nn(save_dir="temp")
+
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                         representation_params=acsf_param)
+
+    new_estimator.load_nn(save_dir="temp")
+
+    new_estimator.set_properties(ene_true)
+    new_estimator.generate_representation(xyz, zs)
+
+    pred3 = new_estimator.predict(idx)
+    pred4 = new_estimator.predict_from_xyz(xyz, zs)
+
+    assert np.all(np.isclose(pred3, pred4, rtol=1.e-6))
+    assert np.all(np.isclose(pred1, pred3, rtol=1.e-6))
+
+    shutil.rmtree("temp")
+
+def test_retraining():
+    xyz = np.array([[[0, 1, 0], [0, 1, 1], [1, 0, 1]],
+                    [[1, 2, 2], [3, 1, 2], [1, 3, 4]],
+                    [[4, 1, 2], [0.5, 5, 6], [-1, 2, 3]]])
+    zs = np.array([[1, 2, 3],
+                   [1, 2, 3],
+                   [1, 2, 3]])
+
+    ene_true = np.array([0.5, 0.9, 1.0])
+
+    acsf_param = {"nRs2": 5, "nRs3": 5, "nTs": 5, "rcut": 5, "acut": 5, "zeta": 220.127, "eta": 30.8065}
+    estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                     representation_params=acsf_param)
+
+    estimator.set_properties(ene_true)
+    estimator.generate_representation(xyz, zs)
+
+    idx = list(range(xyz.shape[0]))
+
+    estimator.fit(idx)
+    estimator.save_nn(save_dir="temp")
+
+    pred1 = estimator.predict(idx)
+
+    estimator.loaded_model = True
+
+    estimator.fit(idx)
+
+    pred2 = estimator.predict(idx)
+
+    new_estimator = ARMP(iterations=10, l1_reg=0.0001, l2_reg=0.005, learning_rate=0.0005, representation_name='acsf',
+                         representation_params=acsf_param)
+    new_estimator.set_properties(ene_true)
+    new_estimator.generate_representation(xyz, zs)
+
+    new_estimator.load_nn("temp")
+
+    pred3 = new_estimator.predict(idx)
+
+    new_estimator.fit(idx)
+
+    pred4 = new_estimator.predict(idx)
+
+    assert np.all(np.isclose(pred1, pred3, rtol=1.e-6))
+    assert np.all(np.isclose(pred2, pred4, rtol=1.e-6))
+
+    shutil.rmtree("temp")
+
 if __name__ == "__main__":
     test_set_representation()
     test_set_properties()
@@ -207,3 +305,5 @@ if __name__ == "__main__":
     test_fit_3()
     test_score_3()
     test_predict_3()
+    test_predict_fromxyz()
+    test_retraining()
