@@ -107,7 +107,6 @@ def batch_size(C):
 
     # This should not raise an exception
     C(batch_size = 2)
-    C(batch_size = 2.0)
     C(batch_size = "auto")
 
     # This should be caught
@@ -116,6 +115,7 @@ def batch_size(C):
     catch("x")
     catch(4.2)
     catch(None)
+    catch(2.0)
 
 def learning_rate(C):
     # Exceptions that are supposed to be caught
@@ -146,13 +146,13 @@ def iterations(C):
 
     # This should not raise an exception
     C(iterations = 1)
-    C(iterations = 1.0)
 
     # This should be caught
     catch(-2)
     catch("x")
     catch(4.2)
     catch(None)
+    catch(1.0)
 
 def tf_dtype(C):
     # Exceptions that are supposed to be caught
@@ -193,7 +193,6 @@ def hl1(C):
 
     # This should not raise an exception
     C(hl1 = 1)
-    C(hl1 = 1.0)
 
     # This should be caught
     catch(0)
@@ -201,6 +200,7 @@ def hl1(C):
     catch(4.2)
     catch(None)
     catch(-1)
+    catch(1.0)
 
 def hl2(C):
     # Exceptions that are supposed to be caught
@@ -213,7 +213,6 @@ def hl2(C):
 
     # This should not raise an exception
     C(hl2 = 1)
-    C(hl2 = 1.0)
     C(hl2 = 0)
 
     # This should be caught
@@ -221,6 +220,7 @@ def hl2(C):
     catch(4.2)
     catch(None)
     catch(-1)
+    catch(1.0)
 
 def hl3(C):
     # Exceptions that are supposed to be caught
@@ -233,7 +233,6 @@ def hl3(C):
 
     # This should not raise an exception
     C(hl2 = 2, hl3 = 1)
-    C(hl2 = 2, hl3 = 1.0)
     C(hl2 = 2, hl3 = 0)
 
     # This should be caught
@@ -241,6 +240,7 @@ def hl3(C):
     catch(4.2)
     catch(None)
     catch(-1)
+    catch(1.0)
 
 def representation(C):
     # Exceptions that are supposed to be caught
