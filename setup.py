@@ -47,11 +47,14 @@ if any(["intelem" in arg for arg in sys.argv]):
 
 
 ext_fkernels = Extension(name = '.kernels.fkernels',
-                          sources = ['qml/kernels/fkernels.f90'],
+                          sources = [
+                          'qml/kernels/fkernels.f90',
+                          'qml/kernels/fkpca.f90',
+                              ],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 
