@@ -41,8 +41,8 @@ subroutine fkpca(k, n, centering, kpca)
     integer :: i
 
     double precision :: inv_n
-    double precision :: inv_n2
     double precision, allocatable, dimension(:) :: temp
+    double precision :: temp_sum
 
     kpca(:,:) = k(:,:)
 
@@ -54,36 +54,37 @@ subroutine fkpca(k, n, centering, kpca)
     if (centering) then
 
         inv_n = 1.0d0 / n
-        inv_n2 = 1.0d0 / (n*n)
 
         allocate(temp(n))
         temp(:) = 0.0d0
 
         !$OMP PARALLEL DO
         do i = 1, n
-            temp(i) = sum(k(i,:))
+            temp(i) = sum(k(i,:)) * inv_n
+        enddo
+        !$OMP END PARALLEL DO
+
+        temp_sum = sum(temp(:)) * inv_n
+
+        !$OMP PARALLEL DO
+        do i = 1, n
+            kpca(i,:) = kpca(i,:) + temp_sum
         enddo
         !$OMP END PARALLEL DO
 
         !$OMP PARALLEL DO
         do i = 1, n
-            kpca(i,:) = kpca(i,:) + sum(temp(:)) * inv_n2
+            kpca(:,i) = kpca(:,i) - temp(i)
+        enddo
+        !$OMP END PARALLEL DO
+
+        !$OMP PARALLEL DO
+        do i = 1, n
+            kpca(i,:) = kpca(i,:) - temp(i)
         enddo
         !$OMP END PARALLEL DO
 
         deallocate(temp)
-
-        !$OMP PARALLEL DO
-        do i = 1, n
-            kpca(:,i) = kpca(:,i) - sum(k(i,:)) * inv_n
-        enddo
-        !$OMP END PARALLEL DO
-
-        !$OMP PARALLEL DO
-        do i = 1, n
-            kpca(i,:) = kpca(i,:) - sum(k(:,i)) * inv_n
-        enddo
-        !$OMP END PARALLEL DO
 
     endif
 
