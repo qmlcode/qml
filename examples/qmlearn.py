@@ -135,8 +135,7 @@ def models():
     energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
     model = qmlearn.representations.CoulombMatrix(data)
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     representations = model.generate(indices)
     model = qmlearn.kernels.GaussianKernel(sigma='auto')
@@ -184,8 +183,7 @@ def pipelines():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     model.fit(indices[:800])
     scores = model.score(indices[800:])
@@ -203,8 +201,7 @@ def pipelines():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     model.fit(indices[:800])
     scores = model.score(indices[800:])
@@ -293,8 +290,7 @@ def cross_validation():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     # 3-fold CV of a given model can easily be done
     scores = sklearn.model_selection.cross_validate(model, indices, cv=3)

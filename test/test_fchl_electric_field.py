@@ -470,5 +470,4 @@ if __name__ == "__main__":
     test_generate_representation()
     test_gaussian_process()
     test_gaussian_process_field_dependent()
-    test_explicit_electric_field()
 
