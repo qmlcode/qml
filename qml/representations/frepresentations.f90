@@ -35,22 +35,19 @@ subroutine get_indices(natoms, nuclear_charges, type1, n, type1_indices)
     integer, dimension(:), intent(out) :: type1_indices
     integer :: j
 
-    !$OMP PARALLEL DO REDUCTION(+:n)
     do j = 1, natoms
         if (nuclear_charges(j) == type1) then
-            ! this shouldn't be a race condition
             n = n + 1
             type1_indices(n) = j
         endif
     enddo
-    !$OMP END PARALLEL DO
 
 end subroutine get_indices
 
 end module representations
 
 subroutine fgenerate_coulomb_matrix(atomic_charges, coordinates, nmax, cm)
-    
+
     implicit none
 
     double precision, dimension(:), intent(in) :: atomic_charges
@@ -223,6 +220,7 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
     integer :: idx
 
     double precision, allocatable, dimension(:, :) :: row_norms
+    double precision, allocatable, dimension(:) :: row_norms_l
     double precision :: pair_norm
     double precision :: prefactor
     double precision :: norm
@@ -303,15 +301,17 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
     ! Allocate temporary
     allocate(pair_distance_matrix(natoms, natoms, central_natoms))
     allocate(row_norms(natoms, central_natoms))
+    allocate(row_norms_l(natoms))
 
     pair_distance_matrix = 0.0d0
     row_norms = 0.0d0
 
 
-    !$OMP PARALLEL DO PRIVATE(pair_norm, prefactor, k) REDUCTION(+:row_norms) COLLAPSE(2)
-    do i = 1, natoms
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
+    !$OMP PARALLEL DO PRIVATE(pair_norm, prefactor, k, row_norms_l)
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        row_norms_l = 0.0d0
+        do i = 1, natoms
             ! self interaction
             if (distance_matrix(i,k) > cent_cutoff) then
                 cycle
@@ -325,7 +325,7 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
 
             pair_norm = prefactor * prefactor * 0.5d0 * atomic_charges(i) ** 2.4d0
             pair_distance_matrix(i,i,l) = pair_norm
-            row_norms(i,l) = row_norms(i,l) + pair_norm * pair_norm
+            row_norms_l(i) = row_norms_l(i) + pair_norm * pair_norm
 
             do j = i+1, natoms
                 if (distance_matrix(j,k) > cent_cutoff) then
@@ -353,34 +353,36 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
                 pair_distance_matrix(i, j, l) = pair_norm
                 pair_distance_matrix(j, i, l) = pair_norm
                 pair_norm = pair_norm * pair_norm
-                row_norms(i,l) = row_norms(i,l) + pair_norm
-                row_norms(j,l) = row_norms(j,l) + pair_norm
+                row_norms_l(i) = row_norms_l(i) + pair_norm
+                row_norms_l(j) = row_norms_l(j) + pair_norm
             enddo
         enddo
+        row_norms(:,l) = row_norms_l
     enddo
     !$OMP END PARALLEL DO
+
+    ! Clean up
+    deallocate(row_norms_l)
 
     ! Allocate temporary
     allocate(sorted_atoms_all(natoms, central_natoms))
 
     !$OMP PARALLEL DO PRIVATE(k)
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
-            row_norms(k,l) = huge_double
-        enddo
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        row_norms(k,l) = huge_double
+    enddo
     !$OMP END PARALLEL DO
 
     !$OMP PARALLEL DO PRIVATE(j,k)
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
-            !$OMP CRITICAL
-                do i = 1, cutoff_count(k)
-                    j = maxloc(row_norms(:,l), dim=1)
-                    sorted_atoms_all(i, l) = j
-                    row_norms(j,l) = 0.0d0
-                enddo
-            !$OMP END CRITICAL
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        do i = 1, cutoff_count(k)
+            j = maxloc(row_norms(:,l), dim=1)
+            sorted_atoms_all(i, l) = j
+            row_norms(j,l) = 0.0d0
         enddo
+    enddo
     !$OMP END PARALLEL DO
 
     ! Clean up
@@ -392,17 +394,17 @@ subroutine fgenerate_local_coulomb_matrix(central_atom_indices, central_natoms, 
     cm = 0.0d0
 
     !$OMP PARALLEL DO PRIVATE(i, j, k, idx)
-        do l = 1, central_natoms
-            k = central_atom_indices(l)
-            do m = 1, cutoff_count(k)
-                i = sorted_atoms_all(m, l)
-                idx = (m*m+m)/2 - m
-                do n = 1, m
-                    j = sorted_atoms_all(n, l)
-                    cm(l, idx+n) = pair_distance_matrix(i,j,l)
-                enddo
+    do l = 1, central_natoms
+        k = central_atom_indices(l)
+        do m = 1, cutoff_count(k)
+            i = sorted_atoms_all(m, l)
+            idx = (m*m+m)/2 - m
+            do n = 1, m
+                j = sorted_atoms_all(n, l)
+                cm(l, idx+n) = pair_distance_matrix(i,j,l)
             enddo
         enddo
+    enddo
     !$OMP END PARALLEL DO
 
 
@@ -541,11 +543,11 @@ subroutine fgenerate_atomic_coulomb_matrix(central_atom_indices, central_natoms,
     do l = 1, central_natoms
         k = central_atom_indices(l)
         !$OMP CRITICAL
-            do i = 1, cutoff_count(k)
-                j = minloc(distance_matrix_tmp(:,k), dim=1)
-                sorted_atoms_all(i, l) = j
-                distance_matrix_tmp(j, k) = huge_double
-            enddo
+        do i = 1, cutoff_count(k)
+            j = minloc(distance_matrix_tmp(:,k), dim=1)
+            sorted_atoms_all(i, l) = j
+            distance_matrix_tmp(j, k) = huge_double
+        enddo
         !$OMP END CRITICAL
     enddo
     !$OMP END PARALLEL DO
@@ -735,12 +737,12 @@ subroutine fgenerate_bob(atomic_charges, coordinates, nuclear_charges, id, &
 
     n = 0
     !$OMP PARALLEL DO REDUCTION(+:n)
-        do i = 1, nid
-            n = n + nmax(i) * (1 + nmax(i))
-            do j = 1, i - 1
-                n = n + 2 * nmax(i) * nmax(j)
-            enddo
+    do i = 1, nid
+        n = n + nmax(i) * (1 + nmax(i))
+        do j = 1, i - 1
+            n = n + 2 * nmax(i) * nmax(j)
         enddo
+    enddo
     !$OMP END PARALLEL DO
 
     if (n /= 2*ncm) then
