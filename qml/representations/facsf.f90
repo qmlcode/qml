@@ -125,7 +125,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
         do j = 1, nelements
             if (nuclear_charges(i) .eq. elements(j)) then
                 element_types(i) = j
-                continue
+                cycle
             endif
         enddo
     enddo
@@ -326,7 +326,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
         do j = 1, nelements
             if (nuclear_charges(i) .eq. elements(j)) then
                 element_types(i) = j
-                continue
+                cycle
             endif
         enddo
     enddo
