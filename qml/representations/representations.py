@@ -582,8 +582,8 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
     :rtype: numpy array
     """
 
-    Rs2 = np.linspace(0, rcut, nRs2)
-    Rs3 = np.linspace(0, acut, nRs3)
+    Rs2 = np.linspace(0.8, rcut, nRs2)
+    Rs3 = np.linspace(0.8, acut, nRs3)
     Ts = np.linspace(0, np.pi, nTs)
     n_elements = len(elements)
     natoms = len(coordinates)
