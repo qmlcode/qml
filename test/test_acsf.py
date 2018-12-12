@@ -49,7 +49,7 @@ def test_acsf_1():
     acut = 5
     zeta = 220.127
     eta = 30.8065
-    min = 0.0
+    bin_min = 0.0
 
     input_data = test_dir + "/data/data_test_acsf.npz"
     data = np.load(input_data)
@@ -66,13 +66,13 @@ def test_acsf_1():
         zs_tf = tf.placeholder(shape=[n_samples, n_atoms], dtype=tf.int32, name="zs")
         xyz_tf = tf.placeholder(shape=[n_samples, n_atoms, 3], dtype=tf.float32, name="xyz")
 
-    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, min)
+    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, bin_min)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     acsf_tf = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
 
-    acsf_np = np_symm_funct.generate_acsf_np(xyzs, zs, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, min)
+    acsf_np = np_symm_funct.generate_acsf_np(xyzs, zs, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, bin_min)
 
     n_samples = xyzs.shape[0]
     n_atoms = xyzs.shape[1]
@@ -98,7 +98,7 @@ def test_acsf_2():
     acut = 5
     zeta = 220.127
     eta = 30.8065
-    min = 0.0
+    bin_min = 0.0
 
     input_data = test_dir + "/data/qm7_testdata.npz"
     data = np.load(input_data)
@@ -115,13 +115,13 @@ def test_acsf_2():
         zs_tf = tf.placeholder(shape=[n_samples, max_n_atoms], dtype=tf.int32, name="zs")
         xyz_tf = tf.placeholder(shape=[n_samples, max_n_atoms, 3], dtype=tf.float32, name="xyz")
 
-    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, min)
+    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, bin_min)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     acsf_tf = sess.run(acsf_tf_t, feed_dict={xyz_tf: xyzs, zs_tf: zs})
 
-    acsf_np = np_symm_funct.generate_acsf_np(xyzs, zs, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, min)
+    acsf_np = np_symm_funct.generate_acsf_np(xyzs, zs, elements, element_pairs, rcut, acut, nRs2, nRs3, nTs, zeta, eta, bin_min)
 
     for i in range(n_samples):
         for j in range(max_n_atoms):

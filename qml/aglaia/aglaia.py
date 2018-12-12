@@ -594,7 +594,7 @@ class _NN(BaseEstimator):
         """
 
         self.acsf_parameters = {'rcut': 5.0, 'acut': 5.0, 'nRs2': 5, 'nRs3': 5, 'nTs': 5,
-                                      'zeta': 220.127, 'eta': 30.8065, 'min': 0.8}
+                                      'zeta': 220.127, 'eta': 30.8065, 'bin_min': 0.8}
 
         if params is not None:
             for key, value in params.items():
@@ -842,9 +842,9 @@ class _NN(BaseEstimator):
         if is_numeric_array(self.acsf_parameters['zeta']):
             raise InputError("Expecting a scalar value for zeta. Got %s." % (self.acsf_parameters['zeta']))
 
-        if not is_positive_or_zero(self.acsf_parameters['min']):
+        if not is_positive_or_zero(self.acsf_parameters['bin_min']):
             raise InputError(
-                "Expected positive or zero float for variable 'min'. Got %s." % str(self.acsf_parameters['min']))
+                "Expected positive or zero float for variable 'bin_min'. Got %s." % str(self.acsf_parameters['bin_min']))
 
     def _get_msize(self, pad = 0):
         """
@@ -1700,7 +1700,7 @@ class ARMP(_NN):
                                           nRs3=self.acsf_parameters['nRs3'],
                                           nTs=self.acsf_parameters['nTs'], eta=self.acsf_parameters['eta'],
                                           zeta=self.acsf_parameters['zeta'],
-                                          min=self.acsf_parameters['min'])
+                                          bin_min=self.acsf_parameters['bin_min'])
 
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
@@ -1771,7 +1771,7 @@ class ARMP(_NN):
                                   eta2=self.acsf_parameters['eta'],
                                   eta3=self.acsf_parameters['eta'],
                                   zeta=self.acsf_parameters['zeta'],
-                                  min=self.acsf_parameters['min'])
+                                  bin_min=self.acsf_parameters['bin_min'])
 
                 padded_g = np.zeros((initial_natoms, g.shape[-1]))
                 padded_g[:g.shape[0], :] = g
@@ -2127,7 +2127,7 @@ class ARMP(_NN):
         elif self.representation_name == "acsf":
 
             acsf_parameters =  {'rcut': 5.0, 'acut': 5.0, 'nRs2': 5, 'nRs3': 5, 'nTs': 5,
-                                      'zeta': 220.127, 'eta': 30.8065, 'min':0.8}
+                                      'zeta': 220.127, 'eta': 30.8065, 'bin_min':0.8}
 
             for key, value in parameters.items():
                 try:
@@ -2430,7 +2430,7 @@ class ARMP(_NN):
                                                     nTs=self.acsf_parameters['nTs'],
                                                     eta=self.acsf_parameters['eta'],
                                                     zeta=self.acsf_parameters['zeta'],
-                                                    min=self.acsf_parameters['min'])
+                                                    bin_min=self.acsf_parameters['bin_min'])
 
         with tf.name_scope("Model_pred"):
             batch_energies_nn = self._model(batch_representation, batch_zs, element_weights, element_biases)
