@@ -188,7 +188,7 @@ def acsf_ang(xyzs, Zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta,
     return np.asarray(total_descriptor)
 
 def generate_acsf_np(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
-                     nRs3, nTs, zeta, eta):
+                     nRs3, nTs, zeta, eta, min):
     """
     This function calculates the symmetry functions used in the tensormol paper.
 
@@ -203,11 +203,12 @@ def generate_acsf_np(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
     :param theta_s: list of all the thetas parameters. Numpy array of shape (n_thetas,)
     :param zeta: parameter. scalar.
     :param eta: parameter. scalar.
+    :param min: value at which to start the binning of the distances
     :return: numpy array of shape (n_samples, n_atoms, n_rad_rs*n_elements + n_ang_rs*n_thetas*n_element_pairs)
     """
 
-    radial_rs = np.linspace(0, rcut, nRs2)
-    angular_rs = np.linspace(0, acut, nRs3)
+    radial_rs = np.linspace(min, rcut, nRs2)
+    angular_rs = np.linspace(min, acut, nRs3)
     theta_s = np.linspace(0, np.pi, nTs)
 
     rad_term = acsf_rad(xyzs, Zs, elements, rcut, radial_rs, eta)

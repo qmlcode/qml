@@ -381,7 +381,7 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
     return clean_final_term
 
 def generate_acsf_tf(xyzs, Zs, elements, element_pairs, rcut, acut,
-                     nRs2, nRs3, nTs, zeta, eta):
+                     nRs2, nRs3, nTs, zeta, eta, min):
     """
     This function generates the atom centred symmetry function as used in the Tensormol paper. Currently only tested for
     single systems with many conformations. It requires the coordinates of all the atoms in each data sample, the atomic
@@ -410,13 +410,15 @@ def generate_acsf_tf(xyzs, Zs, elements, element_pairs, rcut, acut,
     :type zeta: scalar float
     :param eta: parameter in the exponential terms
     :type eta: scalar float
+    :param min: the value at which to start binning the distances
+    :type min: positive float
 
     :return: the atom centred symmetry functions
     :rtype: a tf tensor of shape a tf tensor of shape (n_samples, n_atoms, nRs2 * n_elements + nRs3 * nTs * n_elementpairs)
     """
 
-    radial_rs = np.linspace(0, rcut, nRs2)
-    angular_rs = np.linspace(0, acut, nRs3)
+    radial_rs = np.linspace(min, rcut, nRs2)
+    angular_rs = np.linspace(min, acut, nRs3)
     theta_s = np.linspace(0, np.pi, nTs)
 
     with tf.name_scope("acsf_params"):

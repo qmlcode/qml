@@ -295,7 +295,7 @@ class Compound(object):
         self.representation = slatm
 
     def generate_acsf(self, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
-            eta3 = 1, zeta = 1, rcut = 5, acut = 5, gradients = False):
+            eta3 = 1, zeta = 1, rcut = 5, acut = 5, min=0.8, gradients = False):
         """
         Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
 
@@ -317,12 +317,14 @@ class Compound(object):
         :type rcut: float
         :param acut: Cut-off radius of the three-body terms
         :type acut: float
+        :param min: the value at which to start binning the distances
+        :type min: positive float
         :param gradients: To return gradients or not
         :type gradients: boolean
         """
 
-        Rs2 = np.linspace(0, rcut, nRs2)
-        Rs3 = np.linspace(0, acut, nRs3)
+        Rs2 = np.linspace(min, rcut, nRs2)
+        Rs3 = np.linspace(min, acut, nRs3)
         Ts = np.linspace(0, np.pi, nTs)
         n_elements = len(elements)
         natoms = len(self.coordinates)
