@@ -549,8 +549,8 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
 
     return mbs
 
-def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1, 
-        eta3 = 1, zeta = 1, rcut = 5, acut = 5, gradients = False):
+def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
+                  eta3 = 1, zeta = 1, rcut = 5, acut = 5, bin_min=0.8, gradients = False):
     """
     Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
 
@@ -576,14 +576,16 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
     :type rcut: float
     :param acut: Cut-off radius of the three-body terms
     :type acut: float
+    :param bin_min: the value at which to start binning the distances
+    :type bin_min: positive float
     :param gradients: To return gradients or not
     :type gradients: boolean
     :return: Atom-centered symmetry functions representation
     :rtype: numpy array
     """
 
-    Rs2 = np.linspace(0, rcut, nRs2)
-    Rs3 = np.linspace(0, acut, nRs3)
+    Rs2 = np.linspace(bin_min, rcut, nRs2)
+    Rs3 = np.linspace(bin_min, acut, nRs3)
     Ts = np.linspace(0, np.pi, nTs)
     n_elements = len(elements)
     natoms = len(coordinates)
