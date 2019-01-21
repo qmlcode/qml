@@ -289,9 +289,9 @@ def test_kpca():
 
 if __name__ == "__main__":
 
-    # test_laplacian_kernel()
-    # test_gaussian_kernel()
-    # test_linear_kernel()
-    # test_matern_kernel()
-    # test_sargan_kernel()
+    test_laplacian_kernel()
+    test_gaussian_kernel()
+    test_linear_kernel()
+    test_matern_kernel()
+    test_sargan_kernel()
     test_kpca()
