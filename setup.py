@@ -26,7 +26,7 @@ MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
 if mkl_exists(verbose=True):
-    LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+    LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
