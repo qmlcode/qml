@@ -12,7 +12,7 @@ import qml
 from qml.representations import generate_acsf
 from qml.math import cho_solve
 
-# from qml.kernels import get_local_kernel
+from qml.kernels import get_local_kernel
 from qml.kernels import get_atomic_local_kernel
 from qml.kernels import get_atomic_local_gradient_kernel
 from qml.kernels import get_local_gradient_kernel
@@ -26,8 +26,8 @@ np.set_printoptions(linewidth=666, edgeitems=10)
 CSV_FILE = "data/amons_small.csv"
 # CSV_FILE = "data/molecule_300.csv"
 
-TRAINING = 3
-TEST     = 2
+TRAINING = 7
+TEST     = 5
 
 SIGMA = 2.5
 MAX_ATOMS = 20

@@ -36,9 +36,12 @@ from .fgradient_kernels import fsymmetric_gaussian_process_kernel
 def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
-            :math:`K_{ij} = \\sum_{I\\in i} \\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\sigma^2} \\big)`
+            :math:`K_{ij} = \\sum_{I\\in i} \\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
 
         Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+
+        The kernel is the normal Gaussian kernel with the local decomposition of atomic environments.
+
         For instance atom-centered symmetry functions could be used here.
         K is calculated analytically using an OpenMP parallel Fortran routine.
 
@@ -59,15 +62,11 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
         :rtype: numpy array
     """
     
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -94,16 +93,43 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
 
 def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
-
-
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
     
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+            :math:`K_{Ij} = \\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
+
+        Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+
+        This means that the kernel matrix consists of the local decomposition of atomic environments
+        in a basis of kernel function placed on single atomic environments.
+
+        Thus the dimensions in number of molecules times total number of atoms.
+
+        For instance atom-centered symmetry functions could be used here.
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
+        :type X2: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
+
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
+
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -123,8 +149,7 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
             N2,
             len(N1), 
             len(N2),
-            np.sum(N1),     # mol2.natoms,
-            # np.sum(N2),     # mol1.natoms,
+            np.sum(N1),
             SIGMA
     )
 
@@ -132,16 +157,43 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
 
 def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
-
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
-
     
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+            :math:`K_{Ij} = \\frac{\\part}{\\part x}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
+
+        Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+        For instance atom-centered symmetry functions could be used here.
+
+        The kernel has the dimensions number of nuclear kernel gradients times total number of atoms.
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
+        :type X2: numpy array
+        
+        :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
+        :type dX2: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
+
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
+
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
     
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -166,8 +218,8 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
             N2,
             len(N1), 
             len(N2),
-            np.sum(N1),         # mol2.natoms,
-            np.sum(N2)*3,         # mol1.natoms,
+            np.sum(N1),
+            np.sum(N2)*3,
             SIGMA
     )
 
@@ -182,14 +234,11 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
 def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
+
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
     
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -214,8 +263,7 @@ def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
             N2,
             len(N1), 
             len(N2),
-            np.sum(N1),         # mol2.natoms,
-            np.sum(N2)*3,         # mol1.natoms,
+            np.sum(N2)*3,
             SIGMA
     )
 
@@ -230,15 +278,11 @@ def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
 def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
 
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -281,11 +325,9 @@ def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
 def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
     
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     
@@ -302,7 +344,7 @@ def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
             Q1_input,
             N1,
             len(N1), 
-            np.sum(N1),         # mol2.natoms,
+            np.sum(N1),
             SIGMA
     )
     
@@ -317,14 +359,11 @@ def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
 
 def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
-    N2 = np.zeros((X2.shape[0]), dtype=np.int32)
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
-    
-    for i, rep in enumerate(X2):
-        N2[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
+    N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
+
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
+    assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
@@ -350,8 +389,8 @@ def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
             N2,
             len(N1), 
             len(N2),
-            np.sum(N1),         # mol2.natoms,
-            np.sum(N2),         # mol1.natoms,
+            np.sum(N1),
+            np.sum(N2),
             SIGMA
     )
     
@@ -366,11 +405,9 @@ def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
 def get_symmetric_gp_kernel(X1, dX1, Q1, SIGMA):
 
-    N1 = np.zeros((X1.shape[0]), dtype=np.int32)
+    N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
-    
-    for i, rep in enumerate(X1):
-        N1[i] = sum([any(np.abs(atom) > 0) for atom in rep])
+    assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
    
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     
