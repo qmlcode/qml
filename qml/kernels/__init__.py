@@ -21,3 +21,4 @@
 # SOFTWARE.
 
 from .kernels import *
+from .gradient_kernels import *

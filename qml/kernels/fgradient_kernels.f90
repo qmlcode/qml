@@ -1,0 +1,1206 @@
+subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(nm1,nm2), intent(out) :: kernel
+
+    integer :: j1, j2
+    integer :: a, b
+
+    integer :: rep_size
+    double precision :: inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_sigma2 = -1.0d0 / (2 * sigma**2)
+
+    !$OMP PARALLEL DO private(d) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Molecule 2
+        do b = 1, nm2
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+
+                       d(:) = x1(a,j1,:)- x2(b,j2,:)
+                       kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_sigma2)
+
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(d)
+
+end subroutine flocal_kernel
+
+
+subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+    integer, intent(in) :: na1
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(na1,nm2), intent(out) :: kernel
+
+    integer :: j1, j2
+    integer :: a, b
+    integer :: idx1_start, idx1
+
+    integer :: rep_size
+    double precision :: inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_sigma2 = -1.0d0 / (2 * sigma**2)
+
+    !$OMP PARALLEL DO private(idx1_start, idx1, d) schedule(dynamic)
+    do a = 1, nm1
+
+        idx1_start = sum(n1(:a)) - n1(a)
+
+        ! Molecule 2
+        do b = 1, nm2
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                idx1 = idx1_start + j1
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+
+                        d(:) = x1(a,j1,:)- x2(b,j2,:)
+                        kernel(idx1, b) = kernel(idx1, b) + exp((norm2(d)**2) * inv_sigma2)
+
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(d)
+
+end subroutine fatomic_local_kernel
+
+
+subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, na1, naq2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+    integer, intent(in) :: na1
+    integer, intent(in) :: naq2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(naq2,na1), intent(out) :: kernel
+
+    integer :: i2, j1, j2
+    integer :: xyz2
+    integer :: a, b
+    integer :: idx1_start, idx2_end, idx2_start, idx2, idx1
+
+    integer :: rep_size
+
+    double precision :: expd
+    double precision :: inv_2sigma2
+    double precision :: inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs
+
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma2 = -1.0d0 / (sigma**2)
+
+    allocate(sorted_derivs(rep_size,maxval(n2)*3,maxval(n2),nm2))
+
+    sorted_derivs = 0.0d0
+
+    ! Presort the representation derivatives
+    do b = 1, nm2
+        do i2 = 1, n2(b)
+            idx2 = 0
+
+            do j2 = 1, n2(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs(:,idx2,i2,b) = dx2(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    kernel = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd,idx1_start,idx1) schedule(dynamic)
+    do a = 1, nm1
+
+        idx1_start = sum(n1(:a)) - n1(a) + 1
+
+        ! Atom in Molecule 1
+        do j1 = 1, n1(a)
+
+            idx1 = idx1_start - 1 + j1
+
+            ! Molecule 2
+            do b = 1, nm2
+
+                idx2_start = (sum(n2(:b)) - n2(b))*3 + 1
+                idx2_end = sum(n2(:b))*3
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,j1,:)- x2(b,j2,:)
+                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+
+                        ! Add the dot product to the kernel in one BLAS call
+                        call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs(:,:n2(b)*3,j2,b), &
+                            & rep_size, d, 1, 1.0d0, kernel(idx2_start:idx2_end,idx1), 1)
+                    endif
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(sorted_derivs)
+    deallocate(d)
+
+end subroutine fatomic_local_gradient_kernel
+
+
+! NOTE: Legacy code without any fancy BLAS calls, for reference
+!
+! subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, na1, naq2, sigma, kernel)
+!
+!     implicit none
+!
+!     double precision, dimension(:,:,:), intent(in) :: x1
+!     double precision, dimension(:,:,:), intent(in) :: x2
+!
+!     double precision, dimension(:,:,:,:,:), intent(in) :: dx2
+!
+!     integer, dimension(:,:), intent(in) :: q1
+!     integer, dimension(:,:), intent(in) :: q2
+!
+!     integer, dimension(:), intent(in) :: n1
+!     integer, dimension(:), intent(in) :: n2
+!
+!     integer, intent(in) :: nm1
+!     integer, intent(in) :: nm2
+!     integer, intent(in) :: na1
+!     integer, intent(in) :: naq2
+!
+!     double precision, intent(in) :: sigma
+!
+!     double precision, dimension(naq2,na1), intent(out) :: kernel
+!
+!     integer :: i2, j1, j2
+!     integer :: na, nb, xyz2
+!     integer :: a, b
+!     integer :: idx1_end, idx1_start, idx2_end, idx2_start, idx2, idx1
+!
+!     integer :: rep_size
+!
+!     double precision :: expd
+!     double precision :: inv_2sigma2
+!     double precision :: inv_sigma2
+!
+!     double precision, allocatable, dimension(:) :: d
+!
+!     rep_size = size(x1, dim=3)
+!     allocate(d(rep_size))
+!
+!     inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+!     inv_sigma2 = -1.0d0 / (sigma**2)
+!
+!     kernel = 0.0d0
+!
+!     ! Molecule 1
+!     do a = 1, nm1
+!
+!         na = n1(a)
+!
+!         idx1_end = sum(n1(:a))
+!         idx1_start = idx1_end - na + 1
+!
+!
+!         ! Atom in Molecule 1
+!         do j1 = 1, na
+!             idx1 = idx1_start - 1 + j1
+!
+!             ! Molecule 2
+!             do b = 1, nm2
+!                 nb = n2(b)
+!
+!                 idx2_end = sum(n2(:b))
+!                 idx2_start = idx2_end - nb + 1
+!
+!                 !Atom in Molecule2
+!                 do j2 = 1, nb
+!
+!                     if (q1(j1,a) == q2(j2,b)) then
+!
+!                         d(:) = x1(a,j1,:)- x2(b,j2,:)
+!                         ! expd = -1.0d0/sigma**2 * exp(-(norm2(d)**2) / (2 * sigma**2))
+!                         expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2) ! Possibly 4??
+!
+!                         ! Derivative WRT this atom in Molecule 2
+!                         do i2 = 1, nb
+!
+!                                 ! Loop over XYZ
+!                                 do xyz2 = 1, 3
+!
+!                                     idx2 = (idx2_start-1)*3 + (i2-1)*3 + xyz2
+!                                     kernel(idx2, idx1) = kernel(idx2, idx1) +  expd * dot_product(d, dx2(b, j2,:,i2,xyz2))
+!
+!                                 enddo
+!
+!                             endif
+!                         enddo
+!
+!                     endif
+!
+!                 enddo
+!             enddo
+!         enddo
+!     enddo
+!
+!
+!
+!
+! end subroutine fatomic_local_gradient_kernel
+
+
+subroutine flocal_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, naq2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+    integer, intent(in) :: naq2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(naq2,nm1), intent(out) :: kernel
+
+    integer :: i2, j1, j2
+    integer :: nb, xyz2
+    integer :: a, b
+    integer :: idx2_end, idx2_start, idx2
+
+    integer :: rep_size
+
+    double precision :: expd, inv_2sigma2, inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma2 = -1.0d0 / (sigma**2)
+
+    kernel = 0.0d0
+
+
+    allocate(sorted_derivs(rep_size,maxval(n2)*3,maxval(n2),nm2))
+
+    sorted_derivs = 0.0d0
+
+    ! Presort the representation derivatives
+    do b = 1, nm2
+        do i2 = 1, n2(b)
+            idx2 = 0
+
+            do j2 = 1, n2(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs(:,idx2,i2,b) = dx2(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! Molecule 1
+    !$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Atom in Molecule 1
+        do j1 = 1, n1(a)
+
+            ! Molecule 2
+            do b = 1, nm2
+                nb = n2(b)
+
+                idx2_start = (sum(n2(:b)) - n2(b))*3 + 1
+                idx2_end = sum(n2(:b))*3
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,j1,:)- x2(b,j2,:)
+                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+
+                        ! Add the dot products to the kernel in one BLAS call
+                        call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs(:,:n2(b)*3,j2,b), &
+                            & rep_size, d, 1, 1.0d0, kernel(idx2_start:idx2_end,a), 1)
+                    endif
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(sorted_derivs)
+    deallocate(d)
+
+end subroutine flocal_gradient_kernel
+
+
+subroutine fgdml_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx1
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+    integer, intent(in) :: na1
+    integer, intent(in) :: na2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(na1*3,na2*3), intent(out) :: kernel
+
+    integer :: i1, i2, j2, k
+    integer :: xyz2
+    integer :: a, b
+    integer :: idx1_end, idx1_start, idx2_end, idx2_start, idx2
+
+    integer :: rep_size
+
+    double precision :: expd, expdiag
+
+    double precision :: inv_2sigma2
+    double precision :: inv_sigma4
+    double precision :: sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    double precision, allocatable, dimension(:,:) :: hess
+    double precision, allocatable, dimension(:,:) :: partial
+
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs1
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs2
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+    allocate(partial(rep_size,maxval(n1)*3))
+    partial = 0.0d0
+    allocate(hess(rep_size, rep_size))
+
+    allocate(sorted_derivs1(rep_size,maxval(n1)*3,maxval(n1),nm1))
+    allocate(sorted_derivs2(rep_size,maxval(n2)*3,maxval(n2),nm2))
+
+    sorted_derivs1 = 0.0d0
+    sorted_derivs2 = 0.0d0
+
+    ! Presort the representation derivatives
+    do b = 1, nm2
+        do i2 = 1, n2(b)
+            idx2 = 0
+
+            do j2 = 1, n2(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs2(:,idx2,i2,b) = dx2(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! Presort the representation derivatives
+    do b = 1, nm1
+        do i2 = 1, n1(b)
+            idx2 = 0
+
+            do j2 = 1, n1(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs1(:,idx2,i2,b) = dx1(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! Reset kernel
+    kernel = 0.0d0
+
+    ! Calculate these only once
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma4 = -1.0d0 / (sigma**4)
+    sigma2 = -1.0d0 * sigma**2
+
+    !$OMP PARALLEL DO PRIVATE(idx1_start,idx2_start,d,expd,expdiag,hess,idx1_end,idx2_end,partial) schedule(dynamic)
+    do a = 1, nm1
+        idx1_start = (sum(n1(:a)) - n1(a))*3 + 1
+        idx1_end = sum(n1(:a))*3
+
+        do b = 1, nm2
+            idx2_start = (sum(n2(:b)) - n2(b))*3 + 1
+            idx2_end = sum(n2(:b))*3
+
+            ! Atoms A and B
+            do i1 = 1, n1(a)
+                do i2 = 1, n2(b)
+
+                    if (q1(i1,a) == q2(i2,b)) then
+
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,i1,:)- x2(b,i2,:)
+                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expdiag = sigma2 * expd
+
+                        ! Calculate the outer product of the distance
+                        hess = 0.0d0
+                        call dsyr("U", rep_size, expd, d, 1, hess, rep_size)
+
+                        do k = 1, rep_size
+                           hess(k,k) = hess(k,k) + expdiag
+                        enddo
+
+                        ! Do the first half of the dot product, save in partial(:,:)
+                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! Add the dot product to the kernel in one BLAS call
+                        call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
+                            & partial(:,:n1(a)*3), rep_size, &
+                            & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
+                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(hess)
+    deallocate(sorted_derivs1)
+    deallocate(sorted_derivs2)
+    deallocate(partial)
+    deallocate(d)
+
+end subroutine fgdml_kernel
+
+
+subroutine fsymmetric_gdml_kernel(x1, dx1, q1, n1, nm1, na1, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx1
+
+    integer, dimension(:,:), intent(in) :: q1
+
+    integer, dimension(:), intent(in) :: n1
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: na1
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(na1*3,na1*3), intent(out) :: kernel
+
+    integer :: i1, i2, j2, k
+    integer :: xyz2
+    integer :: a, b
+    integer :: idx1_end, idx1_start, idx2_end, idx2_start, idx2
+
+    integer :: rep_size
+
+    double precision :: expd, expdiag
+
+    double precision :: inv_2sigma2
+    double precision :: inv_sigma4
+    double precision :: sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    double precision, allocatable, dimension(:,:) :: hess
+    double precision, allocatable, dimension(:,:) :: partial
+
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs1
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+    allocate(partial(rep_size,maxval(n1)*3))
+    partial = 0.0d0
+    allocate(hess(rep_size, rep_size))
+
+    allocate(sorted_derivs1(rep_size,maxval(n1)*3,maxval(n1),nm1))
+
+    sorted_derivs1 = 0.0d0
+
+    ! Presort the representation derivatives
+    do b = 1, nm1
+        do i2 = 1, n1(b)
+            idx2 = 0
+
+            do j2 = 1, n1(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs1(:,idx2,i2,b) = dx1(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! Reset kernel
+    kernel = 0.0d0
+
+    ! Calculate these only once
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma4 = -1.0d0 / (sigma**4)
+    sigma2 = -1.0d0 * sigma**2
+
+    !$OMP PARALLEL DO PRIVATE(idx1_start,idx2_start,d,expd,expdiag,hess,idx1_end,idx2_end,partial) schedule(dynamic)
+    do a = 1, nm1
+        idx1_start = (sum(n1(:a)) - n1(a))*3 + 1
+        idx1_end = sum(n1(:a))*3
+
+        do b = a, nm1
+            idx2_start = (sum(n1(:b)) - n1(b))*3 + 1
+            idx2_end = sum(n1(:b))*3
+
+            ! Atoms A and B
+            do i1 = 1, n1(a)
+                do i2 = 1, n1(b)
+
+                    if (q1(i1,a) == q1(i2,b)) then
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,i1,:)- x1(b,i2,:)
+                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expdiag = sigma2 * expd
+
+                        ! Calculate the outer product of the distance
+                        hess = 0.0d0
+                        call dsyr("U", rep_size, expd, d, 1, hess, rep_size)
+
+                        do k = 1, rep_size
+                           hess(k,k) = hess(k,k) + expdiag
+                        enddo
+
+                        ! Do the first half of the dot product, save in partial(:,:)
+                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! Add the dot product to the kernel in one BLAS call
+                        call dgemm("T", "N", n1(a)*3, n1(b)*3, rep_size, 1.0d0, &
+                            & partial(:,:n1(a)*3), rep_size, &
+                            & sorted_derivs1(:,:n1(b)*3,i2,b), rep_size, 1.0d0, &
+                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+                    endif
+                enddo
+            enddo
+
+            if (b > a) then
+               kernel(idx2_start:idx2_end,idx1_start:idx1_end) &
+                & = transpose(kernel(idx1_start:idx1_end,idx2_start:idx2_end))
+            endif
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(hess)
+    deallocate(sorted_derivs1)
+    deallocate(partial)
+    deallocate(d)
+
+end subroutine fsymmetric_gdml_kernel
+
+subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx1
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+    integer, intent(in) :: na1
+    integer, intent(in) :: na2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(na1*3+nm1,na2*3+nm2), intent(out) :: kernel
+
+    integer :: i1, i2, j1, j2, k
+    integer :: xyz2
+    integer :: a, b
+    integer :: idx1_end, idx1_start, idx2_end, idx2_start, idx2
+
+    integer :: rep_size
+
+    double precision :: expd, expdiag
+
+    double precision :: inv_2sigma2
+    double precision :: inv_sigma2
+    double precision :: inv_sigma4
+    double precision :: sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    double precision, allocatable, dimension(:,:) :: hess
+    double precision, allocatable, dimension(:,:) :: partial
+
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs1
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs2
+
+    ! Reset kernel
+    kernel = 0.0d0
+
+    ! Calculate these only once
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma2 = -1.0d0 / (sigma**2)
+    inv_sigma4 = -1.0d0 / (sigma**4)
+    sigma2 = -1.0d0 * sigma**2
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+    allocate(partial(rep_size,maxval(n1)*3))
+    partial = 0.0d0
+    allocate(hess(rep_size, rep_size))
+
+    allocate(sorted_derivs1(rep_size,maxval(n1)*3,maxval(n1),nm1))
+    allocate(sorted_derivs2(rep_size,maxval(n2)*3,maxval(n2),nm2))
+
+    sorted_derivs1 = 0.0d0
+    sorted_derivs2 = 0.0d0
+
+
+    ! Presort the representation derivatives
+    do b = 1, nm1
+        do i2 = 1, n1(b)
+            idx2 = 0
+
+            do j2 = 1, n1(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs1(:,idx2,i2,b) = dx1(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+
+    ! Presort the representation derivatives
+    do b = 1, nm2
+        do i2 = 1, n2(b)
+            idx2 = 0
+
+            do j2 = 1, n2(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs2(:,idx2,i2,b) = dx2(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! write (*,*) "Kernel"
+
+    !$OMP PARALLEL DO private(d) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Molecule 2
+        do b = 1, nm2
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+                        d(:) = x1(a,j1,:)- x2(b,j2,:)
+                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    ! write (*,*) "Kernel grad 1"
+
+    ! Molecule 1
+    !$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Atom in Molecule 1
+        do j1 = 1, n1(a)
+
+            ! Molecule 2
+            do b = 1, nm2
+
+                idx2_start = (sum(n2(:b)) - n2(b))*3 + 1
+                idx2_end = sum(n2(:b))*3
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,j1,:)- x2(b,j2,:)
+                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+
+                        ! Add the dot products to the kernel in one BLAS call
+                        call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs2(:,:n2(b)*3,j2,b), &
+                            & rep_size, d, 1, 1.0d0, kernel(a,idx2_start+nm2:idx2_end+nm2), 1)
+
+                    endif
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    ! write (*,*) "Kernel grad 2"
+
+    ! Molecule 1
+    !$OMP PARALLEL DO PRIVATE(idx1_end,idx1_start,d,expd) schedule(dynamic)
+    do a = 1, nm2
+
+        ! Atom in Molecule 1
+        do j1 = 1, n2(a)
+
+            ! Molecule 2
+            do b = 1, nm1
+
+                idx1_start = (sum(n1(:b)) - n1(b))*3 + 1
+                idx1_end = sum(n1(:b))*3
+
+                !Atom in Molecule2
+                do j2 = 1, n1(b)
+
+                    if (q2(j1,a) == q1(j2,b)) then
+
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x2(a,j1,:)- x1(b,j2,:)
+                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+
+                        ! write(*,*) nm1,idx1_start+nm1,idx1_end+nm1,a
+
+                        ! Add the dot products to the kernel in one BLAS call
+                        call dgemv("T", rep_size, n1(b)*3, expd, sorted_derivs1(:,:n1(b)*3,j2,b), &
+                            & rep_size, d, 1, 1.0d0, kernel(idx1_start+nm1:idx1_end+nm1,a), 1)
+
+                   endif
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    ! write (*,*) "Kernel hessian"
+
+    !$OMP PARALLEL DO PRIVATE(idx1_start,idx2_start,d,expd,expdiag,hess,idx1_end,idx2_end,partial) schedule(dynamic)
+    do a = 1, nm1
+        idx1_start = (sum(n1(:a)) - n1(a))*3 + 1 + nm1
+        idx1_end = sum(n1(:a))*3 + nm1
+
+        do b = 1, nm2
+            idx2_start = (sum(n2(:b)) - n2(b))*3 + 1 + nm2
+            idx2_end = sum(n2(:b))*3 + nm2
+
+            ! Atoms A and B
+            do i1 = 1, n1(a)
+                do i2 = 1, n2(b)
+
+                    if (q1(i1,a) == q2(i2,b)) then
+
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,i1,:)- x2(b,i2,:)
+                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expdiag = sigma2 * expd
+
+                        ! Calculate the outer product of the distance
+                        hess = 0.0d0
+                        call dsyr("U", rep_size, expd, d, 1, hess, rep_size)
+
+                        do k = 1, rep_size
+                           hess(k,k) = hess(k,k) + expdiag
+                        enddo
+
+                        ! Do the first half of the dot product, save in partial(:,:)
+                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! Add the dot product to the kernel in one BLAS call
+                        call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
+                            & partial(:,:n1(a)*3), rep_size, &
+                            & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
+                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(hess)
+    deallocate(sorted_derivs1)
+    deallocate(sorted_derivs2)
+    deallocate(partial)
+    deallocate(d)
+
+end subroutine fgaussian_process_kernel
+
+
+subroutine fsymmetric_gaussian_process_kernel(x1, dx1, q1, n1, nm1, na1, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+
+    double precision, dimension(:,:,:,:,:), intent(in) :: dx1
+
+    integer, dimension(:,:), intent(in) :: q1
+
+    integer, dimension(:), intent(in) :: n1
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: na1
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(na1*3+nm1,na1*3+nm1), intent(out) :: kernel
+
+    integer :: i1, i2, j1, j2, k
+    integer :: xyz2
+    integer :: a, b
+    integer :: idx1_end, idx1_start, idx2_end, idx2_start, idx2
+
+    integer :: rep_size
+
+    double precision :: expd, expdiag
+
+    double precision :: inv_2sigma2
+    double precision :: inv_sigma2
+    double precision :: inv_sigma4
+    double precision :: sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    double precision, allocatable, dimension(:,:) :: hess
+    double precision, allocatable, dimension(:,:) :: partial
+
+    double precision, allocatable, dimension(:,:,:,:) :: sorted_derivs1
+
+    ! Reset kernel
+    kernel(:,:) = 0.0d0
+
+    ! Calculate these only once
+    inv_2sigma2 = -1.0d0 / (2 * sigma**2)
+    inv_sigma2 = -1.0d0 / (sigma**2)
+    inv_sigma4 = -1.0d0 / (sigma**4)
+    sigma2 = -1.0d0 * sigma**2
+    rep_size = size(x1, dim=3)
+
+    allocate(d(rep_size))
+
+    allocate(partial(rep_size,maxval(n1)*3))
+    partial(:,:) = 0.0d0
+
+    allocate(hess(rep_size, rep_size))
+
+    allocate(sorted_derivs1(rep_size,maxval(n1)*3,maxval(n1),nm1))
+    sorted_derivs1(:,:,:,:)= 0.0d0
+
+    ! Presort the representation derivatives
+    do b = 1, nm1
+        do i2 = 1, n1(b)
+            idx2 = 0
+
+            do j2 = 1, n1(b)
+
+                do xyz2 = 1, 3
+                    idx2 = idx2 + 1
+
+                    sorted_derivs1(:,idx2,i2,b) = dx1(b, i2,:,j2,xyz2)
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    ! write (*,*) "Kernel"
+
+    !$OMP PARALLEL DO private(d) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Molecule 2
+        do b = a, nm1
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n1(b)
+
+                    if (q1(j1,a) == q1(j2,b)) then
+                        d(:) = x1(a,j1,:)- x1(b,j2,:)
+                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
+                    endif
+
+                enddo
+            enddo
+
+            if (b > a) then
+                kernel(b, a) = kernel(a, b)
+
+            endif
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    ! write (*,*) "Kernel grad 1"
+
+    ! Molecule 1
+    !$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Atom in Molecule 1
+        do j1 = 1, n1(a)
+
+            ! Molecule 2
+            do b = 1, nm1
+
+                idx2_start = (sum(n1(:b)) - n1(b))*3 + 1
+                idx2_end = sum(n1(:b))*3
+
+                !Atom in Molecule2
+                do j2 = 1, n1(b)
+
+                    if (q1(j1,a) == q1(j2,b)) then
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,j1,:)- x1(b,j2,:)
+                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+
+                        ! Add the dot products to the kernel in one BLAS call
+                        call dgemv("T", rep_size, n1(b)*3, expd, sorted_derivs1(:,:n1(b)*3,j2,b), &
+                            & rep_size, d, 1, 1.0d0, kernel(a,idx2_start+nm1:idx2_end+nm1), 1)
+                    endif
+
+                enddo
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    kernel(nm1:, :nm1) = transpose(kernel(:nm1, nm1:))
+
+    ! write (*,*) "Kernel hessian"
+
+    !$OMP PARALLEL DO PRIVATE(idx1_start,idx2_start,d,expd,expdiag,hess,idx1_end,idx2_end,partial) schedule(dynamic)
+    do a = 1, nm1
+        idx1_start = (sum(n1(:a)) - n1(a))*3 + 1 + nm1
+        idx1_end = sum(n1(:a))*3 + nm1
+
+        do b = a, nm1
+            idx2_start = (sum(n1(:b)) - n1(b))*3 + 1 + nm1
+            idx2_end = sum(n1(:b))*3 + nm1
+
+            ! Atoms A and B
+            do i1 = 1, n1(a)
+                do i2 = 1, n1(b)
+
+                    if (q1(i1,a) == q1(i2,b)) then
+
+                        ! Calculate the distance vector, and some intermediate results
+                        d(:) = x1(a,i1,:)- x1(b,i2,:)
+                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expdiag = sigma2 * expd
+
+                        ! Calculate the outer product of the distance
+                        hess = 0.0d0
+                        call dsyr("U", rep_size, expd, d, 1, hess, rep_size)
+
+                        do k = 1, rep_size
+                           hess(k,k) = hess(k,k) + expdiag
+                        enddo
+
+                        ! Do the first half of the dot product, save in partial(:,:)
+                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! Add the dot product to the kernel in one BLAS call
+                        call dgemm("T", "N", n1(a)*3, n1(b)*3, rep_size, 1.0d0, &
+                            & partial(:,:n1(a)*3), rep_size, &
+                            & sorted_derivs1(:,:n1(b)*3,i2,b), rep_size, 1.0d0, &
+                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+
+                    endif
+
+                enddo
+            enddo
+
+            if (b > a) then
+               kernel(idx2_start:idx2_end,idx1_start:idx1_end) &
+                & = transpose(kernel(idx1_start:idx1_end,idx2_start:idx2_end))
+            endif
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(hess)
+    deallocate(sorted_derivs1)
+    deallocate(partial)
+    deallocate(d)
+
+end subroutine fsymmetric_gaussian_process_kernel
