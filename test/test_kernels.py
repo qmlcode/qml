@@ -23,7 +23,13 @@
 from __future__ import print_function
 
 import sys
+import os
 import numpy as np
+import scipy
+
+import sklearn
+from sklearn.decomposition import KernelPCA
+
 import qml
 from qml.kernels import laplacian_kernel
 from qml.kernels import gaussian_kernel
@@ -32,6 +38,27 @@ from qml.kernels import gaussian_kernel_symmetric
 from qml.kernels import linear_kernel
 from qml.kernels import matern_kernel
 from qml.kernels import sargan_kernel
+from qml.kernels import kpca
+
+def get_energies(filename):
+    """ Returns a dictionary with heats of formation for each xyz-file.
+    """
+
+    f = open(filename, "r")
+    lines = f.readlines()
+    f.close()
+
+    energies = dict()
+
+    for line in lines:
+        tokens = line.split()
+
+        xyz_name = tokens[0]
+        hof = float(tokens[1])
+
+        energies[xyz_name] = hof
+
+    return energies
 
 def test_laplacian_kernel():
 
@@ -136,7 +163,6 @@ def test_matern_kernel():
 
     for metric in ("l1", "l2"):
         for order in (0, 1, 2):
-            print(metric,order)
             matern(metric, order)
 
 def matern(metric, order):
@@ -220,9 +246,52 @@ def sargan(ngamma):
     # Check for symmetry:
     assert np.allclose(Ksymm, Ksymm.T), "Error in Sargan kernel"
 
+
+def array_nan_close(a, b):
+    # Compares arrays, ignoring nans
+
+    m = np.isfinite(a) & np.isfinite(b)
+    return np.allclose(a[m], b[m], atol=1e-8, rtol=0.0)
+
+
+def test_kpca():
+
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
+    # Parse file containing PBE0/def2-TZVP heats of formation and xyz filenam
+    data = get_energies(test_dir + "/data/hof_qm7.txt")
+
+    # Generate a list of qml.data.Compound() objects
+    mols = []
+
+    keys = sorted(data.keys())
+
+    np.random.seed(666)
+    np.random.shuffle(keys)
+
+    n_mols = 100
+
+    for xyz_file in keys[:n_mols]:
+
+        mol = qml.data.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        mol.properties = data[xyz_file]
+        mol.generate_bob()
+        mols.append(mol)
+
+    X = np.array([mol.representation for mol in mols])
+    K = laplacian_kernel(X, X, 2e5)
+
+    pcas_qml = kpca(K, n=10)
+    pcas_sklearn = KernelPCA(10, eigen_solver="dense", kernel='precomputed').fit_transform(K)
+
+    assert array_nan_close(np.abs(pcas_sklearn.T), np.abs(pcas_qml)), "Error in Kernel PCA decomposition."
+
+
 if __name__ == "__main__":
+
     test_laplacian_kernel()
     test_gaussian_kernel()
     test_linear_kernel()
     test_matern_kernel()
     test_sargan_kernel()
+    test_kpca()
