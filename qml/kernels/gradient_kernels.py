@@ -233,6 +233,37 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
 
 def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
+    
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\frac{\\part}{\\part x}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
+
+        Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+        For instance atom-centered symmetry functions could be used here.
+
+        The kernel has the dimensions number of nuclear kernel gradients times total number of molecules.
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
+        :type X2: numpy array
+        
+        :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
+        :type dX2: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
 
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
     N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
@@ -277,6 +308,41 @@ def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
 
 def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
+    
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+            :math:`K_{Ij} = \\frac{\\part^2}{\\part x_i\\part x_j}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
+
+        Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+        For instance atom-centered symmetry functions could be used here.
+
+        This Hessian-kernel corresponds to the "gradient-domain machine learning" (GDML) approach.
+        This means that the surface is only trained on its derivatives. 
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
+        :type X2: numpy array
+        
+        :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
+        :type dX1: numpy array
+        
+        :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
+        :type dX2: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
 
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
     N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
@@ -324,6 +390,34 @@ def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
 
 def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
+    
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+            :math:`K_{Ij} = \\frac{\\part^2}{\\part x_i\\part x_j}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
+
+        Where :math: X_{I}` and :math:`X_{J}` are representation vectors of the atomic environments.
+        For instance atom-centered symmetry functions could be used here.
+
+        This symmetric Hessian-kernel corresponds to the "gradient-domain machine learning" (GDML) approach.
+        This means that the surface is only trained on its derivatives. 
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        
+        :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
+        :type dX1: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
 
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
@@ -358,6 +452,38 @@ def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
 
 
 def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
+    
+    """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
+
+        This kernel corresponds to a Gaussian process regression (GPR) approach.
+        The kernel has four blocks, consisting of the 0'th, 1st and 2nd derivatives.
+
+        The size is (the number of gradients plus the number of molecules) squared.
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
+        :type X2: numpy array
+        
+        :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
+        :type dX1: numpy array
+        
+        :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
+        :type dX2: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
 
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
     N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
@@ -404,6 +530,32 @@ def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
 
 def get_symmetric_gp_kernel(X1, dX1, Q1, SIGMA):
+
+    """
+        This symmetric kernel corresponds to a Gaussian process regression (GPR) approach.
+        The kernel has four blocks, consisting of the 0'th, 1st and 2nd derivatives.
+
+        The size is (the number of gradients plus the number of molecules) squared.
+
+        K is calculated analytically using an OpenMP parallel Fortran routine.
+
+        :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
+        :type X1: numpy array
+        
+        :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
+        :type dX1: numpy array
+        
+        :param Q1: List of lists containing the nuclear charges for each molecule.
+        :type Q1: list
+        :param Q2: List of lists containing the nuclear charges for each molecule.
+        :type Q2: list
+
+        :param SIGMA: Gaussian kernel width.
+        :type SIGMA: float
+
+        :return: 2D matrix of kernel elements shape=(N1, N2),
+        :rtype: numpy array
+    """
 
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
