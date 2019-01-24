@@ -140,7 +140,7 @@ def test_local_kernel():
 
                         d = np.linalg.norm(X[i,n1] - Xs[j,n2])
                         gauss = np.exp(-d**2 / (2 * SIGMA**2))
-                        K_numm[i, j] += gauss
+                        K_numm[j, i] += gauss
 
 
     assert np.allclose(K, K_numm), "Error in get_local_kernel()"
@@ -177,7 +177,7 @@ def test_atomic_local_kernel():
                     if (Q[i][n1] == Qs[j][n2]):
                         d = np.linalg.norm(X[i,n1] - Xs[j,n2])
                         gauss = np.exp(-d**2 / (2 * SIGMA**2))
-                        K_numm[idx, j] += gauss
+                        K_numm[j, idx] += gauss
 
             idx += 1
 
@@ -201,8 +201,8 @@ def test_atomic_local_gradient():
     Qs  = Qall[-TEST:]
     
     Kt_gradient = get_atomic_local_gradient_kernel(X, X, dX, Q, Q, SIGMA)
-   
-    idx2 = 0
+  
+    idx1 = 0
 
     K_numm = np.zeros((4, Kt_gradient.shape[0], Kt_gradient.shape[1]))
 
@@ -210,7 +210,7 @@ def test_atomic_local_gradient():
         for n1 in range(N[i]):
 
 
-            idx1 = 0
+            idx2 = 0
             for j in range(TRAINING):
                 for n2 in range(N[j]):
                     for xyz in range(3):
@@ -218,11 +218,11 @@ def test_atomic_local_gradient():
                         for n_diff in range(N[j]):
                             for k in range(4):
                                 if (Q[i][n1] == Q[j][n_diff]):
-                                    d = np.linalg.norm(X[i,n1] - dispX[k,idx1,n_diff])
+                                    d = np.linalg.norm(X[i,n1] - dispX[k,idx2,n_diff])
                                     gauss = np.exp(-d**2 / (2 * SIGMA**2))
-                                    K_numm[k,idx1,idx2] += gauss 
-                        idx1 += 1
-            idx2 += 1
+                                    K_numm[k,idx2,idx1] += gauss 
+                        idx2 += 1
+            idx1 += 1
 
     K_numm = -(-K_numm[0] + 8*K_numm[1] - 8*K_numm[2] + K_numm[3]) / (12 * DX)
 
@@ -326,7 +326,7 @@ def test_gdml_kernel():
                                         gauss4 = np.exp(-d**2 / (2 * SIGMA**2))
                                    
                                         gauss = (gauss1 - gauss2 - gauss3 + gauss4 )/ (4*DX*DX)
-                                        K_numm[idx1,idx2] += gauss
+                                        K_numm[idx2,idx1] += gauss
 
                                 idx2 += 1
 
@@ -377,17 +377,17 @@ def test_gp_kernel():
     K = get_gp_kernel(X, Xs, dX, dXs, Q, Qs, SIGMA)
     
     K_uu = get_local_kernel(X, Xs, Q, Qs, SIGMA)
-    assert np.allclose(K[:TRAINING,:TEST], K_uu), "Error: Fail in Gaussian Process kernel K_uu"
+    assert np.allclose(K[:TEST,:TRAINING], K_uu), "Error: Fail in Gaussian Process kernel K_uu"
 
     K_ug = get_local_gradient_kernel(X, Xs, dXs,  Q, Qs, SIGMA)
-    assert np.allclose(K[:TRAINING,TEST:], K_ug.T), "Error: Fail in Gaussian Process kernel K_ug"
+    assert np.allclose(K[TEST:,:TRAINING], K_ug), "Error: Fail in Gaussian Process kernel K_ug"
 
     K_gu = get_local_gradient_kernel(Xs, X, dX,  Qs, Q, SIGMA)
-    assert np.allclose(K[TRAINING:,:TEST], K_gu), "Error: Fail in Gaussian Process kernel K_gu"
+    assert np.allclose(K[:TEST,TRAINING:], K_gu.T), "Error: Fail in Gaussian Process kernel K_gu"
 
     K_gg = get_gdml_kernel(X, Xs, dX, dXs,  Q, Qs, SIGMA)
 
-    assert np.allclose(K[TRAINING:,TEST:], K_gg), "Error: Fail in Gaussian Process kernel K_gg"
+    assert np.allclose(K[TEST:,TRAINING:], K_gg), "Error: Fail in Gaussian Process kernel K_gg"
 
     K1_symm = get_gp_kernel(X, X, dX, dX, Q, Q, SIGMA)
     K2_symm = get_symmetric_gp_kernel(X, dX, Q, SIGMA)
@@ -396,10 +396,10 @@ def test_gp_kernel():
 
 if __name__ == "__main__":
 
-    test_local_kernel()
-    test_atomic_local_kernel()
-    test_atomic_local_gradient()
-    test_local_gradient()
-    test_gdml_kernel()
-    test_symmetric_gdml_kernel()
+    # test_local_kernel()
+    # test_atomic_local_kernel()
+    # test_atomic_local_gradient()
+    # test_local_gradient()
+    # test_gdml_kernel()
+    # test_symmetric_gdml_kernel()
     test_gp_kernel()

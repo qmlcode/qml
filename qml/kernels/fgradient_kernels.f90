@@ -39,7 +39,7 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
     double precision, intent(in) :: sigma
 
-    double precision, dimension(nm1,nm2), intent(out) :: kernel
+    double precision, dimension(nm2,nm1), intent(out) :: kernel
 
     integer :: j1, j2
     integer :: a, b
@@ -69,7 +69,7 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
                     if (q1(j1,a) == q2(j2,b)) then
 
                        d(:) = x1(a,j1,:)- x2(b,j2,:)
-                       kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_sigma2)
+                       kernel(b, a) = kernel(b, a) + exp((norm2(d)**2) * inv_sigma2)
 
                     endif
 
@@ -104,7 +104,7 @@ subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, ke
 
     double precision, intent(in) :: sigma
 
-    double precision, dimension(na1,nm2), intent(out) :: kernel
+    double precision, dimension(nm2,na1), intent(out) :: kernel
 
     integer :: j1, j2
     integer :: a, b
@@ -140,7 +140,7 @@ subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, ke
                     if (q1(j1,a) == q2(j2,b)) then
 
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        kernel(idx1, b) = kernel(idx1, b) + exp((norm2(d)**2) * inv_sigma2)
+                        kernel(b,idx1) = kernel(b,idx1) + exp((norm2(d)**2) * inv_sigma2)
 
                     endif
 
@@ -495,7 +495,7 @@ subroutine fgdml_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, si
 
     double precision, intent(in) :: sigma
 
-    double precision, dimension(na1*3,na2*3), intent(out) :: kernel
+    double precision, dimension(na2*3,na1*3), intent(out) :: kernel
 
     integer :: i1, i2, j2, k
     integer :: xyz2
@@ -600,16 +600,27 @@ subroutine fgdml_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, si
                            hess(k,k) = hess(k,k) + expdiag
                         enddo
 
+                        ! ! Do the first half of the dot product, save in partial(:,:)
+                        ! call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                        !     & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                        !     & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! ! Add the dot product to the kernel in one BLAS call
+                        ! call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
+                        !     & partial(:,:n1(a)*3), rep_size, &
+                        !     & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
+                        !     & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+
                         ! Do the first half of the dot product, save in partial(:,:)
-                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
-                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
-                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+                        call dsymm("L", "U", rep_size, n2(b)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, &
+                            & 0.0d0, partial(:,:n2(b)*3), rep_size)
 
                         ! Add the dot product to the kernel in one BLAS call
-                        call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
-                            & partial(:,:n1(a)*3), rep_size, &
-                            & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
-                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+                        call dgemm("T", "N", n2(b)*3, n1(a)*3, rep_size, 1.0d0, &
+                            & partial(:,:n2(b)*3), rep_size, &
+                            & sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, 1.0d0, &
+                            & kernel(idx2_start:idx2_end,idx1_start:idx1_end), n2(b)*3, 1)
 
                     endif
 
@@ -783,7 +794,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
     double precision, intent(in) :: sigma
 
-    double precision, dimension(na1*3+nm1,na2*3+nm2), intent(out) :: kernel
+    double precision, dimension(na2*3+nm2,na1*3+nm1), intent(out) :: kernel
 
     integer :: i1, i2, j1, j2, k
     integer :: xyz2
@@ -880,7 +891,8 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
                     if (q1(j1,a) == q2(j2,b)) then
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
+                        !kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
+                        kernel(b, a) = kernel(b, a) + exp((norm2(d)**2) * inv_2sigma2)
                     endif
 
                 enddo
@@ -915,7 +927,8 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
                         ! Add the dot products to the kernel in one BLAS call
                         call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs2(:,:n2(b)*3,j2,b), &
-                            & rep_size, d, 1, 1.0d0, kernel(a,idx2_start+nm2:idx2_end+nm2), 1)
+                            ! & rep_size, d, 1, 1.0d0, kernel(a,idx2_start+nm2:idx2_end+nm2), 1)
+                            & rep_size, d, 1, 1.0d0, kernel(idx2_start+nm2:idx2_end+nm2,a), 1)
 
                     endif
 
@@ -953,7 +966,8 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
                         ! Add the dot products to the kernel in one BLAS call
                         call dgemv("T", rep_size, n1(b)*3, expd, sorted_derivs1(:,:n1(b)*3,j2,b), &
-                            & rep_size, d, 1, 1.0d0, kernel(idx1_start+nm1:idx1_end+nm1,a), 1)
+                            ! & rep_size, d, 1, 1.0d0, kernel(idx1_start+nm1:idx1_end+nm1,a), 1)
+                            & rep_size, d, 1, 1.0d0, kernel(a,idx1_start+nm1:idx1_end+nm1), 1)
 
                    endif
 
@@ -992,17 +1006,28 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
                         do k = 1, rep_size
                            hess(k,k) = hess(k,k) + expdiag
                         enddo
+                        
+                        ! ! Do the first half of the dot product, save in partial(:,:)
+                        ! call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
+                        !     & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
+                        !     & 0.0d0, partial(:,:n1(a)*3), rep_size)
+
+                        ! ! Add the dot product to the kernel in one BLAS call
+                        ! call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
+                        !     & partial(:,:n1(a)*3), rep_size, &
+                        !     & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
+                        !     & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
 
                         ! Do the first half of the dot product, save in partial(:,:)
-                        call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
-                            & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
-                            & 0.0d0, partial(:,:n1(a)*3), rep_size)
+                        call dsymm("L", "U", rep_size, n2(b)*3, 1.0d0, hess(:,:), &
+                            & rep_size, sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, &
+                            & 0.0d0, partial(:,:n2(b)*3), rep_size)
 
                         ! Add the dot product to the kernel in one BLAS call
-                        call dgemm("T", "N", n1(a)*3, n2(b)*3, rep_size, 1.0d0, &
-                            & partial(:,:n1(a)*3), rep_size, &
-                            & sorted_derivs2(:,:n2(b)*3,i2,b), rep_size, 1.0d0, &
-                            & kernel(idx1_start:idx1_end,idx2_start:idx2_end), n1(a)*3, 1)
+                        call dgemm("T", "N", n2(b)*3, n1(a)*3, rep_size, 1.0d0, &
+                            & partial(:,:n2(b)*3), rep_size, &
+                            & sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, 1.0d0, &
+                            & kernel(idx2_start:idx2_end,idx1_start:idx1_end), n2(b)*3, 1)
 
                     endif
 
