@@ -1,6 +1,24 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
+# MIT License
+#
+# Copyright (c) 2017-2018 Anders Steen Christensen, Lars Andersen Bratholm
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 from copy import deepcopy
 
@@ -10,7 +28,6 @@ import csv
 
 import qml
 from qml.representations import generate_acsf
-from qml.math import cho_solve
 
 from qml.kernels import get_local_kernel
 from qml.kernels import get_atomic_local_kernel
@@ -24,7 +41,6 @@ from qml.kernels import get_symmetric_gp_kernel
 np.set_printoptions(linewidth=666, edgeitems=10)
 
 CSV_FILE = "data/amons_small.csv"
-# CSV_FILE = "data/molecule_300.csv"
 
 TRAINING = 7
 TEST     = 5
@@ -49,7 +65,6 @@ def csv_to_molecular_reps(csv_filename):
     with open(csv_filename, 'r') as csvfile:
 
         df = csv.reader(csvfile, delimiter=";", quotechar='#')
-        # df = csv.reader(csvfile)
 
         for i, row in enumerate(df):
 
@@ -166,9 +181,6 @@ def test_atomic_local_kernel():
 
             idx += 1
 
-    # print(Q)
-    # print(Qs)
-    # print(K)
     assert np.allclose(K, K_numm), "Error in get_local_kernel()"
 
 
@@ -320,9 +332,6 @@ def test_gdml_kernel():
 
                 idx1 += 1
 
-    # print(Kt_gdml)
-    # print(K_numm)
-
     # Numerical hessian has quite large error, probably around 1e-7, so setting atol to 1e-6.
     assert np.allclose(Kt_gdml, K_numm, atol=1e-6), "Error in get_gdml_kernel()"
 
@@ -367,26 +376,17 @@ def test_gp_kernel():
 
     K = get_gp_kernel(X, Xs, dX, dXs, Q, Qs, SIGMA)
     
-    # print(K)
-    
     K_uu = get_local_kernel(X, Xs, Q, Qs, SIGMA)
     assert np.allclose(K[:TRAINING,:TEST], K_uu), "Error: Fail in Gaussian Process kernel K_uu"
 
     K_ug = get_local_gradient_kernel(X, Xs, dXs,  Q, Qs, SIGMA)
-    # print(K_ug.T)
-    # print(K[:TRAINING,TEST:])
     assert np.allclose(K[:TRAINING,TEST:], K_ug.T), "Error: Fail in Gaussian Process kernel K_ug"
 
     K_gu = get_local_gradient_kernel(Xs, X, dX,  Qs, Q, SIGMA)
-    # print(K_gu.T)
-    # print(K[TRAINING:,:TEST].T)
     assert np.allclose(K[TRAINING:,:TEST], K_gu), "Error: Fail in Gaussian Process kernel K_gu"
 
     K_gg = get_gdml_kernel(X, Xs, dX, dXs,  Q, Qs, SIGMA)
 
-    # print(K_gg)
-    # print(K[TRAINING:,TEST:])
-    # print(K[TRAINING:,TEST:] - K_gg)
     assert np.allclose(K[TRAINING:,TEST:], K_gg), "Error: Fail in Gaussian Process kernel K_gg"
 
     K1_symm = get_gp_kernel(X, X, dX, dX, Q, Q, SIGMA)
