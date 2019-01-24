@@ -7,6 +7,8 @@ import ast
 
 import qml
 from qml.math import cho_solve
+from qml.math import svd_solve
+from qml.math import qrlq_solve
 
 from qml.representations import generate_fchl_acsf
 
@@ -20,6 +22,9 @@ from qml.kernels import get_local_gradient_kernel
 from qml.kernels import get_gp_kernel
 from qml.kernels import get_symmetric_gp_kernel
 
+import scipy
+import scipy.stats
+
 import ast
 
 import os
@@ -29,11 +34,6 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 np.set_printoptions(linewidth=999, edgeitems=10, suppress=True)
-
-import scipy
-import scipy.stats
-from scipy.linalg import lstsq
-
 
 import csv
 
@@ -137,7 +137,7 @@ def test_fchl_acsf_operator():
     Y = np.concatenate((E, F.flatten()))
 
     print("Alphas operator ...")
-    alpha, residuals, singular_values, rank = lstsq(C, Y, cond=1e-12, lapack_driver="gelsd")
+    alpha = svd_solve(C, Y, rcond=1e-12)
 
     eYt = np.dot(Kte, alpha)
     eYs = np.dot(Kse, alpha)
