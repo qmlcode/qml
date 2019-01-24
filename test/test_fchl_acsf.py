@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Silvia Amabilino, Lars Andersen Bratholm
+# Copyright (c) 2019 Anders S. Christensen
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,9 +34,6 @@ from qml.representations import generate_fchl_acsf
 
 REP_PARAMS = dict()
 REP_PARAMS["elements"] = [1, 6, 7]
-REP_PARAMS["nRs2"] = 4
-REP_PARAMS["nRs3"] = 4
-REP_PARAMS["nFourier"]  = 1
 
 DX = 1e-5
 
@@ -97,7 +94,7 @@ def test_fchl_acsf():
     anal_grad = grad[:,:,:,:]
     num_grad = get_acsf_numgrad(mol, DX)
 
-    assert np.allclose(anal_grad, num_grad), "Error in FCHL-ACSF representation implementation"
+    assert np.allclose(anal_grad, num_grad), "Error in FCHL-ACSF gradient implementation"
 
 
 if __name__ == "__main__":

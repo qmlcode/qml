@@ -702,7 +702,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
     distance_matrix = 0.0d0
 
 
-    !$OMP PARALLEL DO PRIVATE(rij)
+    !  !$OMP PARALLEL DO PRIVATE(rij)
     do i = 1, natoms
         do j = i+1, natoms
             rij = norm2(coordinates(j,:) - coordinates(i,:))
@@ -710,7 +710,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
             distance_matrix(j, i) = rij
         enddo
     enddo
-    !$OMP END PARALLEL DO
+    ! !$OMP END PARALLEL DO
 
     ! number of basis functions in the two body term
     nbasis2 = size(Rs2)
@@ -1033,7 +1033,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                         &(sigma**4 * rij**4 * exp_s2)) * exp_ln / (Rs2(:) * sigma  * sqrt(pi) * 2) &
                         &- exp_ln  * eta2 * dx / (Rs2(:) * sigma**3 *sqrt(pi) * rij**4 * exp_s2 * 2.0d0)
 
-                    dscal = 4 * dx / rij**(two_body_decay+2)
+                    dscal = two_body_decay * dx / rij**(two_body_decay+2.0d0)
                     ddecay = dx * 0.5d0 * pi * sin(pi*rij * invcut) * invcut * invrij
 
                     part(:) = part(:) * scaling * rdecay(i,j) + radial_base(:) * dscal * rdecay(i,j) &
