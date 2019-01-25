@@ -37,7 +37,7 @@ np.set_printoptions(linewidth=999, edgeitems=10, suppress=True)
 
 import csv
 
-TRAINING = 11
+TRAINING = 7
 TEST     = 5
 VALID    = 3
 
@@ -50,11 +50,12 @@ TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 DF_TRAIN = pd.read_csv(TEST_DIR+"/data/force_train.csv", delimiter=";").head(TRAINING)
 DF_VALID = pd.read_csv(TEST_DIR+"/data/force_valid.csv", delimiter=";").head(VALID)
 DF_TEST  = pd.read_csv(TEST_DIR+"/data/force_test.csv", delimiter=";").head(TEST)
+print(TRAINING, TEST, VALID)
 
 SIGMA = 21.2
 
-LAMBDA_ENERGY = 1e-8
-LAMBDA_FORCE = 1e-8
+LAMBDA_ENERGY = 1e-6
+LAMBDA_FORCE = 1e-6
 
 np.random.seed(666)
 
@@ -67,31 +68,17 @@ def get_reps(df):
     disp_x = []
     q = []
 
-    # x_atoms = max([len(df["atomtypes"][i]) for i in range(len(df))])
     max_atoms = 27
 
     for i in range(len(df)):
 
-        # print(i, "===========")
         coordinates = np.array(ast.literal_eval(df["coordinates"][i]))
-        #print(coordinates)
-
         nuclear_charges = np.array(ast.literal_eval(df["nuclear_charges"][i]), dtype=np.int32)
-        #print(nuclear_charges)
-
         atomtypes = df["atomtypes"][i]
-        #print(atomtypes)
 
         force = np.array(ast.literal_eval(df["forces"][i]))
-        #print(force)
         energy = float(df["atomization_energy"][i])
-        #print(energy)
-        #print("===========")
 
-        ### BEGIN ACSF ###
-
-        # (x1, dx1) = generate_acsf(nuclear_charges, coordinates,
-        #         gradients=True, pad=max_atoms, **rep_params)
         (x1, dx1) = generate_fchl_acsf(nuclear_charges, coordinates,
                gradients=True, pad=max_atoms)
 
@@ -123,21 +110,22 @@ def test_fchl_acsf_operator():
     Fs = np.concatenate(Fs)
     Fv = np.concatenate(Fv)
 
+    Y = np.concatenate((E, F.flatten()))
+
     print("Kernels ...")
-    Kte = get_atomic_local_kernel(X,  X, Q,  Q,  SIGMA)
+    Kte = get_atomic_local_kernel(X, X,  Q, Q,  SIGMA)
     Kse = get_atomic_local_kernel(X, Xs, Q, Qs, SIGMA)
     Kve = get_atomic_local_kernel(X, Xv, Q, Qv, SIGMA)
 
-    Kt = get_atomic_local_gradient_kernel(X,  X, dX,  Q,  Q, SIGMA)
+    Kt = get_atomic_local_gradient_kernel(X, X,  dX,  Q, Q,  SIGMA)
     Ks = get_atomic_local_gradient_kernel(X, Xs, dXs, Q, Qs, SIGMA)
     Kv = get_atomic_local_gradient_kernel(X, Xv, dXv, Q, Qv, SIGMA)
 
     C = np.concatenate((Kte, Kt))
 
-    Y = np.concatenate((E, F.flatten()))
-
     print("Alphas operator ...")
-    alpha = svd_solve(C, Y, rcond=1e-12)
+    alpha = svd_solve(C, Y, rcond=1e-11)
+    # alpha = qrlq_solve(C, Y)
 
     eYt = np.dot(Kte, alpha)
     eYs = np.dot(Kse, alpha)
@@ -176,7 +164,7 @@ def test_fchl_acsf_operator():
     print("VALID    FORCE    MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
             (np.mean(np.abs(Fv.flatten() - fYv.flatten())), slope, intercept, r_value ))
 
-    
+
 def test_fchl_acsf_gaussian_process():
 
     print("Representations ...")
@@ -201,7 +189,7 @@ def test_fchl_acsf_gaussian_process():
 
     for i in range(TRAINING,C.shape[0]):
         C[i,i] += LAMBDA_FORCE
-    
+
     Y = np.concatenate((E, F.flatten()))
 
     alpha = cho_solve(C, Y)
@@ -217,7 +205,7 @@ def test_fchl_acsf_gaussian_process():
     fYt = Yt[TRAINING:]
     fYs = Ys[TEST:]
     fYv = Yv[VALID:]
-   
+
     print("===============================================================================================")
     print("====  GAUSSIAN PROCESS, FORCE + ENERGY  =======================================================")
     print("===============================================================================================")

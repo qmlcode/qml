@@ -35,10 +35,8 @@ from qml.representations import generate_fchl_acsf
 REP_PARAMS = dict()
 REP_PARAMS["elements"] = [1, 6, 7]
 
-DX = 1e-5
 
-
-def get_acsf_numgrad(mol, dx):
+def get_acsf_numgrad(mol, dx=1e-5):
 
     true_coords = deepcopy(mol.coordinates)
 
@@ -70,6 +68,10 @@ def get_acsf_numgrad(mol, dx):
 
     gradient /= (12 * dx)
 
+    gradient = np.swapaxes(gradient, 0, 1 )
+    gradient = np.swapaxes(gradient, 2, 0 )
+    gradient = np.swapaxes(gradient, 3, 1)
+
     return gradient
 
     
@@ -79,7 +81,7 @@ def test_fchl_acsf():
 
     mol = Compound(xyz=test_dir+"/qm7/0101.xyz")
 
-    (repa, grad) = generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, 
+    (repa, anal_grad) = generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, 
         gradients=True, **REP_PARAMS)
     
     repb = generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, 
@@ -87,12 +89,7 @@ def test_fchl_acsf():
 
     assert np.allclose(repa, repb), "Error in FCHL-ACSF representation implementation"
 
-    grad = np.swapaxes(grad, 3, 1)
-    grad = np.swapaxes(grad, 2, 0 )
-    grad = np.swapaxes(grad, 0, 1 )
-    
-    anal_grad = grad[:,:,:,:]
-    num_grad = get_acsf_numgrad(mol, DX)
+    num_grad = get_acsf_numgrad(mol)
 
     assert np.allclose(anal_grad, num_grad), "Error in FCHL-ACSF gradient implementation"
 

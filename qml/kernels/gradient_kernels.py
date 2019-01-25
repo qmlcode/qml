@@ -20,7 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import ctypes
+
 import os
+
 import numpy as np
 
 from .fgradient_kernels import flocal_kernel
@@ -31,6 +34,33 @@ from .fgradient_kernels import fgdml_kernel
 from .fgradient_kernels import fsymmetric_gdml_kernel
 from .fgradient_kernels import fgaussian_process_kernel
 from .fgradient_kernels import fsymmetric_gaussian_process_kernel
+
+
+def mkl_set_num_threads(cores):
+
+    if cores is None:
+        return
+
+    try:
+        mkl_rt = ctypes.CDLL('libmkl_rt.so')
+        mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(cores)))
+
+    except:
+
+        pass
+
+
+def mkl_get_num_threads():
+
+    try:
+        mkl_rt = ctypes.CDLL('libmkl_rt.so')
+        mkl_num_threads = mkl_rt.mkl_get_max_threads()
+
+        return mkl_num_threads
+
+    except:
+
+        return None
 
 
 def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
@@ -49,7 +79,7 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -61,7 +91,7 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
         :return: 2D matrix of kernel elements shape=(N1, N2),
         :rtype: numpy array
     """
-    
+
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
     N2 = np.array([len(Q) for Q in Q2], dtype=np.int32)
 
@@ -70,7 +100,7 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
@@ -78,13 +108,13 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
         Q2_input[:len(q),i] = q
 
     K = flocal_kernel(
-            X1, 
+            X1,
             X2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
             SIGMA
     )
@@ -93,7 +123,7 @@ def get_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
 
 def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
             :math:`K_{Ij} = \\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
@@ -112,7 +142,7 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -133,7 +163,7 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
@@ -141,13 +171,13 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
         Q2_input[:len(q),i] = q
 
     K = fatomic_local_kernel(
-            X1, 
-            X2, 
+            X1,
+            X2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
             np.sum(N1),
             SIGMA
@@ -157,7 +187,7 @@ def get_atomic_local_kernel(X1, X2, Q1, Q2, SIGMA):
 
 
 def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
             :math:`K_{Ij} = \\frac{\\part}{\\part x}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
@@ -173,10 +203,10 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
         :type dX2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -194,10 +224,10 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
     assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
     assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
-    
+
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
@@ -205,35 +235,32 @@ def get_atomic_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
         Q2_input[:len(q),i] = q
 
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
-    
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
+
     K = fatomic_local_gradient_kernel(
-            X1, 
-            X2, 
+            X1,
+            X2,
             dX2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
             np.sum(N1),
             np.sum(N2)*3,
             SIGMA
     )
 
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K
 
 
 def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
             :math:`K_{ij} = \\frac{\\part}{\\part x}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
@@ -249,10 +276,10 @@ def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
         :type dX2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -270,45 +297,42 @@ def get_local_gradient_kernel(X1, X2, dX2, Q1, Q2, SIGMA):
 
     assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
     assert N2.shape[0] == X2.shape[0], "Error: List of charges does not match shape of representations"
-    
+
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
     for i, q in enumerate(Q2):
         Q2_input[:len(q),i] = q
-   
+
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
-    
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
+
     K = flocal_gradient_kernel(
-            X1, 
-            X2, 
+            X1,
+            X2,
             dX2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
             np.sum(N2)*3,
             SIGMA
     )
 
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K
 
 
 def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
             :math:`K_{Ij} = \\frac{\\part^2}{\\part x_i\\part x_j}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
@@ -317,7 +341,7 @@ def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
         For instance atom-centered symmetry functions could be used here.
 
         This Hessian-kernel corresponds to the "gradient-domain machine learning" (GDML) approach.
-        This means that the surface is only trained on its derivatives. 
+        This means that the surface is only trained on its derivatives.
 
         K is calculated analytically using an OpenMP parallel Fortran routine.
 
@@ -325,13 +349,13 @@ def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
         :type dX1: numpy array
-        
+
         :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
         :type dX2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -352,45 +376,42 @@ def get_gdml_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
     for i, q in enumerate(Q2):
         Q2_input[:len(q),i] = q
-   
-   
+
+
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
 
     K = fgdml_kernel(
-            X1, 
-            X2, 
+            X1,
+            X2,
             dX1,
             dX2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
-            np.sum(N1),         # mol2.natoms,
-            np.sum(N2),         # mol1.natoms,
+            np.sum(N1),
+            np.sum(N2),
             SIGMA
     )
-    
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K
 
 
 def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
             :math:`K_{Ij} = \\frac{\\part^2}{\\part x_i\\part x_j}\\sum_{J\\in j}\\exp \\big( -\\frac{\\|X_I - X_J\\|_2^2}{2\\sigma^2} \\big)`
@@ -399,16 +420,16 @@ def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
         For instance atom-centered symmetry functions could be used here.
 
         This symmetric Hessian-kernel corresponds to the "gradient-domain machine learning" (GDML) approach.
-        This means that the surface is only trained on its derivatives. 
+        This means that the surface is only trained on its derivatives.
 
         K is calculated analytically using an OpenMP parallel Fortran routine.
 
         :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
         :type X1: numpy array
-        
+
         :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
         :type dX1: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
 
@@ -422,37 +443,34 @@ def get_symmetric_gdml_kernel(X1, dX1, Q1, SIGMA):
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
     assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
-    
+
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
-   
+
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
 
     K = fsymmetric_gdml_kernel(
-            X1, 
+            X1,
             dX1,
             Q1_input,
             N1,
-            len(N1), 
+            len(N1),
             np.sum(N1),
             SIGMA
     )
-    
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K
 
 
 def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
-    
+
     """ Calculates the Gaussian kernel matrix K with the local decomposition where :math:`K_{ij}`:
 
         This kernel corresponds to a Gaussian process regression (GPR) approach.
@@ -466,13 +484,13 @@ def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
         :type X1: numpy array
         :param X2: Array of representations - shape=(N2, rep_size, max_atoms).
         :type X2: numpy array
-        
+
         :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
         :type dX1: numpy array
-        
+
         :param dX2: Array of representation derivatives - shape=(N2, rep_size, 3, rep_size, max_atoms).
         :type dX2: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -493,38 +511,35 @@ def get_gp_kernel(X1, X2, dX1, dX2, Q1, Q2, SIGMA):
 
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
     Q2_input = np.zeros((max(N2), X2.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
     for i, q in enumerate(Q2):
         Q2_input[:len(q),i] = q
-   
+
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
 
     K = fgaussian_process_kernel(
-            X1, 
-            X2, 
+            X1,
+            X2,
             dX1,
             dX2,
             Q1_input,
             Q2_input,
             N1,
             N2,
-            len(N1), 
+            len(N1),
             len(N2),
             np.sum(N1),
             np.sum(N2),
             SIGMA
     )
-    
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K
 
@@ -541,10 +556,10 @@ def get_symmetric_gp_kernel(X1, dX1, Q1, SIGMA):
 
         :param X1: Array of representations - shape=(N1, rep_size, max_atoms).
         :type X1: numpy array
-        
+
         :param dX1: Array of representation derivatives - shape=(N1, rep_size, 3, rep_size, max_atoms).
         :type dX1: numpy array
-        
+
         :param Q1: List of lists containing the nuclear charges for each molecule.
         :type Q1: list
         :param Q2: List of lists containing the nuclear charges for each molecule.
@@ -560,30 +575,27 @@ def get_symmetric_gp_kernel(X1, dX1, Q1, SIGMA):
     N1 = np.array([len(Q) for Q in Q1], dtype=np.int32)
 
     assert N1.shape[0] == X1.shape[0], "Error: List of charges does not match shape of representations"
-   
+
     Q1_input = np.zeros((max(N1), X1.shape[0]), dtype=np.int32)
-    
+
     for i, q in enumerate(Q1):
         Q1_input[:len(q),i] = q
 
     # This kernel must run with MKL_NUM_THREADS=1
-    original_mkl_threads = os.environ.get('MKL_NUM_THREADS')
-    os.environ["MKL_NUM_THREADS"] = "1"
+    original_mkl_threads = mkl_get_num_threads()
+    mkl_set_num_threads(1)
 
     K = fsymmetric_gaussian_process_kernel(
-            X1, 
+            X1,
             dX1,
             Q1_input,
             N1,
-            len(N1), 
-            np.sum(N1),         # mol2.natoms,
+            len(N1),
+            np.sum(N1),
             SIGMA
     )
-    
-    # Reset MKL_NUM_THREADS back to its original value 
-    if original_mkl_threads is None:
-        del os.environ["MKL_NUM_THREADS"]
-    else:
-        os.environ["MKL_NUM_THREADS"] = original_mkl_threads
+
+    # Reset MKL_NUM_THREADS back to its original value
+    mkl_set_num_threads(original_mkl_threads)
 
     return K

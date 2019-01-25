@@ -69,13 +69,13 @@ def csv_to_molecular_reps(csv_filename):
         for i, row in enumerate(df):
 
             if i > TEST+TRAINING: break
-            
+
             coordinates = np.array(ast.literal_eval(row[2]))
             nuclear_charges = ast.literal_eval(row[5])
             atomtypes = ast.literal_eval(row[1])
             force = np.array(ast.literal_eval(row[3]))
             energy = float(row[6])
-            
+
             (x1, dx1) = generate_acsf(nuclear_charges, coordinates, pad=MAX_ATOMS, gradients=True)
 
             x.append(x1)
@@ -84,8 +84,8 @@ def csv_to_molecular_reps(csv_filename):
             e.append(energy)
             n.append(len(nuclear_charges))
             q.append(nuclear_charges)
-            
-            
+
+
             for j in range(len(nuclear_charges)):
                 for xyz in range(3):
 
@@ -93,7 +93,7 @@ def csv_to_molecular_reps(csv_filename):
                         disp_coords = deepcopy(coordinates)
 
                         disp_coords[j,xyz] += disp
-                        
+
                         # dx1 = generate_fchl_acsf(nuclear_charges, disp_coords, **REP_PARAMS)
                         # print(dx1.shape)
                         dx1 = generate_acsf(nuclear_charges, disp_coords, pad=MAX_ATOMS)
@@ -115,25 +115,25 @@ def test_local_kernel():
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
 
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
     dispXs = dispXall[:,-sum(Ns)*3:,:,:]
     Qs  = Qall[-TEST:]
-    
+
     K = get_local_kernel(X, X, Q, Q, SIGMA)
-    
+
     assert np.allclose(K, K.T), "Error in symmetric get_local_kernel()"
-   
+
 
     K = get_local_kernel(X, Xs, Q, Qs, SIGMA)
-   
+
     K_numm = np.zeros(K.shape)
 
     for i in range(TRAINING):
         for n1 in range(N[i]):
-            
+
             for j in range(TEST):
                 for n2 in range(Ns[j]):
                     if (Q[i][n1] == Qs[j][n2]):
@@ -155,13 +155,13 @@ def test_atomic_local_kernel():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
     dispXs = dispXall[:,-sum(Ns)*3:,:,:]
     Qs  = Qall[-TEST:]
-    
+
     K = get_atomic_local_kernel(X, Xs, Q, Qs, SIGMA)
 
     K_numm = np.zeros(K.shape)
@@ -170,7 +170,7 @@ def test_atomic_local_kernel():
 
     for i in range(TRAINING):
         for n1 in range(N[i]):
-            
+
             for j in range(TEST):
                 for n2 in range(Ns[j]):
 
@@ -193,15 +193,15 @@ def test_atomic_local_gradient():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
     dispXs = dispXall[:,-sum(Ns)*3:,:,:]
     Qs  = Qall[-TEST:]
-    
+
     Kt_gradient = get_atomic_local_gradient_kernel(X, X, dX, Q, Q, SIGMA)
-  
+
     idx1 = 0
 
     K_numm = np.zeros((4, Kt_gradient.shape[0], Kt_gradient.shape[1]))
@@ -220,7 +220,7 @@ def test_atomic_local_gradient():
                                 if (Q[i][n1] == Q[j][n_diff]):
                                     d = np.linalg.norm(X[i,n1] - dispX[k,idx2,n_diff])
                                     gauss = np.exp(-d**2 / (2 * SIGMA**2))
-                                    K_numm[k,idx2,idx1] += gauss 
+                                    K_numm[k,idx2,idx1] += gauss
                         idx2 += 1
             idx1 += 1
 
@@ -238,7 +238,7 @@ def test_local_gradient():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
@@ -265,7 +265,7 @@ def test_local_gradient():
                                 if (Q[i][n1] == Q[j][n_diff]):
                                     d = np.linalg.norm(X[i,n1] - dispX[k,idx1,n_diff])
                                     gauss = np.exp(-d**2 / (2 * SIGMA**2))
-                                    K_numm[k,idx1,idx2] += gauss 
+                                    K_numm[k,idx1,idx2] += gauss
 
                         idx1 += 1
         idx2 += 1
@@ -284,7 +284,7 @@ def test_gdml_kernel():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
@@ -301,30 +301,30 @@ def test_gdml_kernel():
         for n1 in range(N[i]):
             for xyz1 in range(3):
                 for n_diff1 in range(N[i]):
-                
+
                     idx2 = 0
 
                     for j in range(TEST):
                         for n2 in range(Ns[j]):
                             for xyz2 in range(3):
                                 for n_diff2 in range(Ns[j]):
-                    
+
 
                                     if (Q[i][n_diff1] == Qs[j][n_diff2]):
                                         # displacements = [2*DX, DX, -DX, -2*DX]
 
                                         d = np.linalg.norm(dispX[1,idx1,n_diff1] - dispXs[1,idx2,n_diff2])
                                         gauss1 = np.exp(-d**2 / (2 * SIGMA**2))
-                                        
+
                                         d = np.linalg.norm(dispX[1,idx1,n_diff1] - dispXs[2,idx2,n_diff2])
                                         gauss2 = np.exp(-d**2 / (2 * SIGMA**2))
-                                        
+
                                         d = np.linalg.norm(dispX[2,idx1,n_diff1] - dispXs[1,idx2,n_diff2])
                                         gauss3 = np.exp(-d**2 / (2 * SIGMA**2))
 
                                         d = np.linalg.norm(dispX[2,idx1,n_diff1] - dispXs[2,idx2,n_diff2])
                                         gauss4 = np.exp(-d**2 / (2 * SIGMA**2))
-                                   
+
                                         gauss = (gauss1 - gauss2 - gauss3 + gauss4 )/ (4*DX*DX)
                                         K_numm[idx2,idx1] += gauss
 
@@ -345,7 +345,7 @@ def test_symmetric_gdml_kernel():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
@@ -354,7 +354,7 @@ def test_symmetric_gdml_kernel():
 
     K = get_gdml_kernel(X, X, dX, dX, Q, Q, SIGMA)
     K_symm = get_symmetric_gdml_kernel(X, dX, Q,  SIGMA)
-    
+
     assert np.allclose(K, K_symm), "Error in get_symmetric_gdml_kernel()"
 
 
@@ -367,7 +367,7 @@ def test_gp_kernel():
     N  = Nall[:TRAINING]
     dispX  = dispXall[:,:sum(N)*3,:,:]
     Q  = Qall[:TRAINING]
-    
+
     Xs = Xall[-TEST:]
     dXs = dXall[-TEST:]
     Ns = Nall[-TEST:]
@@ -375,7 +375,7 @@ def test_gp_kernel():
     Qs  = Qall[-TEST:]
 
     K = get_gp_kernel(X, Xs, dX, dXs, Q, Qs, SIGMA)
-    
+
     K_uu = get_local_kernel(X, Xs, Q, Qs, SIGMA)
     assert np.allclose(K[:TEST,:TRAINING], K_uu), "Error: Fail in Gaussian Process kernel K_uu"
 
@@ -392,14 +392,14 @@ def test_gp_kernel():
     K1_symm = get_gp_kernel(X, X, dX, dX, Q, Q, SIGMA)
     K2_symm = get_symmetric_gp_kernel(X, dX, Q, SIGMA)
     assert np.allclose(K1_symm, K2_symm), "Error: Fail in Gaussian Process symmetric kernel"
-    
+
 
 if __name__ == "__main__":
 
-    # test_local_kernel()
-    # test_atomic_local_kernel()
-    # test_atomic_local_gradient()
-    # test_local_gradient()
-    # test_gdml_kernel()
-    # test_symmetric_gdml_kernel()
+    test_local_kernel()
+    test_atomic_local_kernel()
+    test_atomic_local_gradient()
+    test_local_gradient()
+    test_gdml_kernel()
+    test_symmetric_gdml_kernel()
     test_gp_kernel()
