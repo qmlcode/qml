@@ -357,7 +357,8 @@ class Compound(object):
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
 
-        self.name = filename
+        # Give the Compound a name if it is a string
+        self.name = filename if isinstance(filename, string_types) else "Compound"
 
         for i, line in enumerate(lines[2:self.natoms+2]):
             tokens = line.split()
