@@ -22,6 +22,7 @@
 
 from __future__ import print_function
 
+from six import string_types
 import numpy as np
 import collections
 
@@ -341,13 +342,15 @@ class Compound(object):
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.
 
-    :param filename: Input xyz-filename.
-    :type filename: string
-    """
+        :param filename: Input xyz-filename or file-like obejct
+        :type filename: string or file-like object
+        """
 
-        f = open(filename, "r")
-        lines = f.readlines()
-        f.close()
+        if isinstance(filename, string_types):
+            with open(filename, "r") as f:
+                lines = f.readlines()
+        else:
+            lines = filename.readlines()
 
         self.natoms = int(lines[0])
         self.atomtypes = []
