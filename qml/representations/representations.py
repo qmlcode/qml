@@ -678,6 +678,9 @@ def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
 
     descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) * nRs3* nFourier
 
+    # Normalization constant for three-body 
+    three_body_weight = np.sqrt(eta3/np.pi) * three_body_weight
+
 
     if gradients is False:
 
