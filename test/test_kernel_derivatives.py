@@ -30,6 +30,7 @@ import qml
 from qml.representations import generate_acsf
 
 from qml.kernels import get_local_kernel
+from qml.kernels import get_local_symmetric_kernel
 from qml.kernels import get_atomic_local_kernel
 from qml.kernels import get_atomic_local_gradient_kernel
 from qml.kernels import get_local_gradient_kernel
@@ -123,9 +124,10 @@ def test_local_kernel():
     Qs  = Qall[-TEST:]
 
     K = get_local_kernel(X, X, Q, Q, SIGMA)
-
     assert np.allclose(K, K.T), "Error in symmetric get_local_kernel()"
-
+    
+    Ksymm = get_local_symmetric_kernel(X, Q, SIGMA)
+    assert np.allclose(Ksymm, K), "Error in get_local_symmetric_kernel()"
 
     K = get_local_kernel(X, Xs, Q, Qs, SIGMA)
 

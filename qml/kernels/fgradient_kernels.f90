@@ -85,6 +85,71 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 end subroutine flocal_kernel
 
 
+subroutine fsymmetric_local_kernel(x1, q1, n1, nm1, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+
+    integer, dimension(:,:), intent(in) :: q1
+
+    integer, dimension(:), intent(in) :: n1
+
+    integer, intent(in) :: nm1
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(nm1,nm1), intent(out) :: kernel
+
+    integer :: j1, j2
+    integer :: a, b
+
+    integer :: rep_size
+    double precision :: inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_sigma2 = -1.0d0 / (2 * sigma**2)
+    
+    !$OMP PARALLEL DO private(d) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Molecule 2
+        do b = a, nm1
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n1(b)
+
+                    if (q1(j1,a) == q1(j2,b)) then
+
+                        d(:) = x1(a,j1,:)- x1(b,j2,:)
+                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_sigma2)
+
+                    endif
+
+                enddo
+            enddo
+
+            if (b > a) then
+                kernel(b, a) = kernel(a, b)
+
+            endif
+
+        enddo
+    enddo
+    !$OMP END PARALLEL do
+
+    deallocate(d)
+
+end subroutine fsymmetric_local_kernel
+
+
 subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, kernel)
 
     implicit none
