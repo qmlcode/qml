@@ -345,7 +345,7 @@ class NeuralNetwork(_BaseModel):
         """
 
         if self._representation_type == 'atomic':
-            # Due to how the atomic neural network iś constructed,
+            # Due to how the atomic neural network is constructed,
             # this cannot be done elementwise
             rep = representations.reshape(-1, representations.shape[-1])
             if self._constant_features is None:

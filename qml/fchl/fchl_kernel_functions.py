@@ -28,7 +28,7 @@ from copy import copy
 
 import scipy
 from scipy.special import binom
-from scipy.misc import factorial
+from scipy.special import factorial
 
 def get_gaussian_parameters(tags):
 

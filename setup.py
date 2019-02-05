@@ -26,7 +26,7 @@ MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
 if mkl_exists(verbose=True):
-    LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+    LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
@@ -47,11 +47,14 @@ if any(["intelem" in arg for arg in sys.argv]):
 
 
 ext_fkernels = Extension(name = '.kernels.fkernels',
-                          sources = ['qml/kernels/fkernels.f90'],
+                          sources = [
+                          'qml/kernels/fkernels.f90',
+                          'qml/kernels/fkpca.f90',
+                              ],
                           extra_f90_compile_args = COMPILER_FLAGS,
                           extra_f77_compile_args = COMPILER_FLAGS,
                           extra_compile_args = COMPILER_FLAGS,
-                          extra_link_args = LINKER_FLAGS,
+                          extra_link_args = LINKER_FLAGS + MATH_LINKER_FLAGS,
                           language = FORTRAN,
                           f2py_options=['--quiet'])
 

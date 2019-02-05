@@ -36,6 +36,8 @@ from .fkernels import fget_local_kernels_gaussian
 from .fkernels import fget_local_kernels_laplacian
 from .fkernels import fget_vector_kernels_gaussian, fget_vector_kernels_gaussian_symmetric
 
+from .fkernels import fkpca
+
 def laplacian_kernel(A, B, sigma):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
@@ -351,3 +353,32 @@ def get_local_kernels_laplacian(A, B, na, nb, sigmas):
     nsigmas = len(sigmas)
 
     return fget_local_kernels_laplacian(A.T, B.T, na, nb, sigmas, nma, nmb, nsigmas)
+
+
+def kpca(K, n=2, centering=True):
+    """ Calculates `n` first principal components for the kernel :math:`K`.
+
+        The PCA is calculated using an OpenMP parallel Fortran routine.
+
+        A square, symmetric kernel matrix is required. Centering of the kernel matrix 
+        is enabled by default, although this isn't a strict requirement.
+
+        :param K: 2D kernel matrix
+        :type K: numpy array
+        :param n: Number of kernel PCAs to return (default=2)
+        :type n: integer
+        :param centering: Whether to center the kernel matrix (default=True)
+        :type centering: bool
+
+        :return: array containing the principal components
+        :rtype: numpy array
+    """
+
+    assert K.shape[0] == K.shape[1], "ERROR: Square matrix required for Kernel PCA."
+    assert np.allclose(K, K.T, atol=1e-8), "ERROR: Symmetric matrix required for Kernel PCA."
+    assert n <= K.shape[0], "ERROR: Requested more principal components than matrix size."
+
+    size = K.shape[0]
+    pca = fkpca(K, size, centering)
+
+    return pca[:n]
