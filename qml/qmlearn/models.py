@@ -734,8 +734,8 @@ class NeuralNetwork(_BaseModel):
             print("Trying to predict on larger molecules than given by the 'size' parameter at initialization")
             raise SystemExit
 
-        padded_rep = np.zeros((len(representation), max_n_atoms, representation[0].shape[1]))
-        padded_zs = np.zeros((len(representation), max_n_atoms))
+        padded_rep = np.zeros((len(representation), self.size, representation[0].shape[1]))
+        padded_zs = np.zeros((len(representation), self.size))
 
         for i in range(len(representation)):
             n_atoms = representation[i].shape[0]
