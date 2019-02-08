@@ -1790,7 +1790,10 @@ class ARMP(_NN):
                                   eta3=self.acsf_parameters['eta'],
                                   zeta=self.acsf_parameters['zeta'])
 
-                representation.append(g)
+                single_precision_g = g.astype(dtype=np.float32)
+                del g
+
+                representation.append(single_precision_g)
 
         return np.asarray(representation)
 
