@@ -1651,11 +1651,7 @@ class ARMP(_NN):
             else:
                 representation = self._generate_acsf_fortran(xyz, classes)
 
-        # Hotfix t make sure the representation is single precision
-        single_precision_representation = representation.astype(dtype=np.float32)
-        del representation
-
-        return single_precision_representation, classes
+        return representation, classes
 
     def _generate_acsf_tf(self, xyz, classes):
         """
@@ -1776,7 +1772,11 @@ class ARMP(_NN):
                 padded_g = np.zeros((initial_natoms, g.shape[-1]))
                 padded_g[:g.shape[0], :] = g
 
-                representation.append(padded_g)
+                # Hotfix t make sure the representation is single precision
+                single_precision_g = padded_g.astype(dtype=np.float32)
+                del padded_g
+
+                representation.append(single_precision_g)
 
             else:
 
