@@ -710,6 +710,11 @@ class AtomCenteredSymmetryFunctions(_AtomicRepresentation):
                         fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
                             eta, eta, zeta, self.cutoff, self.cutoff, n, size)))
 
+        # Check to make sure there are no NANs
+        if np.any(np.isnan(representations)):
+            print("There are NANs in the representations.")
+            exit()
+
         data._representations = np.asarray(representations)
 
         return data
