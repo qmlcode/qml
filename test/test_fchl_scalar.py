@@ -31,7 +31,7 @@ from scipy.special import jn
 from scipy.special import binom
 from scipy.special import factorial
 
-from qml.data import Compound
+from qml import Compound
 
 from qml.math import cho_solve
 

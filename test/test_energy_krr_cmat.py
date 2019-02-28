@@ -26,7 +26,6 @@ import os
 import numpy as np
 
 import qml
-import qml.data
 
 from qml.kernels import laplacian_kernel
 from qml.math import cho_solve
@@ -65,8 +64,8 @@ def test_krr_cmat():
 
     for xyz_file in sorted(data.keys())[:1000]:
 
-        # Initialize the qml.data.Compound() objects
-        mol = qml.data.Compound(xyz=test_dir + "/qm7/" + xyz_file)
+        # Initialize the qml.Compound() objects
+        mol = qml.Compound(xyz=test_dir + "/qm7/" + xyz_file)
 
         # Associate a property (heat of formation) with the object
         mol.properties = data[xyz_file]
