@@ -2,3 +2,4 @@ numpy>=1.13
 scipy
 scikit-learn
 ase
+six
