@@ -40,7 +40,7 @@ from qml.aglaia.tf_utils import TensorBoardLogger
 from qml.representations import generate_acsf
 from qml.aglaia.graceful_killer import _GracefulKiller
 
-from qml.data import Compound
+from qml import Compound
 from qml import representations as qml_rep
 
 import tensorflow
