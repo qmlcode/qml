@@ -29,6 +29,7 @@ import csv
 import qml
 from qml.representations import generate_acsf
 
+from qml.kernels import get_global_kernel
 from qml.kernels import get_local_kernel
 from qml.kernels import get_local_symmetric_kernel
 from qml.kernels import get_atomic_local_kernel
@@ -105,6 +106,58 @@ def csv_to_molecular_reps(csv_filename):
 
     return np.array(x), np.array(dx), e, f, np.array(disp_x), n, q
 
+
+def test_global_kernel():
+
+    Xall, dXall, Eall, Fall, dispXall, Nall, Qall= csv_to_molecular_reps(CSV_FILE)
+
+    X  = Xall[:TRAINING]
+    Q  = Qall[:TRAINING]
+
+
+    Xs = Xall[-TEST:]
+    Qs  = Qall[-TEST:]
+
+    K1 = get_global_kernel(X, Xs, Q, Qs, SIGMA)
+    K2 = get_global_kernel(X, X, Q, Q, SIGMA)
+
+
+def test_atomic_local_kernel():
+
+    Xall, dXall, Eall, Fall, dispXall, Nall, Qall= csv_to_molecular_reps(CSV_FILE)
+
+    X  = Xall[:TRAINING]
+    dX = dXall[:TRAINING]
+    N  = Nall[:TRAINING]
+    dispX  = dispXall[:,:sum(N)*3,:,:]
+    Q  = Qall[:TRAINING]
+
+    Xs = Xall[-TEST:]
+    dXs = dXall[-TEST:]
+    Ns = Nall[-TEST:]
+    dispXs = dispXall[:,-sum(Ns)*3:,:,:]
+    Qs  = Qall[-TEST:]
+
+    K = get_atomic_local_kernel(X, Xs, Q, Qs, SIGMA)
+
+    K_numm = np.zeros(K.shape)
+
+    idx = 0
+
+    for i in range(TRAINING):
+        for n1 in range(N[i]):
+
+            for j in range(TEST):
+                for n2 in range(Ns[j]):
+
+                    if (Q[i][n1] == Qs[j][n2]):
+                        d = np.linalg.norm(X[i,n1] - Xs[j,n2])
+                        gauss = np.exp(-d**2 / (2 * SIGMA**2))
+                        K_numm[j, idx] += gauss
+
+            idx += 1
+
+    assert np.allclose(K, K_numm), "Error in get_local_kernel()"
 
 def test_local_kernel():
 
@@ -405,3 +458,4 @@ if __name__ == "__main__":
     test_gdml_kernel()
     test_symmetric_gdml_kernel()
     test_gp_kernel()
+    test_global_kernel()

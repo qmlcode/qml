@@ -628,7 +628,7 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
 
 
 def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
-        nRs2=24, nRs3=20, nFourier=1, eta2=0.32, eta3=2.7, zeta=3.4, rcut=8.0, acut=8.0,
+        nRs2=24, nRs3=20, nFourier=1, eta2=0.32, eta3=2.7, zeta=np.pi, rcut=8.0, acut=8.0,
         two_body_decay=1.8, three_body_decay=0.57, three_body_weight=13.4,
         pad=False, gradients=False):
     """

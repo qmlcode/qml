@@ -21,6 +21,113 @@
 ! SOFTWARE.
 
 
+subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(nm2,nm1), intent(out) :: kernel
+
+    integer :: i1, i2
+    integer :: j1, j2
+
+    integer :: a, b
+
+    integer :: rep_size
+    double precision :: inv_sigma2
+
+    double precision, allocatable, dimension(:) :: d
+    double precision, dimension(nm1) :: s11
+    double precision, dimension(nm2) :: s22
+    double precision :: s12
+
+    double precision :: l2
+
+    rep_size = size(x1, dim=3)
+    allocate(d(rep_size))
+
+    inv_sigma2 = -1.0d0 / (2 * sigma**2)
+
+    s11(:) = 0.0d0
+
+    !$OMP PARALLEL DO REDUCTION(+:s11)
+    do a = 1, nm1
+        do j1 = 1, n1(a)
+            do i1 = 1, n1(a)
+
+                if (q1(j1,a) == q1(i1,a)) then
+                    s11(a) = s11(a) + dot_product(x1(a,j1,:), x1(a,i1,:))
+                endif
+
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+
+    s22(:) = 0.0d0
+
+    !$OMP PARALLEL DO REDUCTION(+:s22)
+    do b = 1, nm2
+        do j2 = 1, n2(b)
+            do i2 = 1, n2(b)
+
+                if (q2(j2,b) == q2(i2,b)) then
+                    s22(b) = s22(b) + dot_product(x2(b,j2,:), x1(b,i2,:))
+                endif
+
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    !$OMP PARALLEL DO private(s12, l2) schedule(dynamic)
+    do a = 1, nm1
+
+        ! Molecule 2
+        do b = 1, nm2
+ 
+            s12 = 0.0d0
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+
+                        s12 = s12 + dot_product(x1(a,j1,:), x2(b,j2,:))
+
+                    endif
+
+                enddo
+            enddo
+
+            l2 = s11(a) + s22(b) - 2.0d0*s12
+            kernel(b, a) = exp(l2 * inv_sigma2)
+
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    deallocate(d)
+
+end subroutine fglobal_kernel
+
+
 subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
     implicit none
@@ -585,7 +692,7 @@ subroutine fgdml_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, si
 
     rep_size = size(x1, dim=3)
     allocate(d(rep_size))
-    allocate(partial(rep_size,maxval(n1)*3))
+    allocate(partial(rep_size,maxval(n2)*3))
     partial = 0.0d0
     allocate(hess(rep_size, rep_size))
 
@@ -836,6 +943,7 @@ subroutine fsymmetric_gdml_kernel(x1, dx1, q1, n1, nm1, na1, sigma, kernel)
 
 end subroutine fsymmetric_gdml_kernel
 
+
 subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, sigma, kernel)
 
     implicit none
@@ -894,7 +1002,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
     rep_size = size(x1, dim=3)
     allocate(d(rep_size))
-    allocate(partial(rep_size,maxval(n1)*3))
+    allocate(partial(rep_size,maxval(n2)*3))
     partial = 0.0d0
     allocate(hess(rep_size, rep_size))
 
