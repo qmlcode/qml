@@ -26,6 +26,9 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error
 
+import scipy
+import scipy.stats
+
 try:
     import tensorflow as tf
     from ..aglaia.tf_utils import generate_weights
@@ -38,6 +41,7 @@ from ..utils import is_positive, is_positive_or_zero
 from ..utils import InputError
 from .data import Data
 from ..math import cho_solve
+from ..math import svd_solve
 
 
 class _BaseModel(BaseEstimator):
@@ -65,6 +69,7 @@ class _BaseModel(BaseEstimator):
         :rtype: float
         """
 
+        # print("SCOOOOOOOORE")
         # Make predictions
         y_pred = self.predict(X)
 
@@ -74,26 +79,68 @@ class _BaseModel(BaseEstimator):
 
         elif isinstance(X, Data):
             try:
-                y = X.energies[X._indices]
+                e = X.energies[X._indices]
+                f = np.concatenate(X.forces[X._indices])
+                
+                y = np.concatenate((e, f.flatten()))
             except:
-                print("No kernel energies found in data object in module %s" % self.__class__.__name__)
+                print("55No kernel energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
 
         else:
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
+   
+        nE = len(X.energies[X._indices])
 
-        # Return the score
-        if self.scoring == 'mae':
-            return mean_absolute_error(y, y_pred)
-        elif self.scoring == 'neg_mae':
-            return - mean_absolute_error(y, y_pred)
-        elif self.scoring == 'rmsd':
-            return np.sqrt(mean_squared_error(y, y_pred))
-        elif self.scoring == 'neg_rmsd':
-            return - np.sqrt(mean_squared_error(y, y_pred))
-        elif self.scoring == 'neg_log_mae':
-            return - np.log(mean_absolute_error(y, y_pred))
+        E = y[:nE] 
+        F = y[nE:] 
+
+        eYt = y_pred[:nE] 
+        fYt = y_pred[nE:] 
+
+        natoms = X.natoms[X._indices]
+
+        print(y.shape)
+
+        total_score = 0.0
+
+        for i, idx in enumerate(X._indices):
+
+            dE = 0.01 * np.square(E[i] - eYt[i])
+
+            n_start = np.sum(natoms[:i])*3 + len(E)
+            n_end = n_start + 3 * natoms[i]
+            
+            dF = np.sum(np.square(y[n_start:n_end] - y_pred[n_start:n_end])) / natoms[i]
+
+            print("%5i  %5i  %8.2f  %8.2f  %8.2f  %8.2f  %6i  %6i" % (i, natoms[i], E[i], eYt[i], dE, dF, n_start, n_end))
+
+            total_score += dE + dF
+            
+
+        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(E, eYt)
+        print("QMLEARN ENERGY   MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
+            (np.mean(np.abs(E - eYt)), slope, intercept, r_value ))
+
+        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(F.flatten(), fYt.flatten())
+        print("QMLEARN FORCE    MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
+             (np.mean(np.abs(F.flatten() - fYt.flatten())), slope, intercept, r_value ))
+
+        print("QMLEARN SCORE    %10.2f" % total_score)
+        return total_score
+
+        # # Return the score
+        # if self.scoring == 'mae':
+        #     return mean_absolute_error(y, y_pred)
+        # elif self.scoring == 'neg_mae':
+        #     return - mean_absolute_error(y, y_pred)
+        # elif self.scoring == 'rmsd':
+        #     return np.sqrt(mean_squared_error(y, y_pred))
+        # elif self.scoring == 'neg_rmsd':
+        #     return - np.sqrt(mean_squared_error(y, y_pred))
+        # elif self.scoring == 'neg_log_mae':
+        #     return - np.log(mean_absolute_error(y, y_pred))
 
     def _set_scoring(self, scoring):
         if not scoring in ['mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae']:
@@ -130,7 +177,7 @@ class KernelRidgeRegression(_BaseModel):
             try:
                 K, y = X._kernel, X.energies[X._indices]
             except:
-                print("No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                print("11No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
         elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and y is not None:
             K = X
@@ -162,7 +209,7 @@ class KernelRidgeRegression(_BaseModel):
             try:
                 K = X._kernel
             except:
-                print("No kernel matrix found in data object in module %s" % self.__class__.__name__)
+                print("22No kernel matrix found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
         elif is_numeric_array(X) and X.ndim == 2 and X.shape[1] == self.alpha.size:
             K = X
@@ -173,6 +220,7 @@ class KernelRidgeRegression(_BaseModel):
             raise SystemExit
 
         return np.dot(K, self.alpha)
+
 
 class NeuralNetwork(_BaseModel):
     """
@@ -748,3 +796,182 @@ class NeuralNetwork(_BaseModel):
         if tf is None:
             print("Tensorflow not found but is needed for %s" % self.__class__.__name__)
             raise SystemExit
+
+class OQMLRegression(_BaseModel):
+    """
+    Standard Kernel Ridge Regression using a Cholesky solver
+    :param l2_reg: l2 regularization
+    :type l2_reg: float
+    :param scoring: Metric used for scoring ('mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae')
+    :type scoring: string
+    """
+
+    def __init__(self, l2_reg=1e-10, scoring='neg_mae'):
+        self.l2_reg = l2_reg
+        self.scoring = scoring
+
+        self.alpha = None
+
+    def fit(self, X, y=None):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object or kernel
+        :type X: object or array
+        :param y: Energies
+        :type y: array
+        """
+
+        if isinstance(X, Data):
+            try:
+
+                # print(X._kernel)
+                # print(X.energies[X._indices])
+                # print(X.forces[X._indices])
+                # print(X._kernel)
+                K, E, F = X._kernel, X.energies[X._indices], np.concatenate(X.forces[X._indices])
+
+                # print(F.flatten())
+
+
+                y = np.concatenate((E, F.flatten()))
+
+                # print(y.shape)
+                # print(K.shape)
+
+            except:
+                print("33No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                raise SystemExit
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and y is not None:
+            K = X
+        else:
+            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            raise SystemExit
+
+        # print(K.shape)
+
+        self.alpha = svd_solve(K, y, rcond=self.l2_reg)
+
+        print(self.alpha.shape)
+
+        # K[np.diag_indices_from(K)] += self.l2_reg
+
+        # self.alpha = cho_solve(K, y)
+
+    def predict(self, X):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object
+        :type X: object
+        :param y: Energies
+        :type y: array
+        """
+
+        # Check if model has been fit
+        if self.alpha is None:
+            print("Error: The %s model has not been trained yet" % self.__class__.__name__)
+            raise SystemExit
+
+        if isinstance(X, Data):
+            try:
+                K = X._kernel
+            except:
+                print("44No kernel matrix found in data object in module %s" % self.__class__.__name__)
+                raise SystemExit
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[1] == self.alpha.size:
+            K = X
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == self.alpha.size:
+            K = X.T
+        else:
+            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            raise SystemExit
+
+        return np.dot(K, self.alpha)
+
+
+class GPRRegression(_BaseModel):
+    """
+    Standard Kernel Ridge Regression using a Cholesky solver
+    :param l2_reg: l2 regularization
+    :type l2_reg: float
+    :param scoring: Metric used for scoring ('mae', 'neg_mae', 'rmsd', 'neg_rmsd', 'neg_log_mae')
+    :type scoring: string
+    """
+
+    def __init__(self, l2_reg=1e-10, scoring='neg_mae'):
+        self.l2_reg = l2_reg
+        self.scoring = scoring
+
+        self.alpha = None
+
+    def fit(self, X, y=None):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object or kernel
+        :type X: object or array
+        :param y: Energies
+        :type y: array
+        """
+
+        if isinstance(X, Data):
+            try:
+
+                # print(X._kernel)
+                # print(X.energies[X._indices])
+                # print(X.forces[X._indices])
+                # print(X._kernel)
+                K, E, F = X._kernel, X.energies[X._indices], np.concatenate(X.forces[X._indices])
+
+                # print(F.flatten())
+
+
+                y = np.concatenate((E, F.flatten()))
+
+                # print(y.shape)
+                # print(K.shape)
+
+            except:
+                print("33No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                raise SystemExit
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and y is not None:
+            K = X
+        else:
+            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            raise SystemExit
+
+        K[np.diag_indices_from(K)] += self.l2_reg
+
+        self.alpha = cho_solve(K, y)
+
+    def predict(self, X):
+        """
+        Fit the Kernel Ridge Regression model using a cholesky solver
+
+        :param X: Data object
+        :type X: object
+        :param y: Energies
+        :type y: array
+        """
+
+        # Check if model has been fit
+        if self.alpha is None:
+            print("Error: The %s model has not been trained yet" % self.__class__.__name__)
+            raise SystemExit
+
+        if isinstance(X, Data):
+            try:
+                K = X._kernel
+            except:
+                print("44No kernel matrix found in data object in module %s" % self.__class__.__name__)
+                raise SystemExit
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[1] == self.alpha.size:
+            K = X
+        elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == self.alpha.size:
+            K = X.T
+        else:
+            print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
+            raise SystemExit
+
+        return np.dot(K, self.alpha)

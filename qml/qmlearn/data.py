@@ -29,6 +29,7 @@ class Data(object):
         self.nuclear_charges = None
         self.natoms = None
         self.energies = None
+        self.forces = None
 
         if isinstance(filenames, str):
             filenames = sorted(glob.glob(filenames))
@@ -98,6 +99,9 @@ class Data(object):
 
     def set_energies(self, energies):
         self.energies = energies
+
+    def set_forces(self, forces):
+        self.forces = forces 
 
     def _parse_xyz_files(self, filenames):
         """

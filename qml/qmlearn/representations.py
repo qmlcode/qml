@@ -806,6 +806,7 @@ class FCHL_ACSF(_AtomicRepresentation):
     """
 
     _representation_short_name = "fchl_acsf"
+    _representation_type = "atomic-force"
     alchemy = False
 
     def __init__(self, data=None, elements='auto',
@@ -861,6 +862,8 @@ class FCHL_ACSF(_AtomicRepresentation):
         coordinates = data.coordinates[data._indices]
         natoms = data.natoms[data._indices]
 
+        max_atoms = np.amax(data.natoms)
+
         self._check_elements(nuclear_charges)
 
         representations = []
@@ -869,17 +872,14 @@ class FCHL_ACSF(_AtomicRepresentation):
             #             fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
             #                 eta, eta, zeta, self.cutoff, self.cutoff, n, size)))
 
-            representations.append(
-                np.asarray(
-                    generate_fchl_acsf(charge, xyz , elements=self.elements,
+            (rep, grad) = generate_fchl_acsf(charge, xyz , elements=self.elements,
                            nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
                            eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
                            two_body_decay=self.two_body_decay, three_body_decay=self.three_body_decay, 
                            three_body_weight=self.three_body_weight,
-                           pad=False, gradients=False
-                        )
-                    )
-                )
+                           pad=max_atoms, gradients=True)
+            
+            representations.append([rep, grad, charge])
 
         data._representations = np.asarray(representations)
 

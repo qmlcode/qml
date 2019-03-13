@@ -187,8 +187,6 @@ def svd_solve(A, y, rcond=None):
         :rtype: numpy array
         """
 
-    print(y.shape)
-    print(A.shape)
     if len(y.shape) != 1 or y.shape[0] != A.shape[0]:
         raise ValueError('expected matrix and vector of same stride size')
 
