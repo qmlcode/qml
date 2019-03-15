@@ -77,20 +77,29 @@ class _BaseRepresentation(BaseEstimator):
         :rtype: Data object
         """
 
+        # print("LOL", X, type(X))
+        # print(self.data.natoms)
+        # print(self.data)
+        # print(max(X), self.data.natoms.size)
+        # print(max(X) <= self.data.natoms.size)
+        # print(is_positive_integer_or_zero_array(X))
+        # print(self.data)
+
         if isinstance(X, Data):
             self._check_data(X)
             data = copy.copy(X)
             if not hasattr(data, "_indices"):
                 data._indices = np.arange(len(data))
 
-        elif self.data and is_positive_integer_or_zero_array(X) \
+        # elif self.data is not None and is_positive_integer_or_zero_array(X) \
+        elif is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.
             data = copy.copy(self.data)
             data._indices = np.asarray(X, dtype=int).ravel()
         else:
-            print("Expected X to be array of indices or Data object. Got %s" % str(X))
+            print("111Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
 
         # Store representation type / name for later use
@@ -881,6 +890,9 @@ class FCHL_ACSF(_AtomicRepresentation):
             
             representations.append([rep, grad, charge])
 
-        data._representations = np.asarray(representations)
+        data._representations = representations
+        
+        # Won't work with force representation
+        # data._representations = np.asarray(data._representations)
 
         return data
