@@ -25,6 +25,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
 
 import scipy
 import scipy.stats
@@ -87,8 +88,8 @@ class _BaseModel(BaseEstimator):
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
 
-        for i, data in enumerate(zip(y, y_pred)):
-            print("%5i  %8.2f  %8.2f  %8.2f"  % (i, data[0], data[1], data[0] - data[1]))
+        # for i, data in enumerate(zip(y, y_pred)):
+        #     print("%5i  %8.2f  %8.2f  %8.2f"  % (i, data[0], data[1], data[0] - data[1]))
         
         slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(y, y_pred)
         print("QMLEARN ENERGY   MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
