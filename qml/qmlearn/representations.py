@@ -881,14 +881,21 @@ class FCHL_ACSF(_AtomicRepresentation):
             #             fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
             #                 eta, eta, zeta, self.cutoff, self.cutoff, n, size)))
 
-            (rep, grad) = generate_fchl_acsf(charge, xyz , elements=self.elements,
+            # (rep, grad) = generate_fchl_acsf(charge, xyz , elements=self.elements,
+            #                nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
+            #                eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
+            #                two_body_decay=self.two_body_decay, three_body_decay=self.three_body_decay, 
+            #                three_body_weight=self.three_body_weight,
+            #                pad=max_atoms, gradients=True)
+
+            rep = generate_fchl_acsf(charge, xyz , elements=self.elements,
                            nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
                            eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
                            two_body_decay=self.two_body_decay, three_body_decay=self.three_body_decay, 
                            three_body_weight=self.three_body_weight,
-                           pad=max_atoms, gradients=True)
+                           pad=max_atoms, gradients=False)
             
-            representations.append([rep, grad, charge])
+            representations.append([rep, None, charge])
 
         data._representations = representations
         
