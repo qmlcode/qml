@@ -77,20 +77,29 @@ class _BaseRepresentation(BaseEstimator):
         :rtype: Data object
         """
 
+        # print("LOL", X, type(X))
+        # print(self.data.natoms)
+        # print(self.data)
+        # print(max(X), self.data.natoms.size)
+        # print(max(X) <= self.data.natoms.size)
+        # print(is_positive_integer_or_zero_array(X))
+        # print(self.data)
+
         if isinstance(X, Data):
             self._check_data(X)
             data = copy.copy(X)
             if not hasattr(data, "_indices"):
                 data._indices = np.arange(len(data))
 
-        elif self.data and is_positive_integer_or_zero_array(X) \
+        # elif self.data is not None and is_positive_integer_or_zero_array(X) \
+        elif is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.
             data = copy.copy(self.data)
             data._indices = np.asarray(X, dtype=int).ravel()
         else:
-            print("Expected X to be array of indices or Data object. Got %s" % str(X))
+            print("111Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
 
         # Store representation type / name for later use
@@ -872,6 +881,105 @@ class FCHL_ACSF(_AtomicRepresentation):
             #             fgenerate_acsf(xyz, charge, self.elements, Rs, Rs, Ts,
             #                 eta, eta, zeta, self.cutoff, self.cutoff, n, size)))
 
+            # (rep, grad) = generate_fchl_acsf(charge, xyz , elements=self.elements,
+            #                nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
+            #                eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
+            #                two_body_decay=self.two_body_decay, three_body_decay=self.three_body_decay, 
+            #                three_body_weight=self.three_body_weight,
+            #                pad=max_atoms, gradients=True)
+
+            rep = generate_fchl_acsf(charge, xyz , elements=self.elements,
+                           nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
+                           eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
+                           two_body_decay=self.two_body_decay, three_body_decay=self.three_body_decay, 
+                           three_body_weight=self.three_body_weight,
+                           pad=max_atoms, gradients=False)
+            
+            representations.append([rep, None, charge])
+
+        data._representations = representations
+        
+        # Won't work with force representation
+        # data._representations = np.asarray(data._representations)
+
+        return data
+
+
+class FCHL_ACSF_Force(_AtomicRepresentation):
+    """
+    The variant of Atom-Centered Symmetry Functions 
+    :param data: Optional Data object containing all molecules used in training \
+            and/or prediction
+    :type data: Data object
+    :param elements: Atomnumber of elements that the representation should support.
+                     `elements='auto'` will try to determine this automatically.
+    :type elements: list
+    """
+
+    _representation_short_name = "fchl_acsf"
+    _representation_type = "atomic-force"
+    alchemy = False
+
+    def __init__(self, data=None, elements='auto',
+            nRs2=24, nRs3=20, nFourier=1, eta2=0.32, eta3=2.7, zeta=np.pi, rcut=8.0, acut=8.0,
+            two_body_decay=1.8, three_body_decay=0.57, three_body_weight=13.4):
+
+        self._set_data(data)
+        self.nRs2 = nRs2
+        self.nRs3 = nRs3
+        self.nFourier = nFourier
+        self.eta2 = eta2 
+        self.eta3 = eta3
+        self.zeta = zeta
+        self.rcut = rcut
+        self.acut = acut
+        self.two_body_decay = two_body_decay
+        self.three_body_decay = three_body_decay
+        self.three_body_weight = three_body_weight
+        # self.cutoff = cutoff
+        # Will be changed during fit
+        self.elements = elements
+
+    def fit(self, X, y=None):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :param y: Dummy argument for scikit-learn
+        :type y: NoneType
+        :return: self
+        :rtype: object
+        """
+        data = self._extract_data(X)
+
+        if is_string(self.elements) and self.elements == 'auto':
+            nuclear_charges = data.nuclear_charges#[data._indices]
+            self.elements = get_unique(nuclear_charges)
+
+        return self
+
+    def transform(self, X):
+        """
+        :param X: Data object or indices to use from the \
+                Data object passed at initialization
+        :type X: Data object or array of indices
+        :return: Data object
+        :rtype: Data object
+        """
+
+        data = self._extract_data(X)
+
+        nuclear_charges = data.nuclear_charges[data._indices]
+        coordinates = data.coordinates[data._indices]
+        natoms = data.natoms[data._indices]
+
+        max_atoms = np.amax(data.natoms)
+
+        self._check_elements(nuclear_charges)
+
+        representations = []
+        for charge, xyz, n in zip(nuclear_charges, coordinates, natoms):
+
             (rep, grad) = generate_fchl_acsf(charge, xyz , elements=self.elements,
                            nRs2=self.nRs2, nRs3=self.nRs3, nFourier=self.nFourier, eta2=self.eta2, 
                            eta3=self.eta3, zeta=self.zeta, rcut=self.rcut, acut=self.acut,
@@ -881,6 +989,9 @@ class FCHL_ACSF(_AtomicRepresentation):
             
             representations.append([rep, grad, charge])
 
-        data._representations = np.asarray(representations)
+        data._representations = representations
+        
+        # Won't work with force representation
+        # data._representations = np.asarray(data._representations)
 
         return data

@@ -49,6 +49,7 @@ from ..utils import get_unique
 from ..kernels.gradient_kernels import get_atomic_local_kernel
 from ..kernels.gradient_kernels import get_atomic_local_gradient_kernel
 from ..kernels.gradient_kernels import get_local_kernel
+from ..kernels.gradient_kernels import get_local_symmetric_kernel
 from ..kernels.gradient_kernels import get_symmetric_gp_kernel
 from ..kernels.gradient_kernels import get_gp_kernel
 
@@ -826,7 +827,7 @@ class OQMLForceKernel(_BaseKernel):
             # Do a quick and dirty initial estimate of sigma
             self._quick_estimate_sigma(X)
 
-        print(type(Y))
+        # print(type(Y))
 
         if not self.local:
             kernel = self._generate_molecular(X,Y)
@@ -847,12 +848,12 @@ class OQMLForceKernel(_BaseKernel):
         dX1 = np.array([rep[1] for rep in X])
         Q1  = [rep[2] for rep in X]
 
-        print(type(Y))
+        # print(type(Y))
 
         if Y is None or X is Y:
 
 
-            print("TRAIN")
+            # print("TRAIN")
 
             K_energy = get_atomic_local_kernel(X1, X1, Q1, Q1, self.sigma)
             K_force  = get_atomic_local_gradient_kernel(X1, X1, dX1, Q1, Q1, self.sigma)
@@ -867,7 +868,7 @@ class OQMLForceKernel(_BaseKernel):
             dX2 = np.array([rep[1] for rep in Y])
             Q2  = [rep[2] for rep in Y]
 
-            print("TEST")
+            # print("TEST")
             
             K_energy = get_atomic_local_kernel(X2, X1, Q2, Q1, self.sigma)
             K_force  = get_atomic_local_gradient_kernel(X2, X1, dX1, Q2, Q1, self.sigma)
@@ -965,6 +966,84 @@ class GPRForceKernel(_BaseKernel):
             # K_return = np.concatenate((K_energy, K_force))
             
             K_return  = get_gp_kernel(X2, X1, dX2, dX1, Q2, Q1, self.sigma)
+
+            return K_return
+
+    def fit_transform(self, X, y=None):
+
+        return self._fit_transform(X)
+
+
+class GPREnergyKernel(_BaseKernel):
+
+    def __init__(self, sigma=10.0, local=True):
+        
+        self.sigma = sigma
+        self.alchemy = "off"
+        self.representation_type = "atomic-force"
+        self.local = True
+
+    def _quick_estimate_sigma(self, X, sigma_init=1, count=1):
+        print("Error. Could not automatically determine parameter `sigma` in the kernel %s"
+                    % self.__class__.__name__)
+        raise SystemExit
+
+    def generate(self, X, Y=None, representation_type="atomic"):
+        """
+        Create a kernel from representations `X`. Optionally
+        an asymmetric kernel can be constructed between representations
+        `X` and `Y`.
+
+        :param X: representations
+        :type X: array
+        :param Y: (Optional) representations
+        :type Y: array
+
+        :return: Gaussian kernel matrix of shape (n_samplesX, n_samplesX) if \
+                 Y=None else (n_samplesX, n_samplesY)
+        :rtype: array
+        """
+
+        if self.sigma == 'auto':
+            # Do a quick and dirty initial estimate of sigma
+            self._quick_estimate_sigma(X)
+
+        # print(type(Y))
+
+        if not self.local:
+            kernel = self._generate_molecular(X,Y)
+        else:
+            kernel = self._generate_atomic(X,Y)
+
+        return kernel
+
+    def _generate_molecular(self, X, Y=None):
+
+        print("OQML doesn't support global kernels")
+        raise SystemExit
+
+    def _generate_atomic(self, X, Y=None):
+
+
+        X1  = np.array([rep[0] for rep in X])
+        dX1 = np.array([rep[1] for rep in X])
+        Q1  = [rep[2] for rep in X]
+
+        # print(type(Y))
+
+        if Y is None or X is Y:
+
+            K_return  = get_local_symmetric_kernel(X1,  Q1, self.sigma)
+
+            return K_return
+
+        else:
+        
+            X2  = np.array([rep[0] for rep in Y])
+            dX2 = np.array([rep[1] for rep in Y])
+            Q2  = [rep[2] for rep in Y]
+
+            K_return  = get_local_kernel(X2, X1, Q2, Q1, self.sigma)
 
             return K_return
 
