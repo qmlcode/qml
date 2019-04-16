@@ -24,6 +24,7 @@ import numpy as np
 
 from copy import deepcopy
 
+from .fsolvers import fcho_solve_dpp
 from .fsolvers import fcho_solve
 from .fsolvers import fcho_invert
 from .fsolvers import fbkf_solve
@@ -32,6 +33,45 @@ from .fsolvers import fsvd_solve
 from .fsolvers import fqrlq_solve
 from .fsolvers import fcond
 from .fsolvers import fcond_ge
+
+
+def dpp2kernel(A, Is, Js):
+
+    C = np.zeros((len(Js),len(Is)))
+    
+    for a, i in enumerate(Is):
+        for b, j in enumerate(Js):
+
+            p = min(i, j) + 1
+            q = max(i, j) + 1
+
+            idx = p+(q*(q-1))//2 - 1
+            C[b, a] = A[idx]
+
+    return C
+
+def get_view_dpp(A, Is):
+
+    n = len(Is)
+    L = (n * (n+1)) // 2
+
+    AP = np.zeros((L))
+
+    for i, l in enumerate(Is):
+
+        for j, k in enumerate(Is):
+
+            if k < l: continue
+            
+            p = l + 1
+            q = k + 1
+
+            r = i + 1
+            s = j + 1
+
+            AP[r+(s*(s-1))//2 - 1] = A[p+(q*(q-1))//2 - 1]
+
+    return AP
 
 
 def cho_invert(A):
@@ -60,8 +100,48 @@ def cho_invert(A):
 
     return I
 
+def cho_solve_dpp(A, y, l2reg=0.0):
+    """ Solves the equation
 
-def cho_solve(A, y):
+            :math:`A x = y`
+
+        for x using a Cholesky decomposition  via calls to LAPACK dpotrf and dpotrs in the F2PY module. Preserves the input matrix A.
+
+        :param A: Matrix (symmetric and positive definite, left-hand side).
+        :type A: numpy array
+        :param y: Vector (right-hand side of the equation).
+        :type y: numpy array
+
+        :return: The solution vector.
+        :rtype: numpy array
+        """
+    
+    for i in range(len(y)):
+        idx = (i+i*(i-1)//2) - 1
+        A[idx] += l2reg
+
+     
+    n = len(y)
+
+    # Backup diagonal before Cholesky-decomposition
+    # A_diag = A[np.diag_indices_from(A)]
+
+    x = np.zeros(n)
+    fcho_solve_dpp(A, y, x)
+
+    ## Reset diagonal after Cholesky-decomposition
+    #A[np.diag_indices_from(A)] = A_diag
+
+    ## Copy lower triangle to upper
+    #i_lower = np.tril_indices_from(A)
+    #A.T[i_lower] = A[i_lower]
+
+    return x
+
+
+
+
+def cho_solve(A, y, l2reg=0.0):
     """ Solves the equation
 
             :math:`A x = y`
@@ -87,6 +167,10 @@ def cho_solve(A, y):
 
     # Backup diagonal before Cholesky-decomposition
     A_diag = A[np.diag_indices_from(A)]
+    
+    for i in range(len(y)):
+
+        A[i,i] += l2reg
 
     x = np.zeros(n)
     fcho_solve(A, y, x)

@@ -20,6 +20,41 @@
 ! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ! SOFTWARE.
 
+
+subroutine fcho_solve_dpp(A,y,x)
+
+    implicit none
+
+    double precision, dimension(:), intent(in) :: A
+    double precision, dimension(:), intent(in) :: y
+    double precision, dimension(:), intent(inout) :: x
+
+    integer :: info
+    integer :: na
+    integer :: l 
+
+    l = size(A, dim=1)
+    na = size(y, dim=1)
+
+    if (l /= (na * (na+1) / 2)) then
+        write (*,*) "WARNING: fcho_solve_dpp recieved faulty input!", na, l, (na * (na+1) / 2)
+    end if
+
+    x(:na) = y(:na)
+
+    call dppsv("U", na, 1, A, x, na, info )
+
+    if (info > 0) then
+        write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPPSV()."
+        write (*,*) "WARNING: The", info, "-th leading order is not positive definite."
+    else if (info < 0) then
+        write (*,*) "WARNING: Error in LAPACK Cholesky decomposition DPPSV()."
+        write (*,*) "WARNING: The", -info, "-th argument had an illegal value."
+    endif
+
+end subroutine fcho_solve_dpp
+
+
 subroutine fcho_solve(A,y,x)
 
     implicit none
