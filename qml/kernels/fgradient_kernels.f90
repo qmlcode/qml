@@ -1,17 +1,17 @@
 ! MIT License
-! 
+!
 ! Copyright (c) 2018-2019 Anders Steen Christensen
-! 
+!
 ! Permission is hereby granted, free of charge, to any person obtaining a copy
 ! of this software and associated documentation files (the "Software"), to deal
 ! in the Software without restriction, including without limitation the rights
 ! to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 ! copies of the Software, and to permit persons to whom the Software is
 ! furnished to do so, subject to the following conditions:
-! 
+!
 ! The above copyright notice and this permission notice shall be included in all
 ! copies or substantial portions of the Software.
-! 
+!
 ! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,15 +22,11 @@
 
 subroutine flocal_kernel_dpp(x1, q1, n1, nm1, sigma, kernel)
 
-
     implicit none
 
     double precision, dimension(:,:,:), intent(in) :: x1
-
     integer, dimension(:,:), intent(in) :: q1
-
     integer, dimension(:), intent(in) :: n1
-
     integer, intent(in) :: nm1
 
     double precision, intent(in) :: sigma
@@ -46,11 +42,13 @@ subroutine flocal_kernel_dpp(x1, q1, n1, nm1, sigma, kernel)
     integer :: idx
     double precision, allocatable, dimension(:) :: d
 
+    kernel = 0.0d0
+
     rep_size = size(x1, dim=3)
     allocate(d(rep_size))
 
     inv_sigma2 = -1.0d0 / (2 * sigma**2)
-    
+
     !$OMP PARALLEL DO private(d,idx) schedule(dynamic)
     do a = 1, nm1
 
@@ -70,7 +68,7 @@ subroutine flocal_kernel_dpp(x1, q1, n1, nm1, sigma, kernel)
                         ! Follows UPLO = "U" convention
                         idx = a+(b*(b-1))/2
 
-                        kernel(idx) = kernel(idx) + exp((norm2(d)**2) * inv_sigma2)
+                        kernel(idx) = kernel(idx) + exp(sum(d**2) * inv_sigma2)
 
                     endif
 
@@ -121,6 +119,8 @@ subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
     double precision :: l2
 
+    kernel = 0.0d0
+
     rep_size = size(x1, dim=3)
     allocate(d(rep_size))
 
@@ -164,7 +164,7 @@ subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
         ! Molecule 2
         do b = 1, nm2
- 
+
             s12 = 0.0d0
             ! Atom in Molecule 1
             do j1 = 1, n1(a)
@@ -193,6 +193,227 @@ subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 end subroutine fglobal_kernel
 
 
+subroutine flocal_kernels(x1, x2, q1, q2, n1, n2, nm1, nm2, sigmas, nsigmas, kernel)
+
+    use omp_lib, only: omp_get_thread_num, omp_get_wtime
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    double precision, dimension(:,:,:), intent(in) :: x2
+
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:,:), intent(in) :: q2
+
+    integer, dimension(:), intent(in) :: n1
+    integer, dimension(:), intent(in) :: n2
+
+    integer, intent(in) :: nm1
+    integer, intent(in) :: nm2
+
+    double precision, dimension(:), intent(in) :: sigmas
+    integer, intent(in) :: nsigmas
+
+    double precision, dimension(nsigmas,nm2,nm1), intent(out) :: kernel
+
+    ! integer, external :: omp_get_thread_num
+
+    integer :: j1, j2
+    integer :: a, b
+    integer :: i
+
+    integer :: work_done
+    integer :: work_total
+
+    ! integer :: rep_size
+    double precision, dimension(nsigmas) :: inv_sigma2
+    double precision :: l2
+    double precision :: t_start
+    double precision :: t_elapsed
+    double precision :: t_eta
+
+    kernel = 0.0d0
+
+    do i =1, nsigmas
+       inv_sigma2(i) = -1.0d0 / (2 * sigmas(i)**2)
+    enddo
+
+
+    ! !$OMP PARALLEL private(tid)
+    ! tid = OMP_get_thread_num()
+    ! write(*,*) tid
+    ! !$OMP END PARALLEL
+
+    work_total = nm1 * nm2
+    work_done = 0
+
+    t_start = omp_get_wtime()
+
+    write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
+    !$OMP PARALLEL DO private(l2) shared(work_total) schedule(dynamic)
+    do a = 1, nm1
+
+        if (omp_get_thread_num() == 0) then
+
+            t_elapsed = omp_get_wtime() - t_start
+            t_eta = t_elapsed * work_total / work_done - t_elapsed
+
+         write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
+             & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
+          ! write(*,"(A, F10.1, A)") "elapsed", omp_get_wtime() - t_start, "s"
+
+
+
+
+          ! write(*,"(A, F10.1, A)") "eta", (omp_get_wtime() - t_start) * dble(work_total) / dble(work_done) &
+          !    & - (omp_get_wtime() - t_start), "s"
+        endif
+
+        ! Molecule 2
+        do b = 1, nm2
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n2(b)
+
+                    if (q1(j1,a) == q2(j2,b)) then
+
+                        l2 = sum((x1(a,j1,:) - x2(b,j2,:))**2)
+                        kernel(:, b, a) = kernel(:, b, a) + exp(l2 * inv_sigma2(:))
+
+                    endif
+
+                enddo
+            enddo
+
+        enddo
+
+        !$OMP ATOMIC
+        work_done = work_done + nm2
+        !$OMP END ATOMIC
+
+    enddo
+    !$OMP END PARALLEL do
+
+    write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+    write(*,*) "QML: Non-alchemical Gaussian kernel completed!"
+
+end subroutine flocal_kernels
+
+
+subroutine fsymmetric_local_kernels(x1, q1, n1, nm1, sigmas, nsigmas, kernel)
+
+    use omp_lib, only: omp_get_thread_num, omp_get_wtime
+
+    implicit none
+
+    double precision, dimension(:,:,:), intent(in) :: x1
+    integer, dimension(:,:), intent(in) :: q1
+    integer, dimension(:), intent(in) :: n1
+    integer, intent(in) :: nm1
+
+    double precision, dimension(:), intent(in) :: sigmas
+    integer, intent(in) :: nsigmas
+
+    double precision, dimension(nsigmas,nm1,nm1), intent(out) :: kernel
+
+    integer :: j1, j2
+    integer :: a, b
+    integer :: i
+
+    integer :: work_done
+    integer :: work_total
+
+    integer :: rep_size
+    double precision, allocatable, dimension(:) :: inv_sigma2
+    double precision :: l2
+
+    double precision :: t_start
+    double precision :: t_elapsed
+    double precision :: t_eta
+
+    kernel = 0.0d0
+
+    rep_size = size(x1, dim=3)
+    allocate(inv_sigma2(nsigmas))
+
+    do i =1, nsigmas
+       inv_sigma2(i) = -1.0d0 / (2 * sigmas(i)**2)
+    enddo
+
+    work_total = (nm1 * (nm1 + 1)) / 2
+    work_done = 0
+
+    t_start = omp_get_wtime()
+
+    write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
+    !$OMP PARALLEL DO private(l2) shared(work_done) schedule(dynamic)
+    do a = 1, nm1
+
+        ! if (omp_get_thread_num() == 0) then
+        !     write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+        ! endif
+
+        if (omp_get_thread_num() == 0) then
+
+            t_elapsed = omp_get_wtime() - t_start
+            t_eta = t_elapsed * work_total / work_done - t_elapsed
+
+         write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
+             & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
+          ! write(*,"(A, F10.1, A)") "elapsed", omp_get_wtime() - t_start, "s"
+
+
+
+
+          ! write(*,"(A, F10.1, A)") "eta", (omp_get_wtime() - t_start) * dble(work_total) / dble(work_done) &
+          !    & - (omp_get_wtime() - t_start), "s"
+        endif
+
+        ! Molecule 2
+        do b = a, nm1
+
+            ! Atom in Molecule 1
+            do j1 = 1, n1(a)
+
+                !Atom in Molecule2
+                do j2 = 1, n1(b)
+
+                    if (q1(j1,a) == q1(j2,b)) then
+
+                        l2 = sum((x1(a,j1,:) - x1(b,j2,:))**2)
+                        kernel(:, b, a) = kernel(:, b, a) + exp(l2 * inv_sigma2(:))
+
+                    endif
+
+                enddo
+            enddo
+
+            if (b > a) then
+                kernel(:, a, b) = kernel(:, b, a)
+
+            endif
+
+        enddo
+
+        !$OMP ATOMIC
+        work_done = work_done + (nm1 - a + 1)
+        !$OMP END ATOMIC
+
+    enddo
+    !$OMP END PARALLEL do
+
+    write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+    write(*,*) "QML: Non-alchemical Gaussian kernel completed!"
+
+    deallocate(inv_sigma2)
+
+end subroutine fsymmetric_local_kernels
+
+
+
 subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
     implicit none
@@ -218,15 +439,14 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
     integer :: rep_size
     double precision :: inv_sigma2
+    double precision :: l2
 
-    double precision, allocatable, dimension(:) :: d
+    kernel = 0.0d0
 
     rep_size = size(x1, dim=3)
-    allocate(d(rep_size))
-
     inv_sigma2 = -1.0d0 / (2 * sigma**2)
 
-    !$OMP PARALLEL DO private(d) schedule(dynamic)
+    !$OMP PARALLEL DO private(l2) schedule(dynamic)
     do a = 1, nm1
 
         ! Molecule 2
@@ -240,8 +460,8 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
 
                     if (q1(j1,a) == q2(j2,b)) then
 
-                       d(:) = x1(a,j1,:)- x2(b,j2,:)
-                       kernel(b, a) = kernel(b, a) + exp((norm2(d)**2) * inv_sigma2)
+                       l2 = sum((x1(a,j1,:) - x2(b,j2,:))**2)
+                       kernel(b, a) = kernel(b, a) + exp(l2 * inv_sigma2)
 
                     endif
 
@@ -251,8 +471,6 @@ subroutine flocal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
         enddo
     enddo
     !$OMP END PARALLEL do
-
-    deallocate(d)
 
 end subroutine flocal_kernel
 
@@ -278,15 +496,14 @@ subroutine fsymmetric_local_kernel(x1, q1, n1, nm1, sigma, kernel)
 
     integer :: rep_size
     double precision :: inv_sigma2
+    double precision :: l2
 
-    double precision, allocatable, dimension(:) :: d
+    kernel = 0.0d0
 
     rep_size = size(x1, dim=3)
-    allocate(d(rep_size))
-
     inv_sigma2 = -1.0d0 / (2 * sigma**2)
-    
-    !$OMP PARALLEL DO private(d) schedule(dynamic)
+
+    !$OMP PARALLEL DO private(l2) schedule(dynamic)
     do a = 1, nm1
 
         ! Molecule 2
@@ -300,8 +517,8 @@ subroutine fsymmetric_local_kernel(x1, q1, n1, nm1, sigma, kernel)
 
                     if (q1(j1,a) == q1(j2,b)) then
 
-                        d(:) = x1(a,j1,:)- x1(b,j2,:)
-                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_sigma2)
+                        l2 = sum((x1(a,j1,:) - x1(b,j2,:))**2)
+                        kernel(a, b) = kernel(a, b) + exp(l2 * inv_sigma2)
 
                     endif
 
@@ -316,8 +533,6 @@ subroutine fsymmetric_local_kernel(x1, q1, n1, nm1, sigma, kernel)
         enddo
     enddo
     !$OMP END PARALLEL do
-
-    deallocate(d)
 
 end subroutine fsymmetric_local_kernel
 
@@ -349,16 +564,15 @@ subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, ke
 
     integer :: rep_size
     double precision :: inv_sigma2
+    double precision :: l2
 
-    double precision, allocatable, dimension(:) :: d
-
+    kernel = 0.0d0
 
     rep_size = size(x1, dim=3)
-    allocate(d(rep_size))
 
     inv_sigma2 = -1.0d0 / (2 * sigma**2)
 
-    !$OMP PARALLEL DO private(idx1_start, idx1, d) schedule(dynamic)
+    !$OMP PARALLEL DO private(idx1_start, idx1, l2) schedule(dynamic)
     do a = 1, nm1
 
         idx1_start = sum(n1(:a)) - n1(a)
@@ -376,8 +590,8 @@ subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, ke
 
                     if (q1(j1,a) == q2(j2,b)) then
 
-                        d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        kernel(b,idx1) = kernel(b,idx1) + exp((norm2(d)**2) * inv_sigma2)
+                        l2 = sum((x1(a,j1,:) - x2(b,j2,:))**2)
+                        kernel(b,idx1) = kernel(b,idx1) + exp(l2 * inv_sigma2)
 
                     endif
 
@@ -387,8 +601,6 @@ subroutine fatomic_local_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, na1, sigma, ke
         enddo
     enddo
     !$OMP END PARALLEL do
-
-    deallocate(d)
 
 end subroutine fatomic_local_kernel
 
@@ -483,7 +695,7 @@ subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, 
                     if (q1(j1,a) == q2(j2,b)) then
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+                        expd = inv_sigma2 * exp(sum(d**2) * inv_2sigma2)
 
                         ! Add the dot product to the kernel in one BLAS call
                         call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs(:,:n2(b)*3,j2,b), &
@@ -690,7 +902,7 @@ subroutine flocal_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, naq2, s
                     if (q1(j1,a) == q2(j2,b)) then
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+                        expd = inv_sigma2 * exp(sum(d**2) * inv_2sigma2)
 
                         ! Add the dot products to the kernel in one BLAS call
                         call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs(:,:n2(b)*3,j2,b), &
@@ -826,7 +1038,7 @@ subroutine fgdml_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, na1, na2, si
 
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,i1,:)- x2(b,i2,:)
-                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expd = inv_sigma4 * exp(sum(d**2) * inv_2sigma2)
                         expdiag = sigma2 * expd
 
                         ! Calculate the outer product of the distance
@@ -967,7 +1179,7 @@ subroutine fsymmetric_gdml_kernel(x1, dx1, q1, n1, nm1, na1, sigma, kernel)
                     if (q1(i1,a) == q1(i2,b)) then
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,i1,:)- x1(b,i2,:)
-                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expd = inv_sigma4 * exp(sum(d**2) * inv_2sigma2)
                         expdiag = sigma2 * expd
 
                         ! Calculate the outer product of the distance
@@ -1130,7 +1342,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
                     if (q1(j1,a) == q2(j2,b)) then
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
                         !kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
-                        kernel(b, a) = kernel(b, a) + exp((norm2(d)**2) * inv_2sigma2)
+                        kernel(b, a) = kernel(b, a) + exp(sum(d**2) * inv_2sigma2)
                     endif
 
                 enddo
@@ -1161,7 +1373,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
                     if (q1(j1,a) == q2(j2,b)) then
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,j1,:)- x2(b,j2,:)
-                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+                        expd = inv_sigma2 * exp(sum(d**2) * inv_2sigma2)
 
                         ! Add the dot products to the kernel in one BLAS call
                         call dgemv("T", rep_size, n2(b)*3, expd, sorted_derivs2(:,:n2(b)*3,j2,b), &
@@ -1198,7 +1410,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x2(a,j1,:)- x1(b,j2,:)
-                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+                        expd = inv_sigma2 * exp(sum(d**2) * inv_2sigma2)
 
                         ! write(*,*) nm1,idx1_start+nm1,idx1_end+nm1,a
 
@@ -1234,7 +1446,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
 
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,i1,:)- x2(b,i2,:)
-                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expd = inv_sigma4 * exp(sum(d**2) * inv_2sigma2)
                         expdiag = sigma2 * expd
 
                         ! Calculate the outer product of the distance
@@ -1244,7 +1456,7 @@ subroutine fgaussian_process_kernel(x1, x2, dx1, dx2, q1, q2, n1, n2, nm1, nm2, 
                         do k = 1, rep_size
                            hess(k,k) = hess(k,k) + expdiag
                         enddo
-                        
+
                         ! ! Do the first half of the dot product, save in partial(:,:)
                         ! call dsymm("L", "U", rep_size, n1(a)*3, 1.0d0, hess(:,:), &
                         !     & rep_size, sorted_derivs1(:,:n1(a)*3,i1,a), rep_size, &
@@ -1378,7 +1590,7 @@ subroutine fsymmetric_gaussian_process_kernel(x1, dx1, q1, n1, nm1, na1, sigma, 
 
                     if (q1(j1,a) == q1(j2,b)) then
                         d(:) = x1(a,j1,:)- x1(b,j2,:)
-                        kernel(a, b) = kernel(a, b) + exp((norm2(d)**2) * inv_2sigma2)
+                        kernel(a, b) = kernel(a, b) + exp(sum(d**2) * inv_2sigma2)
                     endif
 
                 enddo
@@ -1414,7 +1626,7 @@ subroutine fsymmetric_gaussian_process_kernel(x1, dx1, q1, n1, nm1, na1, sigma, 
                     if (q1(j1,a) == q1(j2,b)) then
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,j1,:)- x1(b,j2,:)
-                        expd = inv_sigma2 * exp((norm2(d)**2) * inv_2sigma2)
+                        expd = inv_sigma2 * exp(sum(d**2) * inv_2sigma2)
 
                         ! Add the dot products to the kernel in one BLAS call
                         call dgemv("T", rep_size, n1(b)*3, expd, sorted_derivs1(:,:n1(b)*3,j2,b), &
@@ -1448,7 +1660,7 @@ subroutine fsymmetric_gaussian_process_kernel(x1, dx1, q1, n1, nm1, na1, sigma, 
 
                         ! Calculate the distance vector, and some intermediate results
                         d(:) = x1(a,i1,:)- x1(b,i2,:)
-                        expd = inv_sigma4 * exp(norm2(d)**2 * inv_2sigma2)
+                        expd = inv_sigma4 * exp(sum(d**2) * inv_2sigma2)
                         expdiag = sigma2 * expd
 
                         ! Calculate the outer product of the distance

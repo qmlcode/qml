@@ -31,7 +31,9 @@ from qml.representations import generate_acsf
 
 from qml.kernels import get_global_kernel
 from qml.kernels import get_local_kernel
+from qml.kernels import get_local_kernels
 from qml.kernels import get_local_symmetric_kernel
+from qml.kernels import get_local_symmetric_kernels
 from qml.kernels import get_atomic_local_kernel
 from qml.kernels import get_atomic_local_gradient_kernel
 from qml.kernels import get_local_gradient_kernel
@@ -449,6 +451,47 @@ def test_gp_kernel():
     assert np.allclose(K1_symm, K2_symm), "Error: Fail in Gaussian Process symmetric kernel"
 
 
+def test_local_kernels():
+
+    Xall, dXall, Eall, Fall, dispXall, Nall, Qall= csv_to_molecular_reps(CSV_FILE)
+
+    X  = Xall[:TRAINING]
+    dX = dXall[:TRAINING]
+    N  = Nall[:TRAINING]
+    dispX  = dispXall[:,:sum(N)*3,:,:]
+    Q  = Qall[:TRAINING]
+
+
+    Xs = Xall[-TEST:]
+    dXs = dXall[-TEST:]
+    Ns = Nall[-TEST:]
+    dispXs = dispXall[:,-sum(Ns)*3:,:,:]
+    Qs  = Qall[-TEST:]
+
+    sigma1 = 2.5
+    sigma2 = 25.0
+
+    K1 = get_local_kernel(X, Xs, Q, Qs, sigma1)
+    K2 = get_local_kernel(X, Xs, Q, Qs, sigma2)
+    K3 = get_local_kernel(X, Xs, Q, Qs, 10.0)
+    K4 = get_local_kernel(X, Xs, Q, Qs, 2.0)
+
+    K5 = get_local_kernel(X, Xs, Q, Qs, 3.0)
+
+    K = get_local_kernels(X, Xs, Q, Qs, [sigma1, sigma2,10.0,2.0,3.0])
+
+
+    assert np.allclose(K1, K[0]), "Error in get_local_kernels() 1"
+    assert np.allclose(K2, K[1]), "Error in get_local_kernels() 2"
+
+    K1 = get_local_kernel(X, X, Q, Q, sigma1)
+    K2 = get_local_symmetric_kernel(X, Q, sigma2)
+
+    K  = get_local_symmetric_kernels(X, Q, [sigma1, sigma2])
+
+    assert np.allclose(K1, K[0]), "Error in get_local_symmetric_kernels() 1"
+    assert np.allclose(K2, K[1]), "Error in get_local_symmetric_kernels() 2"
+
 if __name__ == "__main__":
 
     test_local_kernel()
@@ -459,3 +502,4 @@ if __name__ == "__main__":
     test_symmetric_gdml_kernel()
     test_gp_kernel()
     test_global_kernel()
+    test_local_kernels()
