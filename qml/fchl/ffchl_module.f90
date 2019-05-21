@@ -718,8 +718,6 @@ end function scalar_alchemy
 
 function get_ksi(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
 
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! FCHL descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -747,9 +745,6 @@ function get_ksi(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose
     ! Internal counters
     integer :: maxneigh, maxatoms, nm, a, ni, i
     
-    double precision :: t_start, t_end
-
-
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
     nm = size(x, dim=1)
@@ -757,9 +752,6 @@ function get_ksi(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose
     allocate(ksi(nm, maxatoms, maxneigh))
     
     ksi = 0.0d0
-    
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(ni)
     do a = 1, nm
@@ -770,16 +762,11 @@ function get_ksi(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose
         enddo
     enddo
     !$OMP END PARALLEL do
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
 
 end function get_ksi
 
 
 function get_ksi_displaced(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -807,11 +794,6 @@ function get_ksi_displaced(x, na, nneigh, two_body_power, cut_start, cut_distanc
 
     ! Internal counters
     integer :: maxneigh, maxatoms, nm, a, ni, i, j, pm, xyz, ndisp
-    
-    double precision :: t_start, t_end
-
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY GRADIENT"
-    t_start = omp_get_wtime()
 
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
@@ -838,16 +820,11 @@ function get_ksi_displaced(x, na, nneigh, two_body_power, cut_start, cut_distanc
         enddo
     enddo
     !$OMP END PARALLEL do
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
 
 end function get_ksi_displaced
 
 
 function get_ksi_atomic(x, na, nneigh, two_body_power, cut_start, cut_distance, verbose) result(ksi)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -875,8 +852,6 @@ function get_ksi_atomic(x, na, nneigh, two_body_power, cut_start, cut_distance, 
 
     ! Internal counters
     integer :: maxneigh, nm, i
-    
-    double precision :: t_start, t_end
 
     maxneigh = maxval(nneigh)
     nm = size(x, dim=1)
@@ -884,9 +859,6 @@ function get_ksi_atomic(x, na, nneigh, two_body_power, cut_start, cut_distance, 
     allocate(ksi(na, maxneigh))
 
     ksi = 0.0d0
-    
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO
     do i = 1, na
@@ -895,15 +867,10 @@ function get_ksi_atomic(x, na, nneigh, two_body_power, cut_start, cut_distance, 
     enddo
     !$OMP END PARALLEL do
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
-
 end function get_ksi_atomic
 
 
 subroutine init_cosp_sinp(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -936,8 +903,6 @@ subroutine init_cosp_sinp(x, na, nneigh, three_body_power, order, cut_start, cut
     integer :: maxneigh, maxatoms, pmax, nm, a, ni, i
 
     double precision, allocatable, dimension(:,:,:,:) :: fourier
-    
-    double precision :: t_start, t_end
 
     
     maxneigh = maxval(nneigh)
@@ -948,9 +913,6 @@ subroutine init_cosp_sinp(x, na, nneigh, three_body_power, order, cut_start, cut
 
     cosp = 0.0d0
     sinp = 0.0d0
-    
-    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(ni, fourier) schedule(dynamic)
     do a = 1, nm
@@ -967,15 +929,10 @@ subroutine init_cosp_sinp(x, na, nneigh, three_body_power, order, cut_start, cut
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
-
 end subroutine init_cosp_sinp
 
 
 subroutine init_cosp_sinp_displaced(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1008,14 +965,8 @@ subroutine init_cosp_sinp_displaced(x, na, nneigh, three_body_power, order, cut_
     integer :: maxneigh, maxatoms, pmax, nm, a, ni, i, j, xyz, pm, xyz_pm
 
     double precision, allocatable, dimension(:,:,:,:) :: fourier
-    
-    double precision :: t_start, t_end
 
     integer :: ndisp
-
-
-    if (verbose) write (*,"(A)", advance="no") "THREE-BODY GRADIENT"
-    t_start = omp_get_wtime()
     
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
@@ -1053,15 +1004,10 @@ subroutine init_cosp_sinp_displaced(x, na, nneigh, three_body_power, order, cut_
     enddo
     !$OMP END PARALLEL do
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                     Time = ", t_end - t_start, " s"
-
 end subroutine init_cosp_sinp_displaced
 
 
 subroutine init_cosp_sinp_atomic(x, na, nneigh, three_body_power, order, cut_start, cut_distance, cosp, sinp, verbose)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1097,8 +1043,6 @@ subroutine init_cosp_sinp_atomic(x, na, nneigh, three_body_power, order, cut_sta
     ! Internal temporary variable
     double precision, allocatable, dimension(:,:,:,:) :: fourier
     
-    double precision :: t_start, t_end
-    
     maxneigh = maxval(nneigh)
     nm = size(x, dim=1)
 
@@ -1106,9 +1050,6 @@ subroutine init_cosp_sinp_atomic(x, na, nneigh, three_body_power, order, cut_sta
 
     cosp = 0.0d0
     sinp = 0.0d0
-    
-    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(fourier)
     do i = 1, na
@@ -1122,16 +1063,11 @@ subroutine init_cosp_sinp_atomic(x, na, nneigh, three_body_power, order, cut_sta
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                     Time = ", t_end - t_start, " s"
-
 end subroutine init_cosp_sinp_atomic
 
 
 function get_selfscalar(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
         & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose) result(self_scalar)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1186,11 +1122,6 @@ function get_selfscalar(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
     ! Internal counters
     integer :: a, ni, i
     
-    double precision :: t_start, t_end
-    
-    if (verbose) write (*,"(A)", advance="no") "SELF-SCALAR TERMS"
-    t_start = omp_get_wtime()
-    
     allocate(self_scalar(nm, maxval(na)))
 
     !$OMP PARALLEL DO PRIVATE(ni)
@@ -1207,16 +1138,11 @@ function get_selfscalar(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
-
 end function get_selfscalar
 
 
 function get_selfscalar_displaced(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d_width, &
         & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose) result(self_scalar)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1270,11 +1196,6 @@ function get_selfscalar_displaced(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d
 
     ! Internal counters
     integer :: a, ni, i, j, pm, xyz, xyz_pm, ndisp
-    
-    double precision :: t_start, t_end
-    
-    if (verbose) write (*,"(A)", advance="no") "SELF-SCALAR GRADIENT"
-    t_start = omp_get_wtime()
  
     ndisp = size(x, dim=3)
     allocate(self_scalar(nm, 3, ndisp, maxval(na), maxval(na)))
@@ -1305,16 +1226,11 @@ function get_selfscalar_displaced(x, nm, na, nneigh, ksi, sinp, cosp, t_width, d
     enddo
     !$OMP END PARALLEL do
    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
-
 end function get_selfscalar_displaced
 
 
 
 function get_ksi_ef(x, na, nneigh, two_body_power, cut_start, cut_distance, ef_scale, df, verbose) result(ksi)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1349,11 +1265,6 @@ function get_ksi_ef(x, na, nneigh, two_body_power, cut_start, cut_distance, ef_s
 
     ! Electric field
     double precision, dimension(3) :: field
-    
-    double precision :: t_start, t_end
-
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
@@ -1385,15 +1296,10 @@ function get_ksi_ef(x, na, nneigh, two_body_power, cut_start, cut_distance, ef_s
     enddo
     !$OMP END PARALLEL do
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
-
 end function get_ksi_ef
 
 
 function get_ksi_ef_field(x, na, nneigh, two_body_power, cut_start, cut_distance, fields, ef_scale, verbose) result(ksi)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1425,15 +1331,10 @@ function get_ksi_ef_field(x, na, nneigh, two_body_power, cut_start, cut_distance
     ! Internal counters
     integer :: maxneigh, maxatoms, nm, a, ni, i
     
-    double precision :: t_start, t_end
-    
     double precision, intent(in) :: ef_scale
     
     ! Electric field displacement
     ! double precision, intent(in) :: df
-
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
@@ -1456,15 +1357,10 @@ function get_ksi_ef_field(x, na, nneigh, two_body_power, cut_start, cut_distance
     enddo
     !$OMP END PARALLEL do
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
-
 end function get_ksi_ef_field
 
 subroutine init_cosp_sinp_ef(x, na, nneigh, three_body_power, order, cut_start, cut_distance, &
        & cosp, sinp, ef_scale, df, verbose)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1502,16 +1398,11 @@ subroutine init_cosp_sinp_ef(x, na, nneigh, three_body_power, order, cut_start, 
 
     double precision, allocatable, dimension(:,:,:,:) :: fourier
     
-    double precision :: t_start, t_end
-    
     ! Internal counters
     integer :: xyz, pm
 
     ! Electric field
     double precision, dimension(3) :: field
-    
-    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
-    t_start = omp_get_wtime()
     
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
@@ -1545,16 +1436,11 @@ subroutine init_cosp_sinp_ef(x, na, nneigh, three_body_power, order, cut_start, 
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
-
 end subroutine init_cosp_sinp_ef
 
 
 subroutine init_cosp_sinp_ef_field(x, na, nneigh, three_body_power, &
         & order, cut_start, cut_distance, cosp, sinp, fields, ef_scale, verbose)
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1595,11 +1481,6 @@ subroutine init_cosp_sinp_ef_field(x, na, nneigh, three_body_power, &
 
     double precision, allocatable, dimension(:,:,:,:) :: fourier
     
-    double precision :: t_start, t_end
-
-    if (verbose) write (*,"(A)", advance="no") "THREE-BODY TERMS"
-    t_start = omp_get_wtime()
-    
     maxneigh = maxval(nneigh)
     maxatoms = maxval(na)
     nm = size(x, dim=1)
@@ -1625,9 +1506,6 @@ subroutine init_cosp_sinp_ef_field(x, na, nneigh, three_body_power, &
 
     enddo
     !$OMP END PARALLEL DO
-
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                        Time = ", t_end - t_start, " s"
 
 end subroutine init_cosp_sinp_ef_field
 

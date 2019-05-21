@@ -7,8 +7,6 @@ subroutine fget_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, nm1, nm2
     
     use ffchl_kernels, only: kernel
 
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! fchl descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -99,11 +97,7 @@ subroutine fget_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, nm1, nm2
     ! Max number of neighbors 
     integer :: maxneigh1
     integer :: maxneigh2
-
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
     
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
 
     ! Get max number of neighbors
@@ -144,9 +138,6 @@ subroutine fget_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, nm1, nm2
     ! Pre-calculate self-scalar terms 
     self_scalar2 = get_selfscalar(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, d_width, &
          & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
-
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj)
     do b = 1, nm2
@@ -174,9 +165,6 @@ subroutine fget_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, nm1, nm2
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2)
@@ -198,8 +186,6 @@ subroutine fget_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsigmas, &
     use ffchl_module, only: scalar, get_angular_norm2, get_pmax, get_ksi, init_cosp_sinp, get_selfscalar
     
     use ffchl_kernels, only: kernel
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -261,13 +247,10 @@ subroutine fget_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsigmas, &
     integer :: pmax1
     ! integer :: nneighi
 
-    double precision :: t_start, t_end
-
     double precision :: ang_norm2
 
     integer :: maxneigh1
     
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
 
     ang_norm2 = get_angular_norm2(t_width)
@@ -285,9 +268,6 @@ subroutine fget_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsigmas, &
 
     self_scalar1 = get_selfscalar(x1, nm1, n1, nneigh1, ksi1, sinp1, cosp1, t_width, d_width, &
          & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
-
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj)
     do b = 1, nm1
@@ -317,9 +297,6 @@ subroutine fget_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsigmas, &
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(ksi1)
@@ -336,8 +313,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
 
     use ffchl_module, only: scalar, get_angular_norm2, get_pmax, get_ksi, init_cosp_sinp
     use ffchl_kernels, only: kernel
-    use omp_lib, only: omp_get_wtime
-
+    
     implicit none
 
     ! FCHL descriptors for the training set, format (i,j_1,5,m_1)
@@ -401,9 +377,6 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
 
     double precision :: mol_dist
 
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
-
     integer :: maxneigh1
 
     maxneigh1 = maxval(nneigh1)
@@ -423,9 +396,6 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
     allocate(self_scalar1(nm1))
 
     self_scalar1 = 0.0d0
-   
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:self_scalar1)
     do a = 1, nm1
@@ -444,14 +414,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
-
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
-    
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,mol_dist)
     do b = 1, nm1
@@ -484,9 +447,6 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(ksi1)
@@ -504,7 +464,6 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
 
     use ffchl_module, only: scalar, get_angular_norm2, get_pmax, get_ksi, init_cosp_sinp
     use ffchl_kernels, only: kernel
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -580,9 +539,6 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
 
     double precision :: mol_dist
 
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
-
     integer :: maxneigh1
     integer :: maxneigh2
 
@@ -617,10 +573,6 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
 
     self_scalar1 = 0.0d0
     self_scalar2 = 0.0d0
-    
-    
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:self_scalar1)
     do a = 1, nm1
@@ -638,13 +590,6 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
-    
-    
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
 
     !$OMP PARALLEL DO PRIVATE(ni) REDUCTION(+:self_scalar2)
     do a = 1, nm2
@@ -662,15 +607,8 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
-
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
     
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
-
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,mol_dist)
     do b = 1, nm2
         nj = n2(b)
@@ -699,9 +637,6 @@ subroutine fget_global_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nneigh2, &
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2)
@@ -726,8 +661,6 @@ subroutine fget_atomic_kernels_fchl(x1, x2, verbose, nneigh1, nneigh2, &
     
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! fchl descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -791,9 +724,6 @@ subroutine fget_atomic_kernels_fchl(x1, x2, verbose, nneigh1, nneigh2, &
     integer :: pmax1
     integer :: pmax2
     double precision :: ang_norm2
-
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
     
     integer :: maxneigh1
     integer :: maxneigh2
@@ -850,11 +780,7 @@ subroutine fget_atomic_kernels_fchl(x1, x2, verbose, nneigh1, nneigh2, &
     enddo
     !$OMP END PARALLEL DO
 
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
-    
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12)
     do i = 1, na1
@@ -873,9 +799,6 @@ subroutine fget_atomic_kernels_fchl(x1, x2, verbose, nneigh1, nneigh2, &
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2)
@@ -898,8 +821,6 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, verbose, nneigh1, na1, nsigmas
         & get_pmax_atomic, get_ksi_atomic, init_cosp_sinp_atomic
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! fchl descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -956,9 +877,6 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, verbose, nneigh1, na1, nsigmas
     integer :: pmax1
     double precision :: ang_norm2
 
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
-
     integer :: maxneigh1
 
     maxneigh1 = maxval(nneigh1)
@@ -979,9 +897,6 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, verbose, nneigh1, na1, nsigmas
 
     self_scalar1 = 0.0d0
     
-    if (verbose) write (*,"(A)", advance="no") "TWO-BODY TERMS"
-    t_start = omp_get_wtime()
-
     !$OMP PARALLEL DO
     do i = 1, na1
         self_scalar1(i) = scalar(x1(i,:,:), x1(i,:,:), &
@@ -993,15 +908,8 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, verbose, nneigh1, na1, nsigmas
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                       Time = ", t_end - t_start, " s"
-
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
     
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
-
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12)
     do i = 1, na1
         do j = i, na1
@@ -1020,9 +928,6 @@ subroutine fget_atomic_symmetric_kernels_fchl(x1, verbose, nneigh1, na1, nsigmas
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(ksi1)
@@ -1042,8 +947,6 @@ subroutine fget_atomic_local_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nnei
         & get_angular_norm2, get_pmax, get_ksi, init_cosp_sinp, get_selfscalar
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! fchl descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -1129,9 +1032,6 @@ subroutine fget_atomic_local_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nnei
     integer :: maxneigh1
     integer :: maxneigh2
 
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
-
     maxneigh1 = maxval(nneigh1)
     maxneigh2 = maxval(nneigh2)
 
@@ -1163,11 +1063,7 @@ subroutine fget_atomic_local_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nnei
     self_scalar2 = get_selfscalar(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, d_width, &
          & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
-
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(ni,nj,idx1,s12)
     do a = 1, nm1
@@ -1197,9 +1093,6 @@ subroutine fget_atomic_local_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nnei
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2)
