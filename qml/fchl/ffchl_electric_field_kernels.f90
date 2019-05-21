@@ -8,8 +8,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     
     use ffchl_kernels, only: kernel
 
-    use omp_lib, only: omp_get_wtime
-
     implicit none
 
     ! fchl descriptors for the training set, format (i,maxatoms,5,maxneighbors)
@@ -121,11 +119,7 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     ! Max number of neighbors 
     integer :: maxneigh1
     integer :: maxneigh2
-
-    ! Variables to calculate time 
-    double precision :: t_start, t_end
     
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
 
     ! Get max number of neighbors
@@ -229,9 +223,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
         enddo
     enddo
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL WITH FIELDS"
-    
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj)
     do a = 1, nm1
         ni = n1(a)
@@ -258,12 +249,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
-   
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 1/2"
-    
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
     do a = 1, nm1
         ni = n1(a)
@@ -310,11 +295,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
-
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 2/2"
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
 
     do a = 1, nm2
@@ -363,12 +343,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
         enddo
     enddo
     !$OMP END PARALLEL DO
-    
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
-
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF HESSIAN   "
     
     ! should be zero?
 
@@ -419,9 +393,6 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
-
     deallocate(self_scalar1)
     deallocate(self_scalar1_ef)
     deallocate(ksi1)
@@ -443,8 +414,6 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
         & get_selfscalar, get_ksi, init_cosp_sinp
 
     use ffchl_kernels, only: kernel
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -545,11 +514,7 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
     ! Max number of neighbors
     integer :: maxneigh1
     integer :: maxneigh2
-
-    ! Variables to calculate time
-    double precision :: t_start, t_end
-
-    if (verbose) write (*,*) "CLEARING KERNEL MEM"
+    
     kernels(:,:,:) = 0.0d0
 
     ! Get max number of neighbors
@@ -594,16 +559,7 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
     self_scalar2 = get_selfscalar(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, d_width, &
          & cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-
     kernels(:,:,:) = 0.0d0
-
-
-    ! write (*,*) nm1, nm2, na1
-    ! write (*,*) size(kernels,dim=1), size(kernels,dim=2), size(kernels,dim=3)
-
-
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(ni,nj,idx1,s12)
     do a = 1, nm1
@@ -634,9 +590,6 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose)  write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
-
     deallocate(self_scalar1)
     deallocate(self_scalar2)
     deallocate(ksi1)
@@ -657,8 +610,6 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
         & get_selfscalar, get_ksi_ef, init_cosp_sinp_ef
 
     use ffchl_kernels, only: kernel
-
-    use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -761,10 +712,6 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
     integer :: maxneigh1
     integer :: maxneigh2
 
-    ! Variables to calculate time
-    double precision :: t_start, t_end
-
-    if (verbose)  write (*,*) "CLEARING KERNEL MEM"
     kernels(:,:,:) = 0.0d0
 
     ! Get max number of neighbors
@@ -821,9 +768,6 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
         enddo
     enddo
 
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE"
-
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
 
     do a = 1, nm1
@@ -872,9 +816,6 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
     !$OMP END PARALLEL DO
 
     kernels = kernels / (2 * df)
-
-    t_end = omp_get_wtime()
-    if (verbose)  write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2_ef)
