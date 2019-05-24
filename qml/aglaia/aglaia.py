@@ -1088,8 +1088,16 @@ class MRMP(_NN):
         :type method: string
         :return: numpy array of shape (n_samples, n_features) and None
         """
-        # TODO implement
-        raise InputError("Not implemented yet. Use compounds.")
+
+        if method != "fortran":
+            raise NotImplementedError
+
+        self.compounds = np.empty(xyz.shape[0], dtype=object)
+        for i in range(xyz.shape[0]):
+            self.compounds[i] = Compound()
+            self.compounds[i].set_compounds(xyz=xyz[i], zs=classes[i])
+
+        return self._generate_representations_from_compounds('fortran')
 
     def _generate_representations_from_compounds(self, method):
         """
