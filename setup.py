@@ -144,7 +144,6 @@ def setup_qml():
         name="qml",
         packages=[
             'qml',
-            'qml.data',
             'qml.aglaia',
             'qml.arad',
             'qml.fchl',
