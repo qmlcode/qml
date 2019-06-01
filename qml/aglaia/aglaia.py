@@ -1664,7 +1664,7 @@ class ARMP(_NN):
 
         if self.representation_name == 'slatm':
             self.compounds = self._generate_compounds_from_data(xyz, classes)
-            representations, classes =  self._generate_representations_from_compounds('fortran')
+            representation, classes =  self._generate_representations_from_compounds('fortran')
 
         elif self.representation_name == 'acsf':
             if method == 'tf':
