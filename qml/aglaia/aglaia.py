@@ -982,6 +982,22 @@ class _NN(BaseEstimator):
 
         return np.asarray(zs, dtype=np.float32)
 
+    def _generate_compounds_from_data(self, xyz, classes):
+        """
+        This function generates the compounds from xyz data and nuclear charges.
+
+        :param xyz: cartesian coordinates
+        :type xyz: numpy array of shape (n_samples, n_atoms, 3)
+        :param classes: classes for atomic decomposition
+        :type classes: None
+        :return: array of compound objects
+        """
+        compounds = np.empty(xyz.shape[0], dtype=object)
+        for i in range(xyz.shape[0]):
+            compounds[i] = Compound()
+            compounds[i].set_compounds(xyz=xyz[i], zs=classes[i])
+        return compounds
+
     def predict(self, x, classes=None):
         """
         This function calls the predict function for either ARMP or MRMP.
@@ -1092,10 +1108,7 @@ class MRMP(_NN):
         if method != "fortran":
             raise NotImplementedError
 
-        self.compounds = np.empty(xyz.shape[0], dtype=object)
-        for i in range(xyz.shape[0]):
-            self.compounds[i] = Compound()
-            self.compounds[i].set_compounds(xyz=xyz[i], zs=classes[i])
+        self.compounds = self._generate_compounds_from_data(xyz, classes)
 
         return self._generate_representations_from_compounds('fortran')
 
@@ -1650,8 +1663,8 @@ class ARMP(_NN):
         representation = None
 
         if self.representation_name == 'slatm':
-            # TODO implement
-            raise InputError("Slatm from data has not been implemented yet. Use Compounds.")
+            self.compounds = self._generate_compounds_from_data(xyz, classes)
+            representations, classes =  self._generate_representations_from_compounds('fortran')
 
         elif self.representation_name == 'acsf':
             if method == 'tf':
