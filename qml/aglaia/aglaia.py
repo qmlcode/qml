@@ -2299,7 +2299,8 @@ class ARMP(_NN):
         init = tf.global_variables_initializer()
         iterator_init = iterator.make_initializer(dataset, name="dataset_init")
 
-        self._build_model_from_xyz(self.n_atoms, element_weights, element_biases)
+        if self.representation_name == "acsf":
+            self._build_model_from_xyz(self.n_atoms, element_weights, element_biases)
 
         self.session = tf.Session()
 
