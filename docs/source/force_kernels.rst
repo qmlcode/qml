@@ -65,6 +65,46 @@ Should print the following output:
 
 The size of the representation is reduced to 168.
 
+
+Generating the derivative of the representation
+"""""""""""""""""""""""""""""
+
+In order to learn and predict forces, it is necessary to also generate the derivatives of the representation with respect to the nuclear coordinates.
+This is done with the additional keyword argument ``gradients=True``.
+
+.. code:: python
+    
+    # Generate a minimal representations and their derivatives for the atoms in the water molecule
+    rep, drep = generate_fchl_acsf(nuclear_charges, coordinates, gradients=True, elements=[1,8])
+
+    print(rep)
+    print(rep.shape)
+
+    print(drep)
+    print(drep.shape)
+
+Should print the following output:
+
+.. code:: python
+
+    [[1.16160253e+00 2.11737093e+00 1.42984457e+00 ... 0.00000000e+00
+      0.00000000e+00 0.00000000e+00]
+     [4.73880430e-04 8.12967740e-02 3.00106360e-01 ... 0.00000000e+00
+      0.00000000e+00 0.00000000e+00]
+     [4.73880430e-04 8.12967740e-02 3.00106360e-01 ... 0.00000000e+00
+      0.00000000e+00 0.00000000e+00]]
+    (3, 168)
+    [[[[ 1.20693828e+00  4.23137322e+00 -3.01650346e+00]
+       [ 2.67232755e+00 -2.33030611e+00  2.54463954e+00]
+       [-3.87926583e+00 -1.90106712e+00  4.71863914e-01]]
+      ...
+    
+      [[ 0.00000000e+00  0.00000000e+00  0.00000000e+00]
+       [ 0.00000000e+00  0.00000000e+00  0.00000000e+00]
+       [ 0.00000000e+00  0.00000000e+00  0.00000000e+00]]]]
+    (3, 168, 3, 3)
+
+
 Additional parameters
 """""""""""""""""""""
 
@@ -189,7 +229,7 @@ In addition to the list of representations, nuclear charges and energies in the 
     forces = [mol.properties for mol in mols]
 
     # Generate derivatives of representations
-    dreps = np.array([generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, gradient=True, pad=23)[1] for mol in mols]
+    dreps = np.array([generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, gradients=True, pad=23)[1] for mol in mols]
 
     # Divide in training and test derivatives
     dX  = dreps[:100]
