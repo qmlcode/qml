@@ -556,6 +556,28 @@ subroutine fgaussian_kernel_symmetric(x, n, k, sigma)
 
 end subroutine fgaussian_kernel_symmetric
 
+subroutine fgaussian_sigmas_kernel(a, na, b, nb, k, sigmas)
+    implicit none
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+    double precision, dimension(:), intent(in) :: sigmas
+    integer, intent(in) :: na, nb
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, allocatable, dimension(:) :: temp
+    integer :: i, j
+
+    allocate(temp(size(a, dim=1)))
+    !$OMP PARALLEL DO PRIVATE(temp) COLLAPSE(2)
+    do i = 1, nb
+        do j = 1, na
+            temp(:) = a(:,j) - b(:,i)
+            k(j,i) = product(exp(-abs(temp * temp / (2 * sigmas * sigmas))))
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+    deallocate(temp)
+end subroutine fgaussian_sigmas_kernel
+
 subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 
     implicit none
