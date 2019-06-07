@@ -1261,7 +1261,8 @@ class MRMP(_NN):
 
                 if self.tensorboard:
                     if i % self.tensorboard_logger_training.store_frequency == 0:
-                        self.tensorboard_logger_training.write_summary(self.session, i)
+
+                        self.tensorboard_logger_training.write_summary(self.session, i, feed_dict=feed_dict)
 
             self.training_cost.append(avg_cost)
 

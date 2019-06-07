@@ -55,10 +55,13 @@ class TensorBoardLogger(object):
     def set_summary_writer(self, sess):
         self.summary_writer = tf.summary.FileWriter(logdir=self.path, graph=sess.graph)
 
-    def write_summary(self, sess, iteration):
+    def write_summary(self, sess, iteration, feed_dict=None):
 
         self.merged_summary = tf.summary.merge_all()
-        summary = sess.run(self.merged_summary)
+        if not isinstance(feed_dict, type(None)):
+            summary = sess.run(self.merged_summary, feed_dict)
+        else:
+            summary = sess.run(self.merged_summary)
         self.summary_writer.add_summary(summary, iteration)
         self.summary_writer.add_run_metadata(self.run_metadata, 'iteration %d' % (iteration))
 
