@@ -1259,10 +1259,9 @@ class MRMP(_NN):
                     opt, c = self.session.run([optimisation_op, cost], feed_dict=feed_dict)
                 avg_cost += c * batch_x.shape[0] / x_approved.shape[0]
 
-                if self.tensorboard:
+                if self.tensorboard and j == 0:
                     if i % self.tensorboard_logger_training.store_frequency == 0:
-                        g = i*n_batches+j
-                        self.tensorboard_logger_training.write_summary(self.session, g, feed_dict=feed_dict)
+                        self.tensorboard_logger_training.write_summary(self.session, i, feed_dict=feed_dict)
 
             self.training_cost.append(avg_cost)
 
