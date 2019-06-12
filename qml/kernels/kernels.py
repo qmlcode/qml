@@ -24,11 +24,12 @@ from __future__ import print_function
 
 import numpy as np
 
-from .fkernels import fgaussian_kernel, fgaussian_kernel_symmetric
+from .fkernels import fgaussian_kernel
+from .fkernels import fgaussian_kernel_symmetric
 from .fkernels import fgaussian_sigmas_kernel
 from .fkernels import flaplacian_kernel
-from .fkernels import fgaussian_kernel_symmetric
 from .fkernels import flaplacian_kernel_symmetric
+from .fkernels import flaplacian_sigmas_kernel
 from .fkernels import flinear_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
@@ -92,6 +93,31 @@ def laplacian_kernel_symmetric(A, sigma):
     # Note: Transposed for Fortran
     flaplacian_kernel_symmetric(A.T, na, K, sigma)
 
+    return K
+
+def laplacian_sigmas_kernel(A, B, sigmas):
+    """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_1}{\sigma} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of representations - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of representations - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
+
+        :return: The Laplacian kernel matrix - shape (N, M)
+        :rtype: numpy array
+    """
+    na = A.shape[0]
+    nb = B.shape[0]
+    K = np.empty((na, nb), order='F')
+    # Note: Transposed for Fortran
+    flaplacian_kernel(A.T, na, B.T, nb, K, sigmas)
     return K
 
 def gaussian_kernel(A, B, sigma):
