@@ -537,12 +537,11 @@ subroutine fgaussian_kernel_symmetric(x, n, k, sigma)
 
     k = 1.0d0
 
-    allocate(temp(n))
+    allocate(temp(size(x, dim=1)))
 
-    !$OMP PARALLEL DO PRIVATE(temp, val) SCHEDULE(dynamic) COLLAPSE(2)
+    !$OMP PARALLEL DO PRIVATE(temp, val) SCHEDULE(dynamic)
     do i = 1, n
         do j = 1, n
-            if (j .le. i) cycle
             temp = x(:,j) - x(:,i)
             val = exp(inv_sigma * dot_product(temp,temp))
             k(j,i) = val
@@ -604,10 +603,9 @@ subroutine flaplacian_kernel_symmetric(x, n, k, sigma)
 
     k = 1.0d0
 
-    !$OMP PARALLEL DO PRIVATE(val) SCHEDULE(dynamic) COLLAPSE(2)
+    !$OMP PARALLEL DO PRIVATE(val) SCHEDULE(dynamic)
     do i = 1, n
-        do j = 1, n
-            if (j .le. i) cycle
+        do j = i, n
             val = exp(inv_sigma * sum(abs(x(:,j) - x(:,i))))
             k(j,i) = val
             k(i,j) = val

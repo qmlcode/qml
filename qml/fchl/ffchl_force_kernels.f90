@@ -10,7 +10,7 @@ subroutine fget_gaussian_process_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, 
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -165,8 +165,8 @@ subroutine fget_gaussian_process_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, 
     self_scalar2 = get_selfscalar_displaced(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, &
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
  
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,s12)
     do a = 1, nm1
@@ -195,11 +195,11 @@ subroutine fget_gaussian_process_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, 
     enddo
     !$OMP END PARALLEL do
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2)
     do a = 1, nm1
@@ -254,11 +254,11 @@ subroutine fget_gaussian_process_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, 
     kernels(:,:nm1,nm1+1:) = kernels(:,:nm1,nm1+1:) / (2 * dx)
     kernels(:,nm1+1:,:nm1) = kernels(:,nm1+1:,:nm1) / (2 * dx)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
          
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm1,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2)
@@ -329,8 +329,8 @@ subroutine fget_gaussian_process_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, 
 
     kernels(:,nm1+1:,nm1+1:) = kernels(:,nm1+1:,nm1+1:) / (4 * dx**2)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
 
 end subroutine fget_gaussian_process_kernels_fchl
 
@@ -347,7 +347,7 @@ subroutine fget_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nn
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -501,8 +501,8 @@ subroutine fget_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nn
     self_scalar2 = get_selfscalar_displaced(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, &
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2)
@@ -551,8 +551,8 @@ subroutine fget_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nn
 
     kernels = kernels / (2 * dx)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
 
 end subroutine fget_local_gradient_kernels_fchl
 
@@ -568,7 +568,7 @@ subroutine fget_local_hessian_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nne
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -723,8 +723,8 @@ subroutine fget_local_hessian_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nne
     self_scalar2 = get_selfscalar_displaced(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, &
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm1,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2)
@@ -783,8 +783,8 @@ subroutine fget_local_hessian_kernels_fchl(x1, x2, verbose, n1, n2, nneigh1, nne
 
     kernels = kernels / (4 * dx**2)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
 
 end subroutine fget_local_hessian_kernels_fchl
 
@@ -800,7 +800,7 @@ subroutine fget_local_symmetric_hessian_kernels_fchl(x1, verbose, n1, nneigh1, &
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -928,8 +928,8 @@ subroutine fget_local_symmetric_hessian_kernels_fchl(x1, verbose, n1, nneigh1, &
     self_scalar1 = get_selfscalar_displaced(x1, nm1, n1, nneigh1, ksi1, sinp1, cosp1, t_width,&
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL HESSIAN"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm1,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2)
@@ -998,8 +998,8 @@ subroutine fget_local_symmetric_hessian_kernels_fchl(x1, verbose, n1, nneigh1, &
 
     kernels = kernels / (4 * dx**2)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                          Time = ", t_end - t_start, " s"
 
 end subroutine fget_local_symmetric_hessian_kernels_fchl
 
@@ -1016,7 +1016,7 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1205,8 +1205,8 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
     ! Calculate kernel derivatives and add to kernel matrix
     do xyz2 = 1, 3
         
-        if (verbose) write (*,"(A,I3,A)", advance="no") "KERNEL GRADIENT", xyz2, " / 3"
-        t_start = omp_get_wtime()
+        ! if (verbose) write (*,"(A,I3,A)", advance="no") "KERNEL GRADIENT", xyz2, " / 3"
+        ! t_start = omp_get_wtime()
         
         kernel_delta = 0.0d0
 
@@ -1258,13 +1258,13 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
         enddo
         !$OMP END PARALLEL do
         
-        t_end = omp_get_wtime()
-        if (verbose) write (*,"(A,F12.4,A)") "                  Time = ", t_end - t_start, " s"
+        ! t_end = omp_get_wtime()
+        ! if (verbose) write (*,"(A,F12.4,A)") "                  Time = ", t_end - t_start, " s"
 
         do k = 1, nsigmas
 
-            if (verbose) write (*,"(A,I12)", advance="no") "     DSYRK()    sigma =", k
-            t_start = omp_get_wtime()
+            ! if (verbose) write (*,"(A,I12)", advance="no") "     DSYRK()    sigma =", k
+            ! t_start = omp_get_wtime()
             
             call dsyrk("U", "N", na1, na1, 1.0d0, kernel_delta(1,1,k), na1, &
                & 1.0d0, kernel_scratch(1,1,k), na1)
@@ -1272,19 +1272,19 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
             ! kernel_scratch(:,:,k) = kernel_scratch(:,:,k) &
             !    & + matmul(kernel_delta(:,:,k),transpose(kernel_delta(:,:,k)))! * inv_2dx*inv_2dx
 
-            t_end = omp_get_wtime()
-            if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+            ! t_end = omp_get_wtime()
+            ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
 
-            if (verbose) write (*,"(A,I12)", advance="no") "     DGEMV()    sigma =", k
-            t_start = omp_get_wtime()
+            ! if (verbose) write (*,"(A,I12)", advance="no") "     DGEMV()    sigma =", k
+            ! t_start = omp_get_wtime()
             
             call dgemv("N", na1, na1, 1.0d0, kernel_delta(:,:,k), na1, &
                 & forces(:,xyz2), 1, 1.0d0, y(:,k), 1)
             
             ! y(:,k) = y(:,k) + matmul(kernel_delta(:,:,k), forces(:,xyz2))!* inv_2dx
 
-            t_end = omp_get_wtime()
-            if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+            ! t_end = omp_get_wtime()
+            ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
 
         enddo
 
@@ -1299,7 +1299,7 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
     allocate(kernel_MA(nm1,na1,nsigmas))
     kernel_MA = 0.0d0
  
-    if (verbose) write (*,"(A)", advance="no") "KERNEL"
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(ni,nj,idx1,s12,idx1_start)
     do a = 1, nm1
@@ -1331,8 +1331,8 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
     
     deallocate(self_scalar1)
     deallocate(ksi1)
@@ -1346,23 +1346,23 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
  
         ! y(:,k) = y(:,k) + matmul(transpose(kernel_MA(:,:,k)), energies(:))
 
-        if (verbose) write (*,"(A,I12)", advance="no") "     DSYRK()    sigma =", k
-        t_start = omp_get_wtime()
+        ! if (verbose) write (*,"(A,I12)", advance="no") "     DSYRK()    sigma =", k
+        ! t_start = omp_get_wtime()
 
         call dsyrk("U", "T", na1, nm1, 1.0d0, kernel_MA(:,:,k), nm1, &
             & 1.0d0, kernel_scratch(:,:,k), na1)
 
-        t_end = omp_get_wtime()
-        if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+        ! t_end = omp_get_wtime()
+        ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
  
-        if (verbose) write (*,"(A,I12)", advance="no") "     DGEMV()    sigma =", k
-        t_start = omp_get_wtime()
+        ! if (verbose) write (*,"(A,I12)", advance="no") "     DGEMV()    sigma =", k
+        ! t_start = omp_get_wtime()
             
         call dgemv("T", nm1, na1, 1.0d0, kernel_ma(:,:,k), nm1, &
                       & energies(:), 1, 1.0d0, y(:,k), 1)
 
-        t_end = omp_get_wtime()
-        if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+        ! t_end = omp_get_wtime()
+        ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
  
     enddo
 
@@ -1378,11 +1378,11 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
     alphas = 0.0d0
 
     ! Solve alphas
-    if (verbose) write (*,"(A)") "CHOLESKY DECOMPOSITION"
+    ! if (verbose) write (*,"(A)") "CHOLESKY DECOMPOSITION"
     do k = 1, nsigmas
 
-        if (verbose) write (*,"(A,I12)", advance="no") "     DPOTRF()   sigma =", k
-        t_start = omp_get_wtime()
+        ! if (verbose) write (*,"(A,I12)", advance="no") "     DPOTRF()   sigma =", k
+        ! t_start = omp_get_wtime()
 
         call dpotrf("U", na1, kernel_scratch(:,:,k), na1, info)
         if (info > 0) then
@@ -1393,11 +1393,11 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
             write (*,*) "QML WARNING: The", -info, "-th argument had an illegal value."
         endif
 
-        t_end = omp_get_wtime()
-        if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+        ! t_end = omp_get_wtime()
+        ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
 
-        if (verbose) write (*,"(A,I12)", advance="no") "     DPOTRS()   sigma =", k
-        t_start = omp_get_wtime()
+        ! if (verbose) write (*,"(A,I12)", advance="no") "     DPOTRS()   sigma =", k
+        ! t_start = omp_get_wtime()
 
         call dpotrs("U", na1, 1, kernel_scratch(:,:,k), na1, y(:,k), na1, info)
         if (info < 0) then
@@ -1405,8 +1405,8 @@ subroutine fget_force_alphas_fchl(x1, x2, verbose, forces, energies, n1, n2, &
             write (*,*) "QML WARNING: The", -info, "-th argument had an illegal value."
         endif
 
-        t_end = omp_get_wtime()
-        if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
+        ! t_end = omp_get_wtime()
+        ! if (verbose) write (*,"(A,F12.4,A)") "     Time = ", t_end - t_start, " s"
 
         alphas(k,:) = y(:,k)
     enddo
@@ -1429,7 +1429,7 @@ subroutine fget_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nnei
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1584,8 +1584,8 @@ subroutine fget_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nnei
     self_scalar2 = get_selfscalar_displaced(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, &
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2,idx1_start,idx1_end,idx2_start,idx2_end)
@@ -1644,8 +1644,8 @@ subroutine fget_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, nnei
 
     kernels = kernels / (2 * dx)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
 
 end subroutine fget_atomic_local_gradient_kernels_fchl
 
@@ -1662,7 +1662,7 @@ subroutine fget_atomic_local_gradient_5point_kernels_fchl(x1, x2, verbose, n1, n
 
     use ffchl_kernels, only: kernel
     
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -1826,8 +1826,8 @@ subroutine fget_atomic_local_gradient_5point_kernels_fchl(x1, x2, verbose, n1, n
     self_scalar2 = get_selfscalar_displaced(x2, nm2, n2, nneigh2, ksi2, sinp2, cosp2, t_width, &
     & d_width, cut_distance, order, pd, ang_norm2,distance_scale, angular_scale, alchemy, verbose)
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL GRADIENT"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(na,nb,xyz_pm2,s12),&
     !$OMP& PRIVATE(idx1,idx2,idx1_start,idx1_end,idx2_start,idx2_end)
@@ -1885,7 +1885,7 @@ subroutine fget_atomic_local_gradient_5point_kernels_fchl(x1, x2, verbose, n1, n
 
     kernels = kernels / (12 * dx)
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                         Time = ", t_end - t_start, " s"
 
 end subroutine fget_atomic_local_gradient_5point_kernels_fchl
