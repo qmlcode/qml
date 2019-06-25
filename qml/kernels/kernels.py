@@ -98,17 +98,18 @@ def laplacian_kernel_symmetric(A, sigma):
 def laplacian_sigmas_kernel(A, B, sigmas):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
 
-            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_1}{\sigma} \\big)`
+            :math:`K_{ij} = \\prod_{k}^{S} \\big( -\\frac{\\|A_{ik} - B_{jk}\\|_1}{\sigma_{k}} \\big)`
 
-        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors and
+        :math:`S` is the size of representation vector.
         K is calculated using an OpenMP parallel Fortran routine.
 
         :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
         :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
-        :param sigma: The value of sigma in the kernel matrix.
-        :type sigma: float
+        :param sigmas: Per-feature values of sigma in the kernel matrix - shape (representation_size,)
+        :type sigmas: numpy array
 
         :return: The Laplacian kernel matrix - shape (N, M)
         :rtype: numpy array
@@ -117,7 +118,7 @@ def laplacian_sigmas_kernel(A, B, sigmas):
     nb = B.shape[0]
     K = np.empty((na, nb), order='F')
     # Note: Transposed for Fortran
-    flaplacian_kernel(A.T, na, B.T, nb, K, sigmas)
+    flaplacian_sigmas_kernel(A.T, na, B.T, nb, K, sigmas)
     return K
 
 def gaussian_kernel(A, B, sigma):
@@ -178,17 +179,18 @@ def gaussian_kernel_symmetric(A, sigma):
 def gaussian_sigmas_kernel(A, B, sigmas):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
-            :math:`K_{ij} = \\exp \\big( -\\frac{\\|A_i - B_j\\|_2^2}{2\sigma^2} \\big)`
+            :math:`K_{ij} = \\prod_{k}^{S} \\big( -\\frac{\\|A_{ik} - B_{jk}\\|_2^2}{2\sigma_{k}^{2}} \\big)`
 
-        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors and
+        :math:`S` is the size of representation vector.
         K is calculated using an OpenMP parallel Fortran routine.
 
         :param A: 2D array of representations - shape (N, representation size).
         :type A: numpy array
         :param B: 2D array of representations - shape (M, representation size).
         :type B: numpy array
-        :param sigma: The value of sigma in the kernel matrix.
-        :type sigma: numpy array
+        :param sigmas: Per-feature values of sigma in the kernel matrix - shape (representation_size,)
+        :type sigmas: numpy array
 
         :return: The Gaussian kernel matrix - shape (N, M)
         :rtype: numpy array
