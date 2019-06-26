@@ -550,7 +550,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
     return mbs
 
 def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
-                  eta3 = 1, zeta = 1, rcut = 5, acut = 5, bin_min=0.8, gradients = False):
+                  eta3 = 1, zeta = 1, rcut = 5, acut = 5, bin_min=0.8, gradients = False, pad=None):
     """
     Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
 
@@ -580,6 +580,8 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
     :type bin_min: positive float
     :param gradients: To return gradients or not
     :type gradients: boolean
+    :param pad: `None` if no padding is to be applied other, otherwise an integer corresponding to the desired size
+    :type gradients: NoneType or integer
     :return: Atom-centered symmetry functions representation
     :rtype: numpy array
     """
@@ -592,9 +594,33 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
 
     descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
 
-    if gradients:
-        return fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
+    if gradients is False:
+
+        rep = fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3,
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+
+        if pad is not None:
+
+            rep_pad  = np.zeros((pad, descr_size))
+            rep_pad[:natoms,:] += rep
+
+            return rep_pad
+
+        else:
+            return rep
+
     else:
-        return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
+
+        (rep, grad) = fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+
+        if pad is not None:
+            rep_pad  = np.zeros((pad, descr_size))
+            grad_pad = np.zeros((pad, descr_size, pad, 3))
+
+            rep_pad[:natoms,:] += rep
+            grad_pad[:natoms,:,:natoms,:] += grad
+
+            return rep_pad, grad_pad
+        else:
+            return rep, grad
