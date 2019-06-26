@@ -162,6 +162,28 @@ def test_fit_3():
     estimator = ARMP()
     estimator.fit(x=descriptor, y=energies, classes=classes)
 
+def test_fit_4():
+    """
+    This function tests the second way of fitting the descriptor: the data is passed by storing the compounds in the
+    class.
+    """
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
+
+    estimator = ARMP(tensorboard=True, tensorboard_subdir="./tb_test_4")
+    estimator.set_representations(representations=descriptor)
+    estimator.set_classes(classes=classes)
+    estimator.set_properties(energies)
+
+    idx = np.arange(0, 100)
+    estimator.fit(idx)
+
+    shutil.rmtree("./tb_test_4")
+
 def test_score_3():
     """
     This function tests that all the scoring functions work.
@@ -303,6 +325,7 @@ if __name__ == "__main__":
     test_fit_1()
     test_fit_2()
     test_fit_3()
+    test_fit_4()
     test_score_3()
     test_predict_3()
     test_predict_fromxyz()

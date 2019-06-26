@@ -169,6 +169,22 @@ def test_fit_3():
     estimator = MRMP()
     estimator.fit(descriptor, energies)
 
+def test_fit_4():
+    """
+    This function tests a third way of fitting the descriptor:
+    The data is passed directly to the fit function.
+    """
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
+    data = np.load(test_dir + "/data/CN_isopent_light_UCM.npz")
+    descriptor = data["arr_0"]
+    energies = data["arr_1"]
+
+    estimator = MRMP(tensorboard=True, tensorboard_subdir="./tb_test_4")
+    estimator.fit(descriptor, energies)
+
+    shutil.rmtree("./tb_test_4")
+
 def test_score():
     """
     This function tests that all the scoring functions work.
@@ -264,6 +280,7 @@ if __name__ == "__main__":
     test_fit_1()
     test_fit_2()
     test_fit_3()
+    test_fit_4()
     test_score()
     test_load_external()
     # test_get_params()

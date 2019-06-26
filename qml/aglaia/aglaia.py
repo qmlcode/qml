@@ -982,6 +982,22 @@ class _NN(BaseEstimator):
 
         return np.asarray(zs, dtype=np.float32)
 
+    def _generate_compounds_from_data(self, xyz, classes):
+        """
+        This function generates the compounds from xyz data and nuclear charges.
+
+        :param xyz: cartesian coordinates
+        :type xyz: numpy array of shape (n_samples, n_atoms, 3)
+        :param classes: classes for atomic decomposition
+        :type classes: None
+        :return: array of compound objects
+        """
+        compounds = np.empty(xyz.shape[0], dtype=object)
+        for i in range(xyz.shape[0]):
+            compounds[i] = Compound()
+            compounds[i].set_compounds(xyz=xyz[i], zs=classes[i])
+        return compounds
+
     def predict(self, x, classes=None):
         """
         This function calls the predict function for either ARMP or MRMP.
@@ -1088,8 +1104,13 @@ class MRMP(_NN):
         :type method: string
         :return: numpy array of shape (n_samples, n_features) and None
         """
-        # TODO implement
-        raise InputError("Not implemented yet. Use compounds.")
+
+        if method != "fortran":
+            raise NotImplementedError
+
+        self.compounds = self._generate_compounds_from_data(xyz, classes)
+
+        return self._generate_representations_from_compounds('fortran')
 
     def _generate_representations_from_compounds(self, method):
         """
@@ -1238,9 +1259,9 @@ class MRMP(_NN):
                     opt, c = self.session.run([optimisation_op, cost], feed_dict=feed_dict)
                 avg_cost += c * batch_x.shape[0] / x_approved.shape[0]
 
-                if self.tensorboard:
+                if self.tensorboard and j == 0:
                     if i % self.tensorboard_logger_training.store_frequency == 0:
-                        self.tensorboard_logger_training.write_summary(self.session, feed_dict, i, j)
+                        self.tensorboard_logger_training.write_summary(self.session, i, feed_dict=feed_dict)
 
             self.training_cost.append(avg_cost)
 
@@ -1642,8 +1663,8 @@ class ARMP(_NN):
         representation = None
 
         if self.representation_name == 'slatm':
-            # TODO implement
-            raise InputError("Slatm from data has not been implemented yet. Use Compounds.")
+            self.compounds = self._generate_compounds_from_data(xyz, classes)
+            representation, classes =  self._generate_representations_from_compounds('fortran')
 
         elif self.representation_name == 'acsf':
             if method == 'tf':
@@ -1651,11 +1672,7 @@ class ARMP(_NN):
             else:
                 representation = self._generate_acsf_fortran(xyz, classes)
 
-        # Hotfix t make sure the representation is single precision
-        single_precision_representation = representation.astype(dtype=np.float32)
-        del representation
-
-        return single_precision_representation, classes
+        return representation, classes
 
     def _generate_acsf_tf(self, xyz, classes):
         """
@@ -1776,7 +1793,11 @@ class ARMP(_NN):
                 padded_g = np.zeros((initial_natoms, g.shape[-1]))
                 padded_g[:g.shape[0], :] = g
 
-                representation.append(padded_g)
+                # Hotfix t make sure the representation is single precision
+                single_precision_g = padded_g.astype(dtype=np.float32)
+                del padded_g
+
+                representation.append(single_precision_g)
 
             else:
 
@@ -1790,7 +1811,10 @@ class ARMP(_NN):
                                   eta3=self.acsf_parameters['eta'],
                                   zeta=self.acsf_parameters['zeta'])
 
-                representation.append(g)
+                single_precision_g = g.astype(dtype=np.float32)
+                del g
+
+                representation.append(single_precision_g)
 
         return np.asarray(representation)
 
@@ -2275,7 +2299,8 @@ class ARMP(_NN):
         init = tf.global_variables_initializer()
         iterator_init = iterator.make_initializer(dataset, name="dataset_init")
 
-        self._build_model_from_xyz(self.n_atoms, element_weights, element_biases)
+        if self.representation_name == "acsf":
+            self._build_model_from_xyz(self.n_atoms, element_weights, element_biases)
 
         self.session = tf.Session()
 
