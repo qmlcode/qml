@@ -41,6 +41,7 @@ from . import fchl
 from . import representations
 from . import qmlearn
 from . import utils
+from . import helpers
 from .utils.compound import Compound
 
 __author__ = "Anders S. Christensen"
