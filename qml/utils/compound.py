@@ -373,3 +373,22 @@ class Compound(object):
             self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)
    
         self.natypes = dict([(key, len(value)) for key,value in self.atomtype_indices.items()])
+
+    def set_compounds(self, xyz, zs):
+        """
+        Generating the compounds straight from XYZ rather than from the files.
+
+        :param xyz: coordinates
+        :type xyz: np array of shape (n_samples, n_atoms, 3)
+        :param zs: nuclear charges
+        :type zs: np array of shape (n_samples, n_atoms)
+        :return: None
+        """
+
+        self.natoms = xyz.shape[0]
+        self.nuclear_charges = zs
+        self.coordinates = xyz
+        self.atomtypes = np.unique(zs)
+
+        self.name = "Compound"
+
