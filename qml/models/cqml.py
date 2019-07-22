@@ -347,7 +347,7 @@ class cqml:
                                 self.scalings[s] = scaling[(l1,l2)]
 
 
-            # reset combination coefficients following eqs. (12),(13) in the paper
+            # reset combination coefficients following eqs. (15),(16) in the paper
             for l in self.training_subspaces:
                 coeff = 0;
                 for l1 in range(2):
@@ -419,7 +419,7 @@ class cqml:
                                 # set default scaling
                                 self.scalings[s] = scaling[(l1,l2)]
 
-            # reset combination coefficients following eqs. (12),(13) in the paper
+            # reset combination coefficients following eqs. (15),(16) in the paper
             for l in self.training_subspaces:
                 coeff = 0;
                 for l1 in range(2):
