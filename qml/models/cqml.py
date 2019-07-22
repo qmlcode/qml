@@ -204,7 +204,7 @@ class cqml:
             # information
             print("Loading data for subspace ",s)
     
-            # generate a list of qml.data.Compound() objects
+            # generate a list of qml.Compound() objects
             mols = []
         
             # loop over all samples / molecules, which shall be loaded
@@ -213,8 +213,8 @@ class cqml:
                 # get file name of current xyz file, which is to be used
                 filename = ("%s/frag_%04d.xyz" % (self.xyz_directories[s],i+1))
 
-                # initialize the qml.data.Compound() object, loading the xyz date file
-                mol = qml.data.Compound(xyz=filename);
+                # initialize the qml.Compound() object, loading the xyz date file
+                mol = qml.Compound(xyz=filename);
         
                 # attach the current molecule to the list of all molecules / samples
                 mols.append(mol)

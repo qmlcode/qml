@@ -144,7 +144,7 @@ def load_multilevel_data(ml_data_cfg):
         # information
         print("Loading data for level %d ..." % (l))
 
-        # generate a list of qml.data.Compound() objects
+        # generate a list of qml.Compound() objects
         mols = []
     
         # loop over all samples / molecules, which shall be loaded
@@ -153,8 +153,8 @@ def load_multilevel_data(ml_data_cfg):
             # get file name of current xyz file, which is to be used
             filename = ("%s/frag_%04d.xyz" % (ml_data_cfg.xyz_directories[l],i+1))
 
-            # initialize the qml.data.Compound() object, loading the xyz date file
-            mol = qml.data.Compound(xyz=filename);
+            # initialize the qml.Compound() object, loading the xyz date file
+            mol = qml.Compound(xyz=filename);
         
             # attach the current molecule to the list of all molecules / samles
             mols.append(mol)
