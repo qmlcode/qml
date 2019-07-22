@@ -63,11 +63,11 @@ def test_acsf():
              "qm7/0110.xyz"]
 
 
-    path = test_dir = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.dirname(os.path.realpath(__file__))
 
     mols = []
     for xyz_file in files:
-        mol = qml.data.Compound(xyz=path + "/" + xyz_file)
+        mol = qml.Compound(xyz=path + "/" + xyz_file)
         mols.append(mol)
 
     elements = set()
@@ -85,7 +85,7 @@ def fort_acsf(mols, path, elements):
     # Generate atom centered symmetry functions representation
     # using the Compound class
     for i, mol in enumerate(mols):
-        mol.generate_acsf(elements = elements)
+        mol.generate_acsf(elements = elements, bin_min=0.0)
 
     X_test = np.concatenate([mol.representation for mol in mols])
     X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
@@ -96,8 +96,8 @@ def fort_acsf(mols, path, elements):
     rep = []
     for i, mol in enumerate(mols):
         rep.append(generate_acsf(coordinates = mol.coordinates,
-                nuclear_charges = mol.nuclear_charges, 
-                elements = elements))
+                                 nuclear_charges = mol.nuclear_charges,
+                                 elements = elements, bin_min=0.0))
 
     X_test = np.concatenate(rep)
     X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
@@ -106,11 +106,12 @@ def fort_acsf(mols, path, elements):
 def tf_acsf(mols, path, elements):
     radial_cutoff = 5
     angular_cutoff = 5
-    radial_rs = np.linspace(0, radial_cutoff, 3)
-    angular_rs = np.linspace(0, angular_cutoff, 3)
-    theta_s = np.linspace(0, np.pi, 3)
+    n_radial_rs = 3
+    n_angular_rs = 3
+    n_theta_s = 3
     zeta = 1.0
     eta = 1.0
+    bin_min=0.0
 
     element_pairs = []
     for i, ei in enumerate(elements):
@@ -128,7 +129,7 @@ def tf_acsf(mols, path, elements):
         zs_tf = tf.placeholder(shape=[n_samples, max_n_atoms], dtype=tf.int32, name="zs")
         xyz_tf = tf.placeholder(shape=[n_samples, max_n_atoms, 3], dtype=tf.float32, name="xyz")
 
-    acsf_tf_t = symm_funct.generate_parkhill_acsf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs, angular_rs, theta_s, zeta, eta)
+    acsf_tf_t = symm_funct.generate_acsf_tf(xyz_tf, zs_tf, elements, element_pairs, radial_cutoff, angular_cutoff, n_radial_rs, n_angular_rs, n_theta_s, zeta, eta, bin_min)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
@@ -142,7 +143,7 @@ def fort_acsf_gradients(mols, path, elements):
     # Generate atom centered symmetry functions representation
     # and gradients using the Compound class
     for i, mol in enumerate(mols):
-        mol.generate_acsf(elements = elements, gradients = True)
+        mol.generate_acsf(elements = elements, gradients = True, bin_min=0.0)
 
     X_test = np.concatenate([mol.representation for mol in mols])
     X_ref = np.loadtxt(path + "/data/acsf_representation.txt")
@@ -159,7 +160,7 @@ def fort_acsf_gradients(mols, path, elements):
     grad = []
     for i, mol in enumerate(mols):
         r, g = generate_acsf(coordinates = mol.coordinates, nuclear_charges = mol.nuclear_charges,
-                elements = elements, gradients = True)
+                             elements = elements, gradients = True, bin_min=0.0)
         rep.append(r)
         grad.append(g)
 

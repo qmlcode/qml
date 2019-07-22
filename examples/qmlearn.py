@@ -135,8 +135,7 @@ def models():
     energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
     model = qmlearn.representations.CoulombMatrix(data)
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     representations = model.generate(indices)
     model = qmlearn.kernels.GaussianKernel(sigma='auto')
@@ -184,8 +183,7 @@ def pipelines():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     model.fit(indices[:800])
     scores = model.score(indices[800:])
@@ -203,8 +201,7 @@ def pipelines():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     model.fit(indices[:800])
     scores = model.score(indices[800:])
@@ -212,6 +209,64 @@ def pipelines():
 
     print("*** End pipelines examples ***")
     print()
+
+def pipelines_2():
+    """
+    Scikit learn pipeline with a molecular neural network
+    """
+
+    print("\n *** Begin pipelines example with molecular Neural Network ***")
+
+    data = qmlearn.Data("../test/qm7/*.xyz")
+    energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
+    data.set_energies(energies)
+
+    # Create model
+    model = sklearn.pipeline.make_pipeline(
+        qmlearn.preprocessing.AtomScaler(data),
+        qmlearn.representations.CoulombMatrix(),
+        qmlearn.models.NeuralNetwork(iterations=500, batch_size=50, learning_rate=0.005),
+    )
+
+    indices = np.arange(1000)
+    np.random.shuffle(indices)
+
+    model.fit(indices[:100])
+
+    # Score on the TRAINING set, since you won't get good predictions in 500 iterations
+    scores = model.score(indices[:100])
+    print("Negative MAE:", scores)
+
+    print("*** End pipelines example with molecular Neural Network *** \n")
+
+def pipelines_3():
+    """
+    Scikit learn pipeline with an atomic neural network
+    """
+
+    print("\n *** Begin pipelines example with atomic Neural Network ***")
+
+    data = qmlearn.Data("../test/qm7/*.xyz")
+    energies = np.loadtxt("../test/data/hof_qm7.txt", usecols=1)
+    data.set_energies(energies)
+
+    # Create model
+    model = sklearn.pipeline.make_pipeline(
+        qmlearn.preprocessing.AtomScaler(data),
+        qmlearn.representations.AtomCenteredSymmetryFunctions(),
+        qmlearn.models.NeuralNetwork(iterations=500, batch_size=50, learning_rate=0.005),
+    )
+
+    indices = np.arange(1000)
+    np.random.shuffle(indices)
+
+    model.fit(indices[:100])
+
+    # Score on the TRAINING set, since you won't get good predictions in 500 iterations
+    scores = model.score(indices[:100])
+    print("Negative MAE:", scores)
+
+    print("*** End pipelines example with atomic Neural Network *** \n")
 
 def cross_validation():
     """
@@ -235,8 +290,7 @@ def cross_validation():
             )
 
     # Create 1000 random indices
-    indices = np.arange(1000)
-    np.random.shuffle(indices)
+    indices = np.random.choice(np.arange(len(energies)), size=1000, replace=False)
 
     # 3-fold CV of a given model can easily be done
     scores = sklearn.model_selection.cross_validate(model, indices, cv=3)
@@ -285,3 +339,5 @@ if __name__ == '__main__':
     models()
     pipelines()
     cross_validation()
+    pipelines_2()
+    pipelines_3()

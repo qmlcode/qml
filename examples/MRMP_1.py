@@ -41,7 +41,7 @@ filenames.sort()
 
 ## ------------- ** Setting up the estimator ** ---------------
 
-estimator = MRMP(representation='slatm', representation_params={'slatm_dgrid2': 0.06, 'slatm_dgrid1': 0.06})
+estimator = MRMP(representation_name='slatm', representation_params={'slatm_dgrid2': 0.06, 'slatm_dgrid1': 0.06})
 
 estimator.generate_compounds(filenames[:100])
 estimator.set_properties(energies[:100])

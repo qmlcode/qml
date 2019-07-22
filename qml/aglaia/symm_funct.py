@@ -37,19 +37,25 @@ def acsf_rad(xyzs, Zs, radial_cutoff, radial_rs, eta):
     This does the radial part of the symmetry function (G2 function in Behler's papers). It works only for datasets where
     all samples are the same molecule but in different configurations.
 
-    :param xyzs: tf tensor of shape (n_samples, n_atoms, 3) contaning the coordinates of each atom in each data sample
-    :param Zs: tf tensor of shape (n_samples, n_atoms) containing the atomic number of each atom in each data sample
-    :param radial_cutoff: scalar tensor
-    :param radial_rs: tf tensor of shape (n_rs,) with the R_s values
-    :param eta: tf scalar
+    :param xyzs: Coordinates of each atom in each data sample
+    :type xyzs: tf tensor of shape (n_samples, n_atoms, 3)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param radial_cutoff: cut off used in the radial term
+    :type radial_cutoff: scalar tensor
+    :param radial_rs:  R_s values
+    :type radial_rs: tf tensor of shape (n_rs,)
+    :param eta: parameter in the radial term
+    :type eta: tf scalar
 
-    :return: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
+    :return: pre-sum radial term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
     """
 
     # Calculating the distance matrix between the atoms of each sample
     with tf.name_scope("Distances"):
         dxyzs = tf.expand_dims(xyzs, axis=2) - tf.expand_dims(xyzs, axis=1)
-        dist_tensor = tf.cast(tf.norm(dxyzs, axis=3), dtype=tf.float32)  # (n_samples, n_atoms, n_atoms)
+        dist_tensor = tf.cast(tf.norm(dxyzs+1.e-16, axis=3), dtype=tf.float32)  # (n_samples, n_atoms, n_atoms)
 
     # Indices of terms that need to be zero (diagonal elements)
     mask_0 = tf.zeros(tf.shape(dist_tensor))
@@ -92,20 +98,29 @@ def acsf_ang(xyzs, Zs, angular_cutoff, angular_rs, theta_s, zeta, eta):
     This does the angular part of the symmetry function as mentioned here: https://arxiv.org/pdf/1711.06385.pdf
     It only works for systems where all the samples are the same molecule but in different configurations.
 
-    :param xyzs: tf tensor of shape (n_samples, n_atoms, 3) contaning the coordinates of each atom in each data sample
-    :param Zs: tf tensor of shape (n_samples, n_atoms) containing the atomic number of each atom in each data sample
-    :param angular_cutoff: scalar tensor
-    :param angular_rs: tf tensor of shape (n_ang_rs,) with the equivalent of the R_s values from the G2
-    :param theta_s: tf tensor of shape (n_thetas,)
-    :param zeta: tf tensor of shape (1,)
-    :param eta: tf tensor of shape (1,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_atoms, n_atoms, n_ang_rs * n_thetas)
+    :param xyzs:  Coordinates of each atom in each data sample
+    :type xyzs: tf tensor of shape (n_samples, n_atoms, 3)
+    :param Zs:  Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param angular_cutoff: cut off used in the angular term
+    :type angular_cutoff: scalar tensor
+    :param angular_rs:  angular R_s values
+    :type angular_rs: tf tensor of shape (n_ang_rs,)
+    :param theta_s: angular theta_s values
+    :type theta_s: tf tensor of shape (n_thetas,)
+    :param zeta: parameter in the angular term
+    :type zeta: tf tensor of shape (1,)
+    :param eta: parameter in the angular term
+    :type eta: tf tensor of shape (1,)
+
+    :return: pre-sum angular term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_atoms, n_atoms, n_ang_rs * n_thetas)
     """
 
     # Finding the R_ij + R_ik term
     with tf.name_scope("Sum_distances"):
         dxyzs = tf.expand_dims(xyzs, axis=2) - tf.expand_dims(xyzs, axis=1)
-        dist_tensor = tf.cast(tf.norm(dxyzs, axis=3), dtype=tf.float32)  # (n_samples, n_atoms, n_atoms)
+        dist_tensor = tf.cast(tf.norm(dxyzs+1.e-16, axis=3), dtype=tf.float32)  # (n_samples, n_atoms, n_atoms)
 
         # This is the tensor where element sum_dist_tensor[0,1,2,3] is the R_12 + R_13 in the 0th data sample
         sum_dist_tensor = tf.expand_dims(dist_tensor, axis=3) + tf.expand_dims(dist_tensor,
@@ -163,7 +178,7 @@ def acsf_ang(xyzs, Zs, angular_cutoff, angular_rs, theta_s, zeta, eta):
         # Dividing the dot products by the magnitudes to obtain cos theta
         cos_theta = tf.divide(dots_dxyzs, dist_prod)
         # Taking care of the values that due numerical error are just above 1.0 or below -1.0
-        cut_cos_theta = tf.clip_by_value(cos_theta, tf.constant(-1.0), tf.constant(1.0))
+        cut_cos_theta = tf.clip_by_value(cos_theta, tf.constant(-1.0 + 1.0e-7), tf.constant(1.0 - 1.0e-7))
         # Applying arc cos to find the theta value
         theta = tf.acos(cut_cos_theta)  # (n_samples,  n_atoms, n_atoms, n_atoms)
         # Removing the NaNs created by dividing by zero
@@ -199,16 +214,18 @@ def acsf_ang(xyzs, Zs, angular_cutoff, angular_rs, theta_s, zeta, eta):
         # Subtracting them and do the cos
         cos_theta_term = tf.cos(
             tf.subtract(expanded_theta, expanded_theta_s))  # (n_samples,  n_atoms, n_atoms, n_atoms, n_theta_s)
-        # Make the whole cos term  of the sum
-        cos_term = tf.pow(tf.add(tf.ones(tf.shape(cos_theta_term), dtype=tf.float32), cos_theta_term),
-                          zeta)  # (n_samples,  n_atoms, n_atoms, n_atoms, n_theta_s)
+        # Make the whole cos term  of the sum of shape (n_samples,  n_atoms, n_atoms, n_atoms, n_theta_s)
+        cos_term = tf.pow(tf.divide(tf.add(tf.ones(tf.shape(cos_theta_term), dtype=tf.float32), cos_theta_term),
+                                    tf.constant(2, dtype=tf.float32)), zeta)
+        # cos_term = tf.pow(tf.add(tf.ones(tf.shape(cos_theta_term), dtype=tf.float32), cos_theta_term),
+        #                   zeta)  # (n_samples,  n_atoms, n_atoms, n_atoms, n_theta_s)
 
     # Final product of terms inside the sum time by 2^(1-zeta)
     expanded_fc = tf.expand_dims(tf.expand_dims(cleaner_fc_term, axis=-1), axis=-1, name="Expanded_fc")
     expanded_cos = tf.expand_dims(cos_term, axis=-2, name="Expanded_cos")
     expanded_exp = tf.expand_dims(exp_term, axis=-1, name="Expanded_exp")
 
-    const = tf.pow(tf.constant(2.0, dtype=tf.float32), (1.0 - zeta))
+    const = tf.constant(2.0, dtype=tf.float32)
 
     with tf.name_scope("Ang_term"):
         prod_of_terms = const * tf.multiply(tf.multiply(expanded_cos, expanded_exp),
@@ -226,11 +243,17 @@ def sum_rad(pre_sum, Zs, elements_list, radial_rs):
     Sum of the terms in the radial part of the symmetry function. The terms corresponding to the same neighbour identity
     are summed together.
 
-    :param pre_sum: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
-    :param Zs: tf tensor of shape (n_samples, n_atoms)
-    :param elements_list: np.array of shape (n_elements,)
-    :param radial_rs: tf tensor of shape (n_rad_rs,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_rad_rd * n_elements)
+    :param pre_sum: pre-sum radial term
+    :type pre_sum: tf tensor of shape (n_samples, n_atoms, n_atoms, n_rs)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param elements_list: unique atoms in all of the samples
+    :type elements_list: np.array of shape (n_elements,)
+    :param radial_rs: radial R_s values
+    :type radial_rs: tf tensor of shape (n_rad_rs,)
+
+    :return: the radial term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_rad_rd * n_elements)
     """
     n_atoms = Zs.get_shape().as_list()[1]
     n_elements = len(elements_list)
@@ -268,12 +291,19 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
     This function does the sum of the terms in the radial part of the symmetry function. Three body interactions where
     the two neighbours are the same elements are summed together.
 
-    :param pre_sumterm: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas)
-    :param Zs: tf tensor of shape (n_samples, n_atoms)
-    :param element_pairs_list: np array of shape (n_elementpairs, 2)
-    :param angular_rs: tf tensor of shape (n_ang_rs,)
-    :param theta_s: tf tensor of shape (n_thetas,)
-    :return: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas * n_elementpairs)
+    :param pre_sumterm: pre-sum angular term
+    :type pre_sumterm: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tf tensor of shape (n_samples, n_atoms)
+    :param element_pairs_list: list of all the atom element pairs
+    :type element_pairs_list: np array of shape (n_elementpairs, 2)
+    :param angular_rs: angular R_s values
+    :type angular_rs: tf tensor of shape (n_ang_rs,)
+    :param theta_s: angular theta_s values
+    :type theta_s: tf tensor of shape (n_thetas,)
+
+    :return: the angular term
+    :rtype: tf tensor of shape (n_samples, n_atoms, n_ang_rs * n_thetas * n_elementpairs)
     """
 
     n_atoms = Zs.get_shape().as_list()[1]
@@ -350,31 +380,50 @@ def sum_ang(pre_sumterm, Zs, element_pairs_list, angular_rs, theta_s):
 
     return clean_final_term
 
-def generate_parkhill_acsf(xyzs, Zs, elements, element_pairs, radial_cutoff, angular_cutoff,
-                           radial_rs, angular_rs, theta_s, zeta, eta):
+def generate_acsf_tf(xyzs, Zs, elements, element_pairs, rcut, acut,
+                     nRs2, nRs3, nTs, zeta, eta, bin_min):
     """
     This function generates the atom centred symmetry function as used in the Tensormol paper. Currently only tested for
     single systems with many conformations. It requires the coordinates of all the atoms in each data sample, the atomic
     charges for each atom (in the same order as the xyz), the overall elements and overall element pairs. Then it
     requires the parameters for the ACSF that are used in the Tensormol paper: https://arxiv.org/pdf/1711.06385.pdf
 
-    :param xyzs: tensor of shape (n_samples, n_atoms, 3)
-    :param Zs: tensor of shape (n_samples, n_atoms)
-    :param elements: np.array of shape (n_elements,)
-    :param element_pairs: np.array of shape (n_elementpairs, 2)
-    :param radial_cutoff: scalar float
-    :param angular_cutoff: scalar float
-    :param radial_rs: np.array of shape (n_rad_rs,)
-    :param angular_rs: np.array of shape (n_ang_rs,)
-    :param theta_s: np.array of shape (n_thetas,)
-    :param zeta: scalar float
-    :param eta: scalar float
-    :return: a tf tensor of shape (n_samples, n_atoms, n_rad_rs * n_elements + n_ang_rs * n_thetas * n_elementpairs)
+    :param xyzs: Coordinates of each atom in each data sample
+    :type xyzs: tensor of shape (n_samples, n_atoms, 3)
+    :param Zs: Atomic number of each atom in each data sample
+    :type Zs: tensor of shape (n_samples, n_atoms)
+    :param elements: unique atoms in all of the samples
+    :type elements: np.array of shape (n_elements,)
+    :param element_pairs: list of all the atom element pairs
+    :type element_pairs: np.array of shape (n_elementpairs, 2)
+    :param rcut: radial cut off length
+    :type rcut: scalar float
+    :param acut: angular cut off length
+    :type acut: scalar float
+    :param nRs2: number of distance bins to use in the radial term
+    :type nRs2: positive integer
+    :param nRs3: number of distance bins to use in the angular term
+    :type nRs3: positive integer
+    :param nTs: number of angle bins to use in the angular term
+    :type nTs: positive integer
+    :param zeta: parameter in the cosine term
+    :type zeta: scalar float
+    :param eta: parameter in the exponential terms
+    :type eta: scalar float
+    :param bin_min: the value at which to start binning the distances
+    :type bin_min: positive float
+
+    :return: the atom centred symmetry functions
+    :rtype: a tf tensor of shape a tf tensor of shape (n_samples, n_atoms, nRs2 * n_elements + nRs3 * nTs * n_elementpairs)
     """
 
+    radial_rs = np.linspace(bin_min, rcut, nRs2)
+    angular_rs = np.linspace(bin_min, acut, nRs3)
+    theta_s = np.linspace(0, np.pi, nTs)
+
     with tf.name_scope("acsf_params"):
-        rad_cutoff = tf.constant(radial_cutoff, dtype=tf.float32)
-        ang_cutoff = tf.constant(angular_cutoff, dtype=tf.float32)
+        rad_cutoff = tf.constant(rcut, dtype=tf.float32)
+        ang_cutoff = tf.constant(acut, dtype=tf.float32)
         rad_rs = tf.constant(radial_rs, dtype=tf.float32)
         ang_rs = tf.constant(angular_rs, dtype=tf.float32)
         theta_s = tf.constant(theta_s, dtype=tf.float32)

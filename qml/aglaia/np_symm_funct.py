@@ -171,10 +171,10 @@ def acsf_ang(xyzs, Zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta,
                                 cos_theta_ijk = get_costheta(xyzs[sample, i, :], xyzs[sample, j, :], xyzs[sample, k, :])
                                 theta_ijk = np.arccos(cos_theta_ijk)
 
-                                term_1 = np.power((1.0 + np.cos(theta_ijk - theta_value)), zeta)
+                                term_1 = np.power((1.0 + np.cos(theta_ijk - theta_value))/2.0, zeta)
                                 term_2 = np.exp(- eta * np.power(0.5*(r_ij + r_ik) - rs_value, 2))
                                 term_3 = fc(r_ij, angular_cutoff) * fc(r_ik, angular_cutoff)
-                                g_term = term_1 * term_2 * term_3 * np.power(2.0, 1.0 - zeta)
+                                g_term = term_1 * term_2 * term_3 * 2.0
                                 # Compare the pair of neighbours to all the possible element pairs, then summ accordingly
                                 current_pair = np.flip(np.sort([Zs[sample][j], Zs[sample][k]]), axis=0)     # Sorting the pair in descending order
                                 for m, pair in enumerate(element_pairs):
@@ -187,8 +187,8 @@ def acsf_ang(xyzs, Zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta,
 
     return np.asarray(total_descriptor)
 
-def generate_acsf(xyzs, Zs, elements, element_pairs, radial_cutoff, angular_cutoff, radial_rs,
-                  angular_rs, theta_s, zeta, eta):
+def generate_acsf_np(xyzs, Zs, elements, element_pairs, rcut, acut, nRs2,
+                     nRs3, nTs, zeta, eta, bin_min):
     """
     This function calculates the symmetry functions used in the tensormol paper.
 
@@ -203,47 +203,17 @@ def generate_acsf(xyzs, Zs, elements, element_pairs, radial_cutoff, angular_cuto
     :param theta_s: list of all the thetas parameters. Numpy array of shape (n_thetas,)
     :param zeta: parameter. scalar.
     :param eta: parameter. scalar.
+    :param bin_min: value at which to start the binning of the distances
     :return: numpy array of shape (n_samples, n_atoms, n_rad_rs*n_elements + n_ang_rs*n_thetas*n_element_pairs)
     """
 
-    rad_term = acsf_rad(xyzs, Zs, elements, radial_cutoff, radial_rs, eta)
-    ang_term = acsf_ang(xyzs, Zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta, eta)
+    radial_rs = np.linspace(bin_min, rcut, nRs2)
+    angular_rs = np.linspace(bin_min, acut, nRs3)
+    theta_s = np.linspace(0, np.pi, nTs)
+
+    rad_term = acsf_rad(xyzs, Zs, elements, rcut, radial_rs, eta)
+    ang_term = acsf_ang(xyzs, Zs, element_pairs, acut, angular_rs, theta_s, zeta, eta)
 
     acsf = np.concatenate((rad_term, ang_term), axis=-1)
 
     return acsf
-
-if __name__ == "__main__":
-    xyzs = np.array([[[0.0, 0.0, 0.0],
-                      [1.0, 0.0, 0.0],
-                      [0.0, 1.0, 0.0],
-                      [0.0, 0.0, 1.0]]])
-
-    zs = [[7, 2, 1, 1]]
-
-    elements = [1, 2, 7]
-    element_pairs = [[1, 1], [2, 1], [7, 1], [7, 2]]
-
-    # # input_data = "/Volumes/Transcend/repositories/Aglaia/aglaia/tests/data_test_acsf.npz"
-    # input_data = "/Volumes/Transcend/repositories/Aglaia/aglaia/tests/qm7_testdata.npz"
-    # data = np.load(input_data)
-    #
-    # xyzs = data["arr_0"]
-    # zs = data["arr_1"]
-    # elements = data["arr_2"]
-    # element_pairs = data["arr_3"]
-
-    radial_cutoff = 1000.0
-    angular_cutoff = 1000.0
-    radial_rs = [0.0, 1.0]
-    angular_rs = [0.0, 1.0]
-    theta_s = [np.pi, np.pi * 0.5]
-    # radial_rs = [0.0]
-    # angular_rs = [0.0]
-    # theta_s = [3.0]
-    zeta = 0.0
-    eta = 1.0
-
-    rad_term = acsf_rad(xyzs, zs, elements, radial_cutoff, radial_rs, eta)
-    ang_term = acsf_ang(xyzs, zs, element_pairs, angular_cutoff, angular_rs, theta_s, zeta, eta)
-    print(rad_term)

@@ -102,7 +102,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     integer, allocatable, dimension(:) :: element_types
     double precision :: rij, rik, angle, invcut
     double precision, allocatable, dimension(:) :: radial, angular, a, b, c
-    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay, rep3
+    double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay,  rep_subset
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
@@ -125,7 +125,7 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
         do j = 1, nelements
             if (nuclear_charges(i) .eq. elements(j)) then
                 element_types(i) = j
-                continue
+                cycle
             endif
         enddo
     enddo
@@ -158,27 +158,34 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
 
     ! Allocate temporary
     allocate(radial(nbasis2))
+    allocate(rep_subset(natoms, nelements * nbasis2))
 
-    !$OMP PARALLEL DO PRIVATE(n,m,rij,radial) REDUCTION(+:rep)
+    rep_subset = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(n,m,rij,radial) COLLAPSE(2) REDUCTION(+:rep_subset) SCHEDULE(dynamic)
     do i = 1, natoms
-        ! index of the element of atom i
-        m = element_types(i)
-        do j = i + 1, natoms
-            ! index of the element of atom j
-            n = element_types(j)
-            ! distance between atoms i and j
+        do j = 1, natoms
+            if (j .le. i) cycle
             rij = distance_matrix(i,j)
             if (rij <= rcut) then
+                ! index of the element of atom i
+                m = element_types(i)
+                ! index of the element of atom j
+                n = element_types(j)
+                ! distance between atoms i and j
                 ! two body term of the representation
                 radial = exp(-eta2*(rij - Rs2)**2) * rdecay(i,j)
-                rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
-                rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
+                rep_subset(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep_subset(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
+                rep_subset(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep_subset(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
             endif
         enddo
     enddo
     !$OMP END PARALLEL DO
 
+    rep(:, 1:nelements * nbasis2) = rep_subset(:,:)
+
     deallocate(radial)
+    deallocate(rep_subset)
 
     ! number of radial basis functions in the three body term
     nbasis3 = size(Rs3)
@@ -191,19 +198,19 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
     rdecay = decay(distance_matrix, invcut, natoms)
 
     ! Allocate temporary
-    allocate(rep3(natoms,rep_size))
+    allocate(rep_subset(natoms,rep_size - nelements * nbasis2))
     allocate(a(3))
     allocate(b(3))
     allocate(c(3))
     allocate(radial(nbasis3))
     allocate(angular(nabasis))
 
-    rep3 = 0.0d0
+    rep_subset = 0.0d0
 
     ! This could probably be done more efficiently if it's a bottleneck
     ! Also the order is a bit wobbly compared to the tensorflow implementation
     !$OMP PARALLEL DO PRIVATE(rij, n, rik, m, a, b, c, angle, radial, angular, &
-    !$OMP p, q, s, z) REDUCTION(+:rep3) COLLAPSE(2) SCHEDULE(dynamic)
+    !$OMP p, q, s, z) REDUCTION(+:rep_subset) COLLAPSE(2) SCHEDULE(dynamic)
     do i = 1, natoms
         do j = 1, natoms - 1
             if (i .eq. j) cycle
@@ -234,24 +241,24 @@ subroutine fgenerate_acsf(coordinates, nuclear_charges, elements, &
                 ! The highest of the element indices for atoms j and k
                 q = max(n,m) - 1
                 ! calculate the indices that the three body terms should be added to
-                s = nelements * nbasis2 + nbasis3 * nabasis * (-(p * (p + 1))/2 + q + nelements * p) + 1
+                s = nbasis3 * nabasis * (-(p * (p + 1))/2 + q + nelements * p) + 1
                 do l = 1, nbasis3
                     ! calculate the indices that the three body terms should be added to
                     z = s + (l-1) * nabasis
                     ! Add the contributions from atoms i,j and k
-                    rep3(i, z:z + nabasis - 1) = rep3(i, z:z + nabasis - 1) + angular * radial(l)
+                    rep_subset(i, z:z + nabasis - 1) = rep_subset(i, z:z + nabasis - 1) + angular * radial(l)
                 enddo
             enddo
         enddo
     enddo
     !$OMP END PARALLEL DO
 
-    rep = rep + rep3
+    rep(:, nelements * nbasis2 + 1:) = rep_subset(:,:)
 
     deallocate(element_types)
     deallocate(rdecay)
     deallocate(distance_matrix)
-    deallocate(rep3)
+    deallocate(rep_subset)
     deallocate(a)
     deallocate(b)
     deallocate(c)
@@ -294,7 +301,9 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     double precision, allocatable, dimension(:) :: d_angular_d_i, d_angular_d_j, d_angular_d_k
     double precision, allocatable, dimension(:, :) :: distance_matrix, rdecay, sq_distance_matrix
     double precision, allocatable, dimension(:, :) :: inv_distance_matrix, inv_sq_distance_matrix
+    double precision, allocatable, dimension(:, :) :: rep_subset
     double precision, allocatable, dimension(:, :, :) :: atom_grad
+    double precision, allocatable, dimension(:, :, :, :) :: grad_subset
 
     double precision, parameter :: pi = 4.0d0 * atan(1.0d0)
 
@@ -317,7 +326,7 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
         do j = 1, nelements
             if (nuclear_charges(i) .eq. elements(j)) then
                 element_types(i) = j
-                continue
+                cycle
             endif
         enddo
     enddo
@@ -339,7 +348,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
 
     !$OMP PARALLEL DO PRIVATE(rij,rij2,invrij,invrij2) SCHEDULE(dynamic)
     do i = 1, natoms
-        do j = i+1, natoms
+        do j = 1, natoms
+            if (j .le. i) cycle
             rij = norm2(coordinates(j,:) - coordinates(i,:))
             distance_matrix(i, j) = rij
             distance_matrix(j, i) = rij
@@ -370,8 +380,13 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
     allocate(radial(nbasis2))
     allocate(radial_part(nbasis2))
     allocate(part(nbasis2))
+    allocate(rep_subset(natoms, nelements * nbasis2))
+    allocate(grad_subset(natoms, nelements * nbasis2, natoms, 3))
 
-    !$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep,grad) &
+    grad_subset = 0.0d0
+    rep_subset = 0.0d0
+
+    !$OMP PARALLEL DO PRIVATE(m,n,rij,invrij,radial_base,radial,radial_part,part) REDUCTION(+:rep_subset,grad_subset) &
     !$OMP SCHEDULE(dynamic)
     do i = 1, natoms
         ! The element index of atom i
@@ -388,28 +403,37 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 ! The full two body term between atom i and j
                 radial = radial_base * rdecay(i,j)
                 ! Add the contributions from atoms i and j
-                rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
-                rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
+                rep_subset(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep_subset(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
+                rep_subset(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep_subset(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
                 ! Part of the gradients that can be reused for x,y and z coordinates
                 radial_part = - radial_base * invrij * (2.0d0 * eta2 * (rij - Rs2) * rdecay(i,j) + &
                     & 0.5d0 * pi * sin(pi*rij * invcut) * invcut)
                 do k = 1, 3
                     ! The gradients wrt coordinates
                     part = radial_part * (coordinates(i,k) - coordinates(j,k))
-                    grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) + part
-                    grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) - part
-                    grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) = grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) - part
-                    grad(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) = grad(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) + part
+                    grad_subset(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) = & 
+                        grad_subset(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) + part
+                    grad_subset(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) = & 
+                        grad_subset(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) - part
+                    grad_subset(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) = & 
+                        grad_subset(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) - part
+                    grad_subset(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) = & 
+                        grad_subset(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) + part
                 enddo
             endif
         enddo
     enddo
     !$OMP END PARALLEL DO
 
+    rep(:,:nelements*nbasis2) = rep_subset(:,:)
+    grad(:,:nelements*nbasis2,:,:) = grad_subset(:,:,:,:)
+
     deallocate(radial_base)
     deallocate(radial)
     deallocate(radial_part)
     deallocate(part)
+    deallocate(rep_subset)
+    deallocate(grad_subset)
 
 
     ! Number of radial basis functions in the three body term
@@ -549,8 +573,8 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 enddo
             enddo
         enddo
-        rep(i, twobody_size + 1:) = rep(i, twobody_size + 1:) + atom_rep
-        grad(i, twobody_size + 1:,:,:) = grad(i, twobody_size + 1:,:,:) + atom_grad
+        rep(i, twobody_size + 1:) = atom_rep
+        grad(i, twobody_size + 1:,:,:) = atom_grad
     enddo
     !$OMP END PARALLEL DO
 
