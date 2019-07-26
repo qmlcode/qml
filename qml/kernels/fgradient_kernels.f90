@@ -151,7 +151,7 @@ subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
             do i2 = 1, n2(b)
 
                 if (q2(j2,b) == q2(i2,b)) then
-                    s22(b) = s22(b) + dot_product(x2(b,j2,:), x1(b,i2,:))
+                    s22(b) = s22(b) + dot_product(x2(b,j2,:), x2(b,i2,:))
                 endif
 
             enddo
