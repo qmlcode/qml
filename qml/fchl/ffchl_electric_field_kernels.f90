@@ -8,7 +8,7 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     
     use ffchl_kernels, only: kernel
 
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -229,8 +229,8 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
         enddo
     enddo
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL WITH FIELDS"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL WITH FIELDS"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj)
     do a = 1, nm1
@@ -258,11 +258,11 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
    
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 1/2"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 1/2"
     
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
     do a = 1, nm1
@@ -310,11 +310,11 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 2/2"
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE 2/2"
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
 
     do a = 1, nm2
@@ -364,11 +364,11 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
     
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                Time = ", t_end - t_start, " s"
 
-    t_start = omp_get_wtime()
-    if (verbose) write (*,"(A)", advance="no") "KERNEL EF HESSIAN   "
+    ! t_start = omp_get_wtime()
+    ! if (verbose) write (*,"(A)", advance="no") "KERNEL EF HESSIAN   "
     
     ! should be zero?
 
@@ -419,8 +419,8 @@ subroutine fget_ef_gaussian_process_kernels_fchl(x1, x2, verbose, f1, f2, n1, n2
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose) write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar1_ef)
@@ -444,7 +444,7 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
 
     use ffchl_kernels, only: kernel
 
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -602,8 +602,8 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
     ! write (*,*) size(kernels,dim=1), size(kernels,dim=2), size(kernels,dim=3)
 
 
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL"
+    ! t_start = omp_get_wtime()
+    ! if (verbose)  write (*,"(A)", advance="no") "KERNEL"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(ni,nj,idx1,s12)
     do a = 1, nm1
@@ -634,8 +634,8 @@ subroutine fget_ef_atomic_local_kernels_fchl(x1, x2, verbose, f2, n1, n2, nneigh
     enddo
     !$OMP END PARALLEL DO
 
-    t_end = omp_get_wtime()
-    if (verbose)  write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose)  write (*,"(A,F12.4,A)") "                                  Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2)
@@ -658,7 +658,7 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
 
     use ffchl_kernels, only: kernel
 
-    use omp_lib, only: omp_get_wtime
+    ! use omp_lib, only: omp_get_wtime
 
     implicit none
 
@@ -821,8 +821,8 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
         enddo
     enddo
 
-    t_start = omp_get_wtime()
-    if (verbose)  write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE"
+    ! t_start = omp_get_wtime()
+    ! if (verbose)  write (*,"(A)", advance="no") "KERNEL EF DERIVATIVE"
 
     !$OMP PARALLEL DO schedule(dynamic) PRIVATE(s12,ni,nj,idx_a,idx_b)
 
@@ -873,8 +873,8 @@ subroutine fget_ef_atomic_local_gradient_kernels_fchl(x1, x2, verbose, n1, n2, n
 
     kernels = kernels / (2 * df)
 
-    t_end = omp_get_wtime()
-    if (verbose)  write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
+    ! t_end = omp_get_wtime()
+    ! if (verbose)  write (*,"(A,F12.4,A)") "                    Time = ", t_end - t_start, " s"
 
     deallocate(self_scalar1)
     deallocate(self_scalar2_ef)

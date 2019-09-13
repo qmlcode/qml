@@ -151,7 +151,7 @@ subroutine fglobal_kernel(x1, x2, q1, q2, n1, n2, nm1, nm2, sigma, kernel)
             do i2 = 1, n2(b)
 
                 if (q2(j2,b) == q2(i2,b)) then
-                    s22(b) = s22(b) + dot_product(x2(b,j2,:), x1(b,i2,:))
+                    s22(b) = s22(b) + dot_product(x2(b,j2,:), x2(b,i2,:))
                 endif
 
             enddo
@@ -195,7 +195,7 @@ end subroutine fglobal_kernel
 
 subroutine flocal_kernels(x1, x2, q1, q2, n1, n2, nm1, nm2, sigmas, nsigmas, kernel)
 
-    use omp_lib, only: omp_get_thread_num, omp_get_wtime
+    ! use omp_lib, only: omp_get_thread_num, omp_get_wtime
 
     implicit none
 
@@ -244,22 +244,22 @@ subroutine flocal_kernels(x1, x2, q1, q2, n1, n2, nm1, nm2, sigmas, nsigmas, ker
     ! write(*,*) tid
     ! !$OMP END PARALLEL
 
-    work_total = nm1 * nm2
-    work_done = 0
+    ! work_total = nm1 * nm2
+    ! work_done = 0
 
-    t_start = omp_get_wtime()
+    ! t_start = omp_get_wtime()
 
-    write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
+    ! write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
     !$OMP PARALLEL DO private(l2) shared(work_total) schedule(dynamic)
     do a = 1, nm1
 
-        if (omp_get_thread_num() == 0) then
+        ! if (omp_get_thread_num() == 0) then
 
-            t_elapsed = omp_get_wtime() - t_start
-            t_eta = t_elapsed * work_total / work_done - t_elapsed
+            ! t_elapsed = omp_get_wtime() - t_start
+            ! t_eta = t_elapsed * work_total / work_done - t_elapsed
 
-         write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
-             & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
+         ! write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
+         !     & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
           ! write(*,"(A, F10.1, A)") "elapsed", omp_get_wtime() - t_start, "s"
 
 
@@ -267,7 +267,7 @@ subroutine flocal_kernels(x1, x2, q1, q2, n1, n2, nm1, nm2, sigmas, nsigmas, ker
 
           ! write(*,"(A, F10.1, A)") "eta", (omp_get_wtime() - t_start) * dble(work_total) / dble(work_done) &
           !    & - (omp_get_wtime() - t_start), "s"
-        endif
+        ! endif
 
         ! Molecule 2
         do b = 1, nm2
@@ -290,22 +290,22 @@ subroutine flocal_kernels(x1, x2, q1, q2, n1, n2, nm1, nm2, sigmas, nsigmas, ker
 
         enddo
 
-        !$OMP ATOMIC
-        work_done = work_done + nm2
-        !$OMP END ATOMIC
+        ! !$OMP ATOMIC
+        ! work_done = work_done + nm2
+        ! !$OMP END ATOMIC
 
     enddo
     !$OMP END PARALLEL do
 
-    write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
-    write(*,*) "QML: Non-alchemical Gaussian kernel completed!"
+    ! write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+    ! write(*,*) "QML: Non-alchemical Gaussian kernel completed!"
 
 end subroutine flocal_kernels
 
 
 subroutine fsymmetric_local_kernels(x1, q1, n1, nm1, sigmas, nsigmas, kernel)
 
-    use omp_lib, only: omp_get_thread_num, omp_get_wtime
+    ! use omp_lib, only: omp_get_thread_num, omp_get_wtime
 
     implicit none
 
@@ -343,34 +343,34 @@ subroutine fsymmetric_local_kernels(x1, q1, n1, nm1, sigmas, nsigmas, kernel)
        inv_sigma2(i) = -1.0d0 / (2 * sigmas(i)**2)
     enddo
 
-    work_total = (nm1 * (nm1 + 1)) / 2
-    work_done = 0
+    ! work_total = (nm1 * (nm1 + 1)) / 2
+    ! work_done = 0
 
-    t_start = omp_get_wtime()
+    ! t_start = omp_get_wtime()
 
-    write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
+    ! write(*,*) "QML: Non-alchemical Gaussian kernel progess:"
     !$OMP PARALLEL DO private(l2) shared(work_done) schedule(dynamic)
     do a = 1, nm1
 
+        ! ! if (omp_get_thread_num() == 0) then
+        ! !     write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+        ! ! endif
+
         ! if (omp_get_thread_num() == 0) then
-        !     write(*,"(F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %"
+
+        !     t_elapsed = omp_get_wtime() - t_start
+        !     t_eta = t_elapsed * work_total / work_done - t_elapsed
+
+        !  write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
+        !      & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
+        !   ! write(*,"(A, F10.1, A)") "elapsed", omp_get_wtime() - t_start, "s"
+
+
+
+
+        !   ! write(*,"(A, F10.1, A)") "eta", (omp_get_wtime() - t_start) * dble(work_total) / dble(work_done) &
+        !   !    & - (omp_get_wtime() - t_start), "s"
         ! endif
-
-        if (omp_get_thread_num() == 0) then
-
-            t_elapsed = omp_get_wtime() - t_start
-            t_eta = t_elapsed * work_total / work_done - t_elapsed
-
-         write(*,"(F10.1, A, F10.1, A, F10.1, A, F10.1, A)") dble(work_done) / dble(work_total) * 100.0d0 , " %", &
-             & t_eta, " s", t_elapsed, " s", t_elapsed + t_eta, " s"
-          ! write(*,"(A, F10.1, A)") "elapsed", omp_get_wtime() - t_start, "s"
-
-
-
-
-          ! write(*,"(A, F10.1, A)") "eta", (omp_get_wtime() - t_start) * dble(work_total) / dble(work_done) &
-          !    & - (omp_get_wtime() - t_start), "s"
-        endif
 
         ! Molecule 2
         do b = a, nm1

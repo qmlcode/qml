@@ -141,7 +141,7 @@ def cho_solve_dpp(A, y, l2reg=0.0):
 
 
 
-def cho_solve(A, y, l2reg=0.0):
+def cho_solve(A, y, l2reg=0.0, destructive=False):
     """ Solves the equation
 
             :math:`A x = y`
@@ -152,6 +152,11 @@ def cho_solve(A, y, l2reg=0.0):
         :type A: numpy array
         :param y: Vector (right-hand side of the equation).
         :type y: numpy array
+        :param l2reg: Small number to add to the diagonal as L2-regularization when solving.
+        :type l2reg: float
+        :param destructive: Whether to preserve the lower triangle after solving(=False) or destroy it, which is faster(=True). 
+        :type destructive: bool 
+
 
         :return: The solution vector.
         :rtype: numpy array
@@ -178,9 +183,11 @@ def cho_solve(A, y, l2reg=0.0):
     # Reset diagonal after Cholesky-decomposition
     A[np.diag_indices_from(A)] = A_diag
 
-    # Copy lower triangle to upper
-    i_lower = np.tril_indices_from(A)
-    A.T[i_lower] = A[i_lower]
+    if destructive is False:
+
+        # Copy lower triangle to upper
+        i_lower = np.tril_indices_from(A)
+        A.T[i_lower] = A[i_lower]
 
     return x
 
