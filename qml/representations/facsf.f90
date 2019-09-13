@@ -548,7 +548,9 @@ subroutine fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, 
                 ! Part of the derivative of the angular basis functions wrt coordinates (dim(nabasis))
                 ! including decay
                 d_angular = (zeta * angular * sin(angle-Ts) * rdecay(i,j) * rdecay(i,k)) / &
-                    & (2.0d0 * sqrt(rij2 * rik2 - dot**2) * angular_base)
+                    ! & (2.0d0 * sqrt(rij2 * rik2 - dot**2) * angular_base)
+                    & (2.0d0 * max(1d-10, sqrt(abs(rij2 * rik2 - dot**2)) * angular_base))
+                ! write(*,*) angular_base
                 ! Part of the derivative of the angular basis functions wrt atom j (dim(3))
                 d_angular_d_j = c - b + dot * ((b - a) * invrij2)
                 ! Part of the derivative of the angular basis functions wrt atom k (dim(3))
@@ -1173,9 +1175,9 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                 angular(1)   =  exp(-(zeta**2)*0.5d0) * 2 * cos(angle)
                 angular(2)   =  exp(-(zeta**2)*0.5d0) * 2 * sin(angle)
 
-                d_angular(1) =  exp(-(zeta**2)*0.5d0) * 2 * sin(angle) / sqrt(rij2 * rik2 - dot**2)
-                d_angular(2) = -exp(-(zeta**2)*0.5d0) * 2 * cos(angle) / sqrt(rij2 * rik2 - dot**2)
-                
+                d_angular(1) =  exp(-(zeta**2)*0.5d0) * 2 * sin(angle) / sqrt(max(1d-10, rij2 * rik2 - dot**2))
+                d_angular(2) = -exp(-(zeta**2)*0.5d0) * 2 * cos(angle) / sqrt(max(1d-10, rij2 * rik2 - dot**2))
+
                 ! Part of the derivative of the angular basis functions wrt atom j (dim(3))
                 d_angular_d_j = c - b + dot * ((b - a) * invrij2)
                 ! Part of the derivative of the angular basis functions wrt atom k (dim(3))
