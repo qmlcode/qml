@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-
-sys.path.insert(0, "/home/andersx/dev/qml/gradient_kernel/build/lib.linux-x86_64-3.6")
-
 import pickle
 
 import glob
@@ -165,8 +162,8 @@ def npz2data(npy_filename, num=10):
 
     # data.set_energies(rescaled_energies)
 
-    # rescaled_energies = qmlearn.preprocessing.AtomScaler().fit_transform(data.nuclear_charges, e)
-    # data.set_energies(rescaled_energies)
+    rescaled_energies = qmlearn.preprocessing.AtomScaler().fit_transform(data.nuclear_charges, e)
+    data.set_energies(rescaled_energies)
 
     return data
 
@@ -174,7 +171,7 @@ def pipeline():
 
     test_dir = os.path.dirname(os.path.realpath(__file__))
     
-    DATA_SIZE = 200
+    DATA_SIZE = 1600
 
     # data = csv2data(test_dir+"/data/force_train.csv", num=DATA_SIZE)
     # data = npz2data("/project/andersx/sgdml_npy/toluene_dft.npz", num=DATA_SIZE)
@@ -194,12 +191,12 @@ def pipeline():
             "uracil_dft.npz",        # 10
         ]
 
-    data = npz2data("/project/andersx/sgdml_npy/" + npy_names[4], num=DATA_SIZE)
+    # data = npz2data("/project/andersx/sgdml_npy/" + npy_names[0], num=DATA_SIZE)
 
 
 
     # data = parse_qm7_data(num=DATA_SIZE)
-    # data = parse_qm9_data(num=DATA_SIZE)
+    data = parse_qm9_data(num=DATA_SIZE)
 
 
 
@@ -213,15 +210,15 @@ def pipeline():
     # print("Negative MAE:", scores)
 
     model = sklearn.pipeline.Pipeline([
-            ('preprocess', qmlearn.preprocessing.AtomScaler(data)),
-            ('representations', qmlearn.representations.FCHL_ACSF_Force()),
-            # ('representations', qmlearn.representations.FCHL_ACSF(data)),
+            # ('preprocess', qmlearn.preprocessing.AtomScaler(data)),
+            # ('representations', qmlearn.representations.FCHL_ACSF()),
+            ('representations', qmlearn.representations.FCHL_ACSF(data)),
             # ('kernel', qmlearn.kernels.OQMLForceKernel()),
-            #('model', qmlearn.models.OQMLRegression())
-            ('kernel', qmlearn.kernels.GPRForceKernel()),
-            ('model', qmlearn.models.GPRRegression())
-            # ('kernel', qmlearn.kernels.GPREnergyKernel()),
-            # ('model', qmlearn.models.KernelRidgeRegression(scoring="neg_mae"))
+            # ('model', qmlearn.models.OQMLRegression())
+            # ('kernel', qmlearn.kernels.GPRForceKernel()),
+            # ('model', qmlearn.models.GPRRegression())
+            ('kernel', qmlearn.kernels.GPREnergyKernel()),
+            ('model', qmlearn.models.KernelRidgeRegression(scoring="neg_mae"))
             ],
             # memory='/dev/shm/' ### This will cache the previous steps to the virtual memory and might speed up gridsearch
             )
@@ -235,13 +232,13 @@ def pipeline():
     params = {
               # 'kernel__sigma': [2.0, 4.0, 8.0],
               # 'model__l2_reg': [1e-14, 1e-12, 1e-10, 1e-9, 1e-8],
-              'model__l2_reg': [1e-9, 1e-8, 1e-7],
+              # 'model__l2_reg': [1e-9, 1e-8, 1e-7],
               'kernel__sigma': [4.0],
-              # 'model__l2_reg': [1e-14],
+              'model__l2_reg': [1e-14],
              }
 
     # from skopt import BayesSearchCV
-    grid = sklearn.model_selection.GridSearchCV(model, cv=2, refit=False, param_grid=params, verbose=10000)
+    grid = sklearn.model_selection.GridSearchCV(model, cv=4, refit=False, param_grid=params, verbose=10000)
     grid.fit(indices)
 
     means = grid.cv_results_['mean_test_score']

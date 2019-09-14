@@ -737,7 +737,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
             ! distance between atoms i and j
             rij = distance_matrix(i,j)
             if (rij <= rcut) then
-                
+
                 ! two body term of the representation
                 mu    = log(rij / sqrt(1.0d0 + eta2  / rij**2))
                 sigma = sqrt(log(1.0d0 + eta2  / rij**2))
@@ -747,7 +747,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
                    radial(k) = 1.0d0/(sigma* sqrt(2.0d0*pi) * Rs2(k)) * rdecay(i,j) &
                               & * exp( - (log(Rs2(k)) - mu)**2 / (2.0d0 * sigma**2) ) / rij**two_body_decay
                 enddo
-                
+
                 rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
                 rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + radial
             endif

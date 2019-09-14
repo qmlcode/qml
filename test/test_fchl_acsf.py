@@ -29,7 +29,7 @@ from copy import deepcopy
 import numpy as np
 np.set_printoptions(linewidth=666, edgeitems=10)
 import qml
-from qml.data import Compound
+from qml import Compound
 from qml.representations import generate_fchl_acsf
 
 REP_PARAMS = dict()

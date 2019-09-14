@@ -88,13 +88,6 @@ class _BaseModel(BaseEstimator):
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
 
-        # for i, data in enumerate(zip(y, y_pred)):
-        #     print("%5i  %8.2f  %8.2f  %8.2f"  % (i, data[0], data[1], data[0] - data[1]))
-        
-        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(y, y_pred)
-        print("QMLEARN ENERGY   MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
-            (np.mean(np.abs(y - y_pred)), slope, intercept, r_value ))
-
         # Return the score
         if self.scoring == 'mae':
             return mean_absolute_error(y, y_pred)
@@ -142,7 +135,7 @@ class KernelRidgeRegression(_BaseModel):
             try:
                 K, y = X._kernel, X.energies[X._indices]
             except:
-                print("11No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
+                print("No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
         elif is_numeric_array(X) and X.ndim == 2 and X.shape[0] == X.shape[1] and y is not None:
             K = X
@@ -174,7 +167,7 @@ class KernelRidgeRegression(_BaseModel):
             try:
                 K = X._kernel
             except:
-                print("22No kernel matrix found in data object in module %s" % self.__class__.__name__)
+                print("No kernel matrix found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
         elif is_numeric_array(X) and X.ndim == 2 and X.shape[1] == self.alpha.size:
             K = X
@@ -790,19 +783,8 @@ class OQMLRegression(_BaseModel):
         if isinstance(X, Data):
             try:
 
-                # print(X._kernel)
-                # print(X.energies[X._indices])
-                # print(X.forces[X._indices])
-                # print(X._kernel)
                 K, E, F = X._kernel, X.energies[X._indices], np.concatenate(X.forces[X._indices])
-
-                # print(F.flatten())
-
-
                 y = np.concatenate((E, F.flatten()))
-
-                # print(y.shape)
-                # print(K.shape)
 
             except:
                 print("33No kernel matrix and/or energies found in data object in module %s" % self.__class__.__name__)
@@ -813,15 +795,7 @@ class OQMLRegression(_BaseModel):
             print("Expected variable 'X' to be kernel matrix or Data object. Got %s" % str(X))
             raise SystemExit
 
-        # print(K.shape)
-
         self.alpha = svd_solve(K, y, rcond=self.l2_reg)
-
-        # print(self.alpha.shape)
-
-        # K[np.diag_indices_from(K)] += self.l2_reg
-
-        # self.alpha = cho_solve(K, y)
     
     def score(self, X, y=None):
         """
@@ -835,7 +809,6 @@ class OQMLRegression(_BaseModel):
         :rtype: float
         """
 
-        # print("SCOOOOOOOORE")
         # Make predictions
         y_pred = self.predict(X)
 
@@ -847,27 +820,25 @@ class OQMLRegression(_BaseModel):
             try:
                 e = X.energies[X._indices]
                 f = np.concatenate(X.forces[X._indices])
-                
                 y = np.concatenate((e, f.flatten()))
+
             except:
-                print("55No kernel energies found in data object in module %s" % self.__class__.__name__)
+                print("No kernel energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
 
         else:
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
-   
+
         nE = len(X.energies[X._indices])
 
-        E = y[:nE] 
-        F = y[nE:] 
+        E = y[:nE]
+        F = y[nE:]
 
-        eYt = y_pred[:nE] 
-        fYt = y_pred[nE:] 
+        eYt = y_pred[:nE]
+        fYt = y_pred[nE:]
 
         natoms = X.natoms[X._indices]
-
-        # print(y.shape)
 
         total_score = 0.0
 
@@ -995,7 +966,7 @@ class GPRRegression(_BaseModel):
         K[np.diag_indices_from(K)] += self.l2_reg
 
         self.alpha = cho_solve(K, y)
-    
+
     def score(self, X, y=None):
         """
         Make predictions on `X` and return a score
@@ -1008,7 +979,6 @@ class GPRRegression(_BaseModel):
         :rtype: float
         """
 
-        # print("SCOOOOOOOORE")
         # Make predictions
         y_pred = self.predict(X)
 
@@ -1023,20 +993,20 @@ class GPRRegression(_BaseModel):
                 
                 y = np.concatenate((e, f.flatten()))
             except:
-                print("55No kernel energies found in data object in module %s" % self.__class__.__name__)
+                print("No kernel energies found in data object in module %s" % self.__class__.__name__)
                 raise SystemExit
 
         else:
             print("Expected variable 'X' to be Data object. Got %s" % str(X))
             raise SystemExit
-   
+
         nE = len(X.energies[X._indices])
 
-        E = y[:nE] 
-        F = y[nE:] 
+        E = y[:nE]
+        F = y[nE:]
 
-        eYt = y_pred[:nE] 
-        fYt = y_pred[nE:] 
+        eYt = y_pred[:nE]
+        fYt = y_pred[nE:]
 
         natoms = X.natoms[X._indices]
 
@@ -1050,37 +1020,15 @@ class GPRRegression(_BaseModel):
 
             n_start = np.sum(natoms[:i])*3 + len(E)
             n_end = n_start + 3 * natoms[i]
-            
+ 
             dF = np.sum(np.square(y[n_start:n_end] - y_pred[n_start:n_end])) / natoms[i]
-
-            # print("%5i  %5i  %8.2f  %8.2f  %8.2f  %8.2f  %6i  %6i" % (i, natoms[i], E[i], eYt[i], dE, dF, n_start, n_end))
 
             total_score += dE + dF
 
         total_score *= -1
 
-        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(E, eYt)
-        print("QMLEARN ENERGY   MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
-            (np.mean(np.abs(E - eYt)), slope, intercept, r_value ))
-
-        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(F.flatten(), fYt.flatten())
-        print("QMLEARN FORCE    MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
-             (np.mean(np.abs(F.flatten() - fYt.flatten())), slope, intercept, r_value ))
-
-        print("QMLEARN SCORE    %10.2f" % total_score)
         return total_score
 
-        # # Return the score
-        # if self.scoring == 'mae':
-        #     return mean_absolute_error(y, y_pred)
-        # elif self.scoring == 'neg_mae':
-        #     return - mean_absolute_error(y, y_pred)
-        # elif self.scoring == 'rmsd':
-        #     return np.sqrt(mean_squared_error(y, y_pred))
-        # elif self.scoring == 'neg_rmsd':
-        #     return - np.sqrt(mean_squared_error(y, y_pred))
-        # elif self.scoring == 'neg_log_mae':
-        #     return - np.log(mean_absolute_error(y, y_pred))
 
     def predict(self, X):
         """

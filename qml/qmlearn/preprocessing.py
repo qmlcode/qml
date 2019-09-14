@@ -66,14 +66,6 @@ class AtomScaler(BaseEstimator):
         :rtype: tuple
         """
 
-        # print("LOL", X, type(X))
-        # print(self.data.natoms)
-        # print(self.data)
-        # print(max(X), self.data.natoms.size)
-        # print(max(X) <= self.data.natoms.size)
-        # print(is_positive_integer_or_zero_array(X))
-        # print(self.data)
-
         if isinstance(X, Data):
 
             self._check_data(X)
@@ -92,8 +84,6 @@ class AtomScaler(BaseEstimator):
             transformed_labels[data._indices] = True
             data._has_transformed_labels = transformed_labels
 
-        # SOMETHING BUGGY HERE
-        # elif self.data and is_positive_integer_or_zero_array(X) \
         elif self.data is not None and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
@@ -113,7 +103,7 @@ class AtomScaler(BaseEstimator):
                 data._has_transformed_labels = transformed_labels
 
         else:
-            print("222Expected X to be array of indices or Data object. Got %s" % str(X))
+            print("Expected X to be array of indices or Data object. Got %s" % str(X))
             raise SystemExit
 
         return data

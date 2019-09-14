@@ -29,7 +29,7 @@ from copy import deepcopy
 import numpy as np
 np.set_printoptions(linewidth=666, edgeitems=100000000000000000)
 import qml
-from qml.data import Compound
+from qml import Compound
 from qml.representations import generate_fchl_acsf
 from qml.representations import generate_acsf
 
@@ -122,7 +122,7 @@ def test_fchl_acsf():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
     # mol = Compound(xyz=test_dir+ "/qm7/0101.xyz")
-    mol = Compound(xyz=test_dir+ "/hcn.xyz")
+    mol = Compound(xyz=test_dir+ "/data/hcn.xyz")
 
     (repa, anal_grad) = generate_fchl_acsf(mol.nuclear_charges, mol.coordinates, 
         gradients=True,  **REP_PARAMS)
@@ -149,7 +149,7 @@ def test_acsf():
     test_dir = os.path.dirname(os.path.realpath(__file__))
 
     # mol = Compound(xyz=test_dir+ "/qm7/0101.xyz")
-    mol = Compound(xyz=test_dir+ "/hcn.xyz")
+    mol = Compound(xyz=test_dir+ "/data/hcn.xyz")
 
     (repa, anal_grad) = generate_acsf(mol.nuclear_charges, mol.coordinates, 
         gradients=True,  **REP_PARAMS)

@@ -101,7 +101,7 @@ class Data(object):
         self.energies = energies
 
     def set_forces(self, forces):
-        self.forces = forces 
+        self.forces = forces
 
     def _parse_xyz_files(self, filenames):
         """

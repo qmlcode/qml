@@ -313,6 +313,7 @@ subroutine fget_global_symmetric_kernels_fchl(x1, verbose, n1, nneigh1, nm1, nsi
 
     use ffchl_module, only: scalar, get_angular_norm2, get_pmax, get_ksi, init_cosp_sinp
     use ffchl_kernels, only: kernel
+    
     implicit none
 
     ! FCHL descriptors for the training set, format (i,j_1,5,m_1)

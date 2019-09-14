@@ -111,7 +111,6 @@ class _BaseKernel(BaseEstimator):
                     (X._representations[0] == self.representations[0])
             kernel = self.generate(X._representations[:,~constant_features], self.representations[:,~constant_features], 'molecular')
         elif self.representation_type == "atomic-force":
-            # print("HERE, PREDICTO")
             kernel = self.generate(X._representations, self.representations)
         elif (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
             # Ignore constant features
@@ -213,7 +212,6 @@ class _BaseKernel(BaseEstimator):
             self._constant_features = (np.std(X._representations, axis=0) == 0)
             kernel = self.generate(X._representations[:,~self._constant_features], representation_type='molecular')
         elif self.representation_type == "atomic-force":
-            # print("HERE")
             kernel = self.generate(X._representations)
         elif (self.alchemy == 'auto' and X._representation_alchemy) or self.alchemy:
             # Ignore constant features
@@ -827,8 +825,6 @@ class OQMLForceKernel(_BaseKernel):
             # Do a quick and dirty initial estimate of sigma
             self._quick_estimate_sigma(X)
 
-        # print(type(Y))
-
         if not self.local:
             kernel = self._generate_molecular(X,Y)
         else:
@@ -848,12 +844,7 @@ class OQMLForceKernel(_BaseKernel):
         dX1 = np.array([rep[1] for rep in X])
         Q1  = [rep[2] for rep in X]
 
-        # print(type(Y))
-
         if Y is None or X is Y:
-
-
-            # print("TRAIN")
 
             K_energy = get_atomic_local_kernel(X1, X1, Q1, Q1, self.sigma)
             K_force  = get_atomic_local_gradient_kernel(X1, X1, dX1, Q1, Q1, self.sigma)
@@ -867,8 +858,6 @@ class OQMLForceKernel(_BaseKernel):
             X2  = np.array([rep[0] for rep in Y])
             dX2 = np.array([rep[1] for rep in Y])
             Q2  = [rep[2] for rep in Y]
-
-            # print("TEST")
             
             K_energy = get_atomic_local_kernel(X2, X1, Q2, Q1, self.sigma)
             K_force  = get_atomic_local_gradient_kernel(X2, X1, dX1, Q2, Q1, self.sigma)
@@ -916,8 +905,6 @@ class GPRForceKernel(_BaseKernel):
             # Do a quick and dirty initial estimate of sigma
             self._quick_estimate_sigma(X)
 
-        # print(type(Y))
-
         if not self.local:
             kernel = self._generate_molecular(X,Y)
         else:
@@ -937,17 +924,8 @@ class GPRForceKernel(_BaseKernel):
         dX1 = np.array([rep[1] for rep in X])
         Q1  = [rep[2] for rep in X]
 
-        # print(type(Y))
-
         if Y is None or X is Y:
 
-
-            # print("TRAIN")
-
-            # K_energy = get_atomic_local_kernel(X1, X1, Q1, Q1, self.sigma)
-            # K_force  = get_atomic_local_gradient_kernel(X1, X1, dX1, Q1, Q1, self.sigma)
-
-            # K_return = np.concatenate((K_energy, K_force))
             K_return  = get_symmetric_gp_kernel(X1, dX1, Q1, self.sigma)
 
             return K_return
@@ -957,13 +935,6 @@ class GPRForceKernel(_BaseKernel):
             X2  = np.array([rep[0] for rep in Y])
             dX2 = np.array([rep[1] for rep in Y])
             Q2  = [rep[2] for rep in Y]
-
-            # print("TEST")
-            
-            # K_energy = get_atomic_local_kernel(X2, X1, Q2, Q1, self.sigma)
-            # K_force  = get_atomic_local_gradient_kernel(X2, X1, dX1, Q2, Q1, self.sigma)
-
-            # K_return = np.concatenate((K_energy, K_force))
             
             K_return  = get_gp_kernel(X2, X1, dX2, dX1, Q2, Q1, self.sigma)
 
@@ -1028,8 +999,6 @@ class GPREnergyKernel(_BaseKernel):
         X1  = np.array([rep[0] for rep in X])
         dX1 = np.array([rep[1] for rep in X])
         Q1  = [rep[2] for rep in X]
-
-        # print(type(Y))
 
         if Y is None or X is Y:
 
