@@ -47,27 +47,28 @@ qml\.Compound class
 
 
 qml\.fchl module, representations
-----------------
+---------------------------------
 
  .. automodule:: qml.fchl.fchl_representations
     :members:
     :show-inheritance:
 
 qml\.fchl module, scalar kernels
-----------------
+--------------------------------
+
  .. automodule:: qml.fchl.fchl_scalar_kernels
     :members:
     :show-inheritance:
 
 qml\.fchl module, force kernels 
-----------------
+-------------------------------
  
  .. automodule:: qml.fchl.fchl_force_kernels
     :members:
     :show-inheritance:
 
 qml\.fchl module, electric-field kernels
-----------------
+----------------------------------------
  
  .. automodule:: qml.fchl.fchl_electric_field_kernels
     :members:
@@ -114,13 +115,13 @@ qml\.aglaia module
 
 
 qml\.qmlearn.representations module
-------------------
+-----------------------------------
 
 .. automodule:: qml.qmlearn.representations
    :inherited-members:
 
 qml\.qmlearn.kernels module
-------------------
+---------------------------
 
 .. automodule:: qml.qmlearn.kernels
    :inherited-members:

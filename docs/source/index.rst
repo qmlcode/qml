@@ -65,6 +65,7 @@ For citation of the individual procedures of QML, please see the "Citing use of 
    installation
    citation
    tutorial
+   force_kernels
    qml_examples/examples
 
 

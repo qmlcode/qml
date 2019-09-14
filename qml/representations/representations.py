@@ -39,6 +39,7 @@ from .slatm import get_sbop
 from .slatm import get_sbot
 
 from .facsf import fgenerate_acsf, fgenerate_acsf_and_gradients
+from .facsf import fgenerate_fchl_acsf, fgenerate_fchl_acsf_and_gradients
 
 def vector_to_matrix(v):
     """ Converts a representation from 1D vector to 2D square matrix.
@@ -550,7 +551,7 @@ def generate_slatm(coordinates, nuclear_charges, mbtypes,
     return mbs
 
 def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 3, nRs3 = 3, nTs = 3, eta2 = 1,
-                  eta3 = 1, zeta = 1, rcut = 5, acut = 5, bin_min=0.8, gradients = False):
+                  eta3 = 1, zeta = 1, rcut = 5, acut = 5, bin_min=0.8, gradients = False, pad=None):
     """
     Generate the variant of atom-centered symmetry functions used in https://doi.org/10.1039/C7SC04934J
 
@@ -580,6 +581,8 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
     :type bin_min: positive float
     :param gradients: To return gradients or not
     :type gradients: boolean
+    :param pad: `None` if no padding is to be applied other, otherwise an integer corresponding to the desired size
+    :type gradients: NoneType or integer
     :return: Atom-centered symmetry functions representation
     :rtype: numpy array
     """
@@ -592,9 +595,128 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
 
     descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) // 2 * nRs3*nTs
 
-    if gradients:
-        return fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
+    if gradients is False:
+
+        rep = fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3,
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+
+        if pad is not None:
+
+            rep_pad  = np.zeros((pad, descr_size))
+            rep_pad[:natoms,:] += rep
+
+            return rep_pad
+
+        else:
+            return rep
+
     else:
-        return fgenerate_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3, 
+
+        (rep, grad) = fgenerate_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
                 Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size)
+
+        if pad is not None:
+            rep_pad  = np.zeros((pad, descr_size))
+            grad_pad = np.zeros((pad, descr_size, pad, 3))
+
+            rep_pad[:natoms,:] += rep
+            grad_pad[:natoms,:,:natoms,:] += grad
+
+            return rep_pad, grad_pad
+        else:
+            return rep, grad
+
+
+def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
+        nRs2=24, nRs3=20, nFourier=1, eta2=0.32, eta3=2.7, zeta=np.pi, rcut=8.0, acut=8.0,
+        two_body_decay=1.8, three_body_decay=0.57, three_body_weight=13.4,
+        pad=False, gradients=False):
+    """
+    
+    FCHL-ACSF
+
+    Reasonable hyperparameters:
+    
+    Sigma ~ 21.0
+    Lambda ~ 1e-8
+    Max singular value ~ 1e-12
+
+    :param nuclear_charges: List of nuclear charges.
+    :type nuclear_charges: numpy array
+    :param coordinates: Input coordinates
+    :type coordinates: numpy array
+    :param elements: list of unique nuclear charges (atom types)
+    :type elements: numpy array
+    :param nRs2: Number of gaussian basis functions in the two-body terms
+    :type nRs2: integer
+    :param nRs3: Number of gaussian basis functions in the three-body radial part
+    :type nRs3: integer
+    :param nFourier: Order of Fourier expansion 
+    :type nFourier: integer
+    :param eta2: Precision in the gaussian basis functions in the two-body terms
+    :type eta2: float
+    :param eta3: Precision in the gaussian basis functions in the three-body radial part
+    :type eta3: float
+    :param zeta: Precision parameter of basis functions in the three-body angular part
+    :type zeta: float
+    :param rcut: Cut-off radius of the two-body terms
+    :type rcut: float
+    :param acut: Cut-off radius of the three-body terms
+    :type acut: float
+    :param gradients: To return gradients or not
+    :type gradients: boolean
+    :return: Atom-centered symmetry functions representation
+    :rtype: numpy array
+    """
+
+    Rs2 = np.linspace(0, rcut, 1+nRs2)[1:]
+    Rs3 = np.linspace(0, acut, 1+nRs3)[1:]
+
+    Ts = np.linspace(0, np.pi, 2*nFourier)
+    n_elements = len(elements)
+    natoms = len(coordinates)
+
+    descr_size = n_elements * nRs2 + (n_elements * (n_elements + 1)) * nRs3* nFourier
+
+    # Normalization constant for three-body 
+    three_body_weight = np.sqrt(eta3/np.pi) * three_body_weight
+
+
+    if gradients is False:
+
+        rep = fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3,
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size,
+                two_body_decay, three_body_decay, three_body_weight)
+
+        if pad is not False:
+
+            rep_pad  = np.zeros((pad, descr_size))
+            rep_pad[:natoms,:] += rep
+
+            return rep_pad
+
+        else:
+            return rep
+
+    else:
+
+        if (nFourier > 1):
+            print("Error: FCHL-ACSF only supports nFourier=1, requested", nfourier)
+            exit()
+
+        (rep, grad) = fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size,
+                two_body_decay, three_body_decay, three_body_weight)
+
+
+        if pad is not False:
+            rep_pad  = np.zeros((pad, descr_size))
+            grad_pad = np.zeros((pad, descr_size, pad, 3))
+
+            rep_pad[:natoms,:] += rep
+            grad_pad[:natoms,:,:natoms,:] += grad
+
+            return rep_pad, grad_pad
+        else:
+            return rep, grad
+
