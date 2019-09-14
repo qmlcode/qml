@@ -22,6 +22,7 @@
 
 from __future__ import print_function
 
+from six import string_types
 import numpy as np
 import collections
 
@@ -341,20 +342,23 @@ class Compound(object):
     def read_xyz(self, filename):
         """(Re-)initializes the Compound-object with data from an xyz-file.
 
-    :param filename: Input xyz-filename.
-    :type filename: string
-    """
+        :param filename: Input xyz-filename or file-like obejct
+        :type filename: string or file-like object
+        """
 
-        f = open(filename, "r")
-        lines = f.readlines()
-        f.close()
+        if isinstance(filename, string_types):
+            with open(filename, "r") as f:
+                lines = f.readlines()
+        else:
+            lines = filename.readlines()
 
         self.natoms = int(lines[0])
         self.atomtypes = []
         self.nuclear_charges = np.empty(self.natoms, dtype=int)
         self.coordinates = np.empty((self.natoms, 3), dtype=float)
 
-        self.name = filename
+        # Give the Compound a name if it is a string
+        self.name = filename if isinstance(filename, string_types) else "Compound"
 
         for i, line in enumerate(lines[2:self.natoms+2]):
             tokens = line.split()
@@ -369,3 +373,22 @@ class Compound(object):
             self.coordinates[i] = np.asarray(tokens[1:4], dtype=float)
    
         self.natypes = dict([(key, len(value)) for key,value in self.atomtype_indices.items()])
+
+    def set_compounds(self, xyz, zs):
+        """
+        Generating the compounds straight from XYZ rather than from the files.
+
+        :param xyz: coordinates
+        :type xyz: np array of shape (n_samples, n_atoms, 3)
+        :param zs: nuclear charges
+        :type zs: np array of shape (n_samples, n_atoms)
+        :return: None
+        """
+
+        self.natoms = xyz.shape[0]
+        self.nuclear_charges = zs
+        self.coordinates = xyz
+        self.atomtypes = np.unique(zs)
+
+        self.name = "Compound"
+

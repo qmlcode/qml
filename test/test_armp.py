@@ -162,6 +162,28 @@ def test_fit_3():
     estimator = ARMP()
     estimator.fit(x=descriptor, y=energies, classes=classes)
 
+def test_fit_4():
+    """
+    This function tests the second way of fitting the descriptor: the data is passed by storing the compounds in the
+    class.
+    """
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
+    data = np.load(test_dir + "/data/local_slatm_ch4cn_light.npz")
+    descriptor = data["arr_0"]
+    classes = data["arr_1"]
+    energies = data["arr_2"]
+
+    estimator = ARMP(tensorboard=True, tensorboard_subdir="./tb_test_4")
+    estimator.set_representations(representations=descriptor)
+    estimator.set_classes(classes=classes)
+    estimator.set_properties(energies)
+
+    idx = np.arange(0, 100)
+    estimator.fit(idx)
+
+    shutil.rmtree("./tb_test_4")
+
 def test_score_3():
     """
     This function tests that all the scoring functions work.
@@ -228,7 +250,7 @@ def test_predict_fromxyz():
     pred1 = estimator.predict(idx)
     pred2 = estimator.predict_from_xyz(xyz, zs)
 
-    assert np.all(np.isclose(pred1, pred2, rtol=1.e-6))
+    assert np.all(np.isclose(pred1, pred2, rtol=1.e-5))
 
     estimator.save_nn(save_dir="temp")
 
@@ -243,10 +265,10 @@ def test_predict_fromxyz():
     pred3 = new_estimator.predict(idx)
     pred4 = new_estimator.predict_from_xyz(xyz, zs)
 
-    assert np.all(np.isclose(pred3, pred4, rtol=1.e-6))
-    assert np.all(np.isclose(pred1, pred3, rtol=1.e-6))
-
     shutil.rmtree("temp")
+
+    assert np.all(np.isclose(pred3, pred4, rtol=1.e-5))
+    assert np.all(np.isclose(pred1, pred3, rtol=1.e-5))
 
 def test_retraining():
     xyz = np.array([[[0, 1, 0], [0, 1, 1], [1, 0, 1]],
@@ -291,8 +313,8 @@ def test_retraining():
 
     pred4 = new_estimator.predict(idx)
 
-    assert np.all(np.isclose(pred1, pred3, rtol=1.e-6))
-    assert np.all(np.isclose(pred2, pred4, rtol=1.e-6))
+    assert np.all(np.isclose(pred1, pred3, rtol=1.e-5))
+    assert np.all(np.isclose(pred2, pred4, rtol=1.e-5))
 
     shutil.rmtree("temp")
 
@@ -303,6 +325,7 @@ if __name__ == "__main__":
     test_fit_1()
     test_fit_2()
     test_fit_3()
+    test_fit_4()
     test_score_3()
     test_predict_3()
     test_predict_fromxyz()

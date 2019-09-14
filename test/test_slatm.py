@@ -46,7 +46,7 @@ def test_slatm_global_representation():
     mols = []
     for xyz_file in files:
 
-        mol = qml.data.Compound(xyz=path + "/" + xyz_file)
+        mol = qml.Compound(xyz=path + "/" + xyz_file)
         mols.append(mol)
 
     mbtypes = get_slatm_mbtypes(np.array([mol.nuclear_charges for mol in mols]))
@@ -79,7 +79,7 @@ def test_slatm_local_representation():
     mols = []
     for xyz_file in files:
 
-        mol = qml.data.Compound(xyz=path + "/" + xyz_file)
+        mol = qml.Compound(xyz=path + "/" + xyz_file)
         mols.append(mol)
 
     mbtypes = get_slatm_mbtypes(np.array([mol.nuclear_charges for mol in mols]))

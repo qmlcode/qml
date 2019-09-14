@@ -216,6 +216,21 @@ class AtomScaler(BaseEstimator):
         else:
             return delta_y
 
+    def _revert_transform(self, data, features, y):
+        """
+        Reverts the work of the transform method.
+        """
+
+        full_y = y + self.model.predict(features)
+
+        if data:
+            # Force copy
+            data.energies = data.energies.copy()
+            data.energies[data._indices] = full_y
+            return data
+        else:
+            return full_y
+
     def _check_elements(self, nuclear_charges):
         """
         Check that the elements in the given nuclear_charges was
@@ -271,3 +286,27 @@ class AtomScaler(BaseEstimator):
         features = self._featurizer(nuclear_charges)
 
         return self._transform(data, features, y)
+
+    def revert_transform(self, X, y=None):
+        """
+        Transforms data back to what it originally would have been if it hadn't been transformed with the fitted linear
+        model. Supports three different types of input.
+        1) X is a list of nuclear charges and y is values to transform.
+        2) X is an array of indices of which to transform.
+        3) X is a data object
+
+        :param X: List with nuclear charges or Data object.
+        :type X: list
+        :param y: Values to revert to before transform
+        :type y: array or None
+        :return: Array of untransformed values or Data object, depending on input
+        :rtype: array or Data object
+        """
+
+        data, nuclear_charges, y = self._parse_input(X, y)
+
+        self._check_elements(nuclear_charges)
+
+        features = self._featurizer(nuclear_charges)
+
+        return self._revert_transform(data, features, y)
