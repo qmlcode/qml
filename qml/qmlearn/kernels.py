@@ -358,9 +358,9 @@ class GaussianKernel(_BaseKernel):
     def _generate_molecular(self, X, Y=None):
         if Y is None or X is Y:
             # Do symmetric matrix
-            return gaussian_kernel_symmetric(X, self.sigma)
+            return gaussian_kernel_symmetric(np.array(X), self.sigma)
         else:
-            return gaussian_kernel(X, Y, self.sigma)
+            return gaussian_kernel(np.array(X), np.array(Y), self.sigma)
 
     def _generate_atomic(self, X, Y=None):
 
