@@ -541,7 +541,7 @@ subroutine fgaussian_kernel_symmetric(x, n, k, sigma)
 
     !$OMP PARALLEL DO PRIVATE(temp, val) SCHEDULE(dynamic)
     do i = 1, n
-        do j = 1, n
+        do j = i, n
             temp = x(:,j) - x(:,i)
             val = exp(inv_sigma * dot_product(temp,temp))
             k(j,i) = val
