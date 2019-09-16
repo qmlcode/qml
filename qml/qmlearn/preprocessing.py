@@ -84,7 +84,7 @@ class AtomScaler(BaseEstimator):
             transformed_labels[data._indices] = True
             data._has_transformed_labels = transformed_labels
 
-        elif self.data and is_positive_integer_or_zero_array(X) \
+        elif self.data is not None and is_positive_integer_or_zero_array(X) \
                 and max(X) <= self.data.natoms.size:
             # A copy here might avoid some unintended behaviour
             # if multiple models is used sequentially.

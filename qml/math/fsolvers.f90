@@ -20,6 +20,7 @@
 ! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ! SOFTWARE.
 
+
 subroutine fcho_solve(A,y,x)
 
     implicit none
@@ -148,3 +149,253 @@ subroutine fbkf_solve(A,y,x)
 
     deallocate(work)
 end subroutine fbkf_solve
+
+
+subroutine fqrlq_solve(A, y, la, x)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(inout) :: A
+    double precision, dimension(:), intent(inout):: y
+    integer, intent(in):: la
+
+    double precision, allocatable, dimension(:,:) :: b
+    double precision, dimension(la), intent(out) :: x
+
+    integer :: m, n, nrhs, lda, ldb, info
+
+    integer :: lwork
+    double precision, dimension(:), allocatable :: work
+
+    m = size(A, dim=1)
+    n = size(A, dim=2)
+
+
+    nrhs = 1
+    lda = m
+    ldb = max(m,n)
+    
+    allocate(b(ldb,1))
+    b = 0.0d0
+    b(:m,1) = y(:m)
+
+    lwork = (min(m,n) + max(m,n)) * 10
+    allocate(work(lwork))
+
+    ! write (*,*) info, lda, ldb, m, n
+    call dgels("N", m, n, nrhs, a, lda, b, ldb, work, lwork, info)
+
+    if (info < 0) then
+        write (*,*) "QML WARNING: Could not perform QRLQ solver DGELS: info =", info
+    else if (info > 0) then
+        write (*,*) "QML WARNING: QRLQ solver (DGELS) the", -info, "th"
+        write (*,*) "diagonal element of the triangular factor of A is zero,"
+        write (*,*) "so that A does not have full rank; the least squares"
+        write (*,*) "solution could not be computed."
+    endif
+    
+    x(:n) = b(:n,1)    
+    
+end subroutine fqrlq_solve
+
+
+subroutine fsvd_solve(A, y, la, rcond, x)
+    
+    implicit none
+
+    double precision, dimension(:,:), intent(inout) :: A
+    double precision, dimension(:), intent(inout):: y
+    integer, intent(in):: la
+    double precision, intent(in) :: rcond 
+
+    double precision, allocatable, dimension(:,:) :: b
+    double precision, dimension(la), intent(out) :: x
+
+    integer :: m, n, nrhs, lda, ldb, info
+
+    integer :: lwork
+    integer :: liwork
+    double precision, dimension(:), allocatable :: work
+
+    integer, dimension(:), allocatable :: iwork
+
+    double precision, dimension(:), allocatable :: s
+    integer :: rank
+
+    m = size(A, dim=1)
+    n = size(A, dim=2)
+
+    nrhs = 1
+    lda = m
+    ldb = max(m,n)
+
+    allocate(b(ldb,1))
+    b = 0.0d0
+    b(:m,1) = y(:m)
+
+
+    allocate(s(ldb))
+    ! rcond = 0.0d0
+
+    allocate(work(1))
+    allocate(iwork(1))
+
+    lwork = -1
+    call dgelsd(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, iwork, info)
+
+    liwork = int(iwork(1))
+    lwork  = int(work(1))
+
+    deallocate(work)
+    deallocate(iwork)
+    allocate(work(lwork))
+    allocate(iwork(liwork))
+
+    call dgelsd(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, iwork, info)
+
+    ! write (*,*) "DGELSD(): matrix rank =", rank, "/", n
+    ! write (*,*) "DGELSD(): matrix rcond =", rcond
+    ! write (*,*) "DGELSD(): matrix cond =", 1.0d0/rcond
+
+    ! allocate(x(m))
+    x(:n) = b(:n,1)
+
+end subroutine fsvd_solve
+
+
+subroutine fcond(A, rcond)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(inout) :: A
+    double precision, intent(out) :: rcond
+
+    double precision :: anorm
+    character, parameter :: norm = "1"
+    character, parameter :: uplo = "U"
+
+    double precision, allocatable, dimension(:) :: work
+    integer, allocatable, dimension(:) :: iwork
+
+
+    double precision, allocatable, dimension(:) :: A_diag
+
+    integer :: info, na, nb
+    integer :: n, lda
+    integer :: i
+
+    double precision :: dlansy
+
+    na = size(A, dim=1)
+    nb = size(A, dim=2)
+
+    n = na
+    lda = na
+
+    ! Save diagonal
+    allocate(a_diag(n))
+    do i = 1, na
+        a_diag(i) = a(i,i)
+    enddo
+
+    allocate(work(n))
+    anorm = dlansy(norm, uplo, n, a, lda, work )
+    deallocate(work)
+
+
+    ! Cholesky factorization
+
+    call dpotrf("U", n, A , lda, info)
+    if (info > 0) then
+        write (*,*) "WARNING: Cholesky decompositon failed because A is not positive definite. info = ", info
+    else if (info < 0) then
+        write (*,*) "WARNING: Cholesky decompositon DPOTRF() failed. info = ", info
+    endif
+
+
+    ! Condition number from Cholesky factorization
+
+    allocate(work(n*3))
+    allocate(iwork(n))
+
+    call dpocon(uplo, n, a, lda, anorm, rcond, work, iwork, info)
+    if (info < 0) then
+        write (*,*) "WARNING: Calculating condition number DPOCON() failed. info = ", info
+    endif
+
+    deallocate(work)
+    deallocate(iwork)
+
+    ! Restore lower triangle and diagonal
+    do i = 1, na
+        a(i,i) = a_diag(i)
+        a(i,i+1:) = a(i+1:,i)
+    enddo
+
+    deallocate(a_diag)
+
+    rcond = 1.0d0 / rcond
+
+end subroutine fcond
+
+
+subroutine fcond_ge(K, rcond)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: K
+    double precision, intent(out) :: rcond
+
+    double precision :: anorm
+    character, parameter :: norm = "1"
+    ! character, parameter :: uplo = "U"
+
+    double precision, allocatable, dimension(:) :: work
+    double precision, allocatable, dimension(:,:) :: A
+    integer, allocatable, dimension(:) :: iwork
+    integer, allocatable, dimension(:) :: ipiv
+
+    integer :: info
+    integer :: n, m, lda
+
+    double precision :: dlange
+
+    m = size(K, dim=1)
+    n = size(K, dim=2)
+
+    allocate(A(m,n))
+
+    A(:,:) = K(:,:)
+
+    lda = n
+
+    allocate(work(max(m,n)))
+    anorm = dlange( norm, m, n, a, lda, work )
+    deallocate(work)
+
+    allocate(ipiv(min(m,n)))
+    call dgetrf( m, n, a, lda, ipiv, info )
+    deallocate(ipiv)
+
+    if (info > 0) then
+        write (*,*) "WARNING: LU-decompositon failed because A is exactly singular. info = ", info
+    else if (info < 0) then
+        write (*,*) "WARNING: LU-decompositon DGETRF() failed. info = ", info
+    endif
+
+    allocate(work(n*4))
+    allocate(iwork(n))
+    call dgecon( norm, n, a, lda, anorm, rcond, work, iwork, info )
+
+     if (info < 0) then
+        write (*,*) "WARNING: Calculating condition number DGECON() failed. info = ", info
+    endif
+
+    deallocate(work)
+    deallocate(iwork)
+    deallocate(a)
+
+    rcond = 1.0d0 / rcond
+
+end subroutine fcond_ge
+
