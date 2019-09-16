@@ -57,6 +57,7 @@ install:
  - pip3 install pandas
  - pip3 install scikit-learn
  - pip3 install tensorflow
+ - pip3 install pytest
  - pip3 install . 
  - pip3 install sphinx
  - pip3 install nbsphinx
