@@ -38,7 +38,7 @@ matrix:
           update: true
 
     - os: osx
-      osx_image: xcode10.1
+      osx_image: xcode11
       addons:
         homebrew:
           packages:
@@ -47,8 +47,10 @@ matrix:
           - lapack
           - pandoc
           update: true
+      language: shell
 
 install:
+ - pip3 install --upgrade pip
  - pip3 install numpy
  - pip3 install scipy
  - pip3 install ase
