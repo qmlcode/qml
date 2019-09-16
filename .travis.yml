@@ -1,7 +1,6 @@
 language: python
 
 sudo: required
-dist: trusty
 
 group: edge
 
@@ -20,14 +19,26 @@ deploy:
 python:
   - "3.6"
 
-before_install:
-  - sudo apt-get update -qq
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc
+            - gfortran
+            - libblas-dev
+            - liblapack-dev
+            - gcc-4.8
+            - gfortran-4.8
+            - pandoc
+            - python3-numpy
+          update: true
 
 install:
- - sudo apt-get install -qq gcc gfortran libblas-dev liblapack-dev
- - sudo apt-get install -qq gcc-4.8 gfortran-4.8
- - sudo apt install pandoc
- - sudo apt-get install python3-numpy
  - pip3 install scipy
  - pip3 install ase
  - pip3 install pandas
@@ -40,7 +51,6 @@ install:
  - pip3 install sphinx-rtd-theme
  - cd ${TRAVIS_BUILD_DIR}/docs
  - make html
-
 
 before_script:
  - cd ${TRAVIS_BUILD_DIR}/test/
