@@ -47,7 +47,7 @@ matrix:
           - lapack
           - pandoc
           update: true
-      language: shell
+      language: shell # 'language: python' is an error on Travis CI macOS
 
 install:
  - pip3 install --upgrade pip
