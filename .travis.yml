@@ -37,6 +37,17 @@ matrix:
             - pandoc
           update: true
 
+     - os: osx
+      osx_image: xcode10.1
+      addons:
+        homebrew:
+          packages:
+          - gcc
+          - openblas
+          - lapack
+          - pandoc
+          update: true
+
 install:
  - pip3 install numpy
  - pip3 install scipy
