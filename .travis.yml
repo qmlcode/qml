@@ -35,17 +35,16 @@ matrix:
             - gcc-4.8
             - gfortran-4.8
             - pandoc
-            - python3-numpy
           update: true
 
 install:
+ - pip3 install numpy
  - pip3 install scipy
  - pip3 install ase
  - pip3 install pandas
  - pip3 install scikit-learn
  - pip3 install tensorflow
- - python3 setup.py build
- - python3 setup.py install
+ - pip3 install . 
  - pip3 install sphinx
  - pip3 install nbsphinx
  - pip3 install sphinx-rtd-theme
