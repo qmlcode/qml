@@ -30,7 +30,7 @@ if mkl_exists(verbose=True):
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 else:
     mklpath = mkl_exists_env(verbose=True)
-    if path is not None:
+    if mklpath is not None:
         LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
         MATH_LINKER_FLAGS = ["-L{:}".format(mklpath), "-lmkl_rt"]
 
