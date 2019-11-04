@@ -1,7 +1,7 @@
 import sys
 from numpy.distutils.core import Extension, setup
 
-from mkldiscover import mkl_exists
+from mkldiscover import mkl_exists, mkl_exists_env
 
 __author__ = "Anders S. Christensen"
 __copyright__ = "Copyright 2016"
@@ -28,6 +28,11 @@ MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 if mkl_exists(verbose=True):
     LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
     MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+else:
+    mklpath = mkl_exists_env(verbose=True)
+    if path is not None:
+        LINKER_FLAGS = ["-lgomp", "-lpthread", "-lm", "-ldl"]
+        MATH_LINKER_FLAGS = ["-L{:}".format(mklpath), "-lmkl_rt"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
 if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
