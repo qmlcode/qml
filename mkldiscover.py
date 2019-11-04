@@ -24,7 +24,8 @@
 from __future__ import print_function
 
 import os
-
+import sys
+import glob
 
 def mkl_exists_env(verbose=False):
     """
@@ -42,7 +43,7 @@ def mkl_exists_env(verbose=False):
 
     for path in paths:
 
-        filenames = glob.glob(paths[0]+"/*.so")
+        filenames = glob.glob(path+"/*.so")
         filenames = [os.path.basename(filename) for filename in filenames]
 
         if "libmkl_rt.so" in filenames:
@@ -111,4 +112,10 @@ if __name__ == "__main__":
     if mkl_present:
         print("MKL found")
     else:
-        print("MKL could NOT be found")
+        print("MKL could NOT be found in paths")
+        path = mkl_exists_env(verbose=False)
+        if path is not None:
+            print("MKL found in Python env: ", path)
+        else:
+            print("MKL could NOT be found in Python env")
+
