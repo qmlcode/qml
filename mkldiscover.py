@@ -25,6 +25,34 @@ from __future__ import print_function
 
 import os
 
+
+def mkl_exists_env(verbose=False):
+    """
+    Check if MKL is installed in the Python enviroment.
+    Return the lib path if found, otherwise return None.
+
+    """
+
+    paths = sys.path
+    paths = [path for path in paths if "site-packages" in path]
+
+    clean_path = lambda s: "/".join(s.split("/")[:-2])
+
+    paths = [clean_path(path) for path in paths]
+
+    for path in paths:
+
+        filenames = glob.glob(paths[0]+"/*.so")
+        filenames = [os.path.basename(filename) for filename in filenames]
+
+        if "libmkl_rt.so" in filenames:
+
+            if verbose: print("MKL-discover: Found mkl in python env", path)
+            return path
+
+    return None
+
+
 def mkl_exists(verbose=False):
 
     # Get environment variables
@@ -48,7 +76,7 @@ def mkl_exists(verbose=False):
 
     # Check if path exists
     mklroot_exists = os.path.isdir(__MKLROOT__)
-    
+
     if not mklroot_exists:
         if verbose: 
             print("MKL-discover: MKLROOT path does not exist")
