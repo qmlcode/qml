@@ -284,6 +284,8 @@ end subroutine polynomial2_kernel
 
 function kernel(s11, s22, s12, kernel_idx, parameters) result(k)
 
+    use ffchl_kernel_types
+
     implicit none
 
     double precision, intent(in) :: s11
@@ -298,37 +300,37 @@ function kernel(s11, s22, s12, kernel_idx, parameters) result(k)
     n = size(parameters, dim=1)
     allocate(k(n))
 
-    if (kernel_idx == 1) then
+    if (kernel_idx == GAUSSIAN) then
         call gaussian_kernel(s11, s22, s12, parameters, k)
 
-    else if (kernel_idx == 2) then
+    else if (kernel_idx == LINEAR) then
         call linear_kernel(s12, parameters, k)
     
-    else if (kernel_idx == 3) then
+    else if (kernel_idx == POLYNOMIAL) then
         call polynomial_kernel(s12, parameters, k)
 
-    else if (kernel_idx == 4) then
+    else if (kernel_idx == SIGMOID) then
         call sigmoid_kernel(s12, parameters, k)
 
-    else if (kernel_idx == 5) then
+    else if (kernel_idx == MULTIQUADRATIC) then
         call multiquadratic_kernel(s11, s22, s12, parameters, k)
 
-    else if (kernel_idx == 6) then
+    else if (kernel_idx == INV_MULTIQUADRATIC) then
         call inverse_multiquadratic_kernel(s11, s22, s12, parameters, k)
 
-    else if (kernel_idx == 7) then
+    else if (kernel_idx == BESSEL) then
         call bessel_kernel(s12, parameters, k)
     
-    else if (kernel_idx == 8) then
+    else if (kernel_idx == L2) then
         call l2_kernel(s11, s22, s12, parameters, k)
     
-    else if (kernel_idx == 9) then
+    else if (kernel_idx == MATERN) then
         call matern_kernel(s11, s22, s12, parameters, k)
     
-    else if (kernel_idx == 10) then
+    else if (kernel_idx == CAUCHY) then
         call cauchy_kernel(s11, s22, s12, parameters, k)
     
-    else if (kernel_idx == 11) then
+    else if (kernel_idx == POLYNOMIAL2) then
         call polynomial2_kernel(s12, parameters, k)
 
     else
