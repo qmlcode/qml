@@ -30,6 +30,9 @@ import scipy
 from scipy.special import binom
 from scipy.special import factorial
 
+from .ffchl_module import ffchl_kernel_types as kt
+
+
 def get_gaussian_parameters(tags):
 
     if tags is None:
@@ -44,7 +47,7 @@ def get_gaussian_parameters(tags):
 
     n_kernels = len(tags["sigma"])
 
-    return 1, parameters, n_kernels
+    return kt.gaussian, parameters, n_kernels
 
 
 def get_linear_parameters(tags):
@@ -59,7 +62,7 @@ def get_linear_parameters(tags):
     
     n_kernels = len(tags["c"])
 
-    return 2, parameters, n_kernels
+    return kt.linear, parameters, n_kernels
 
 
 def get_polynomial_parameters(tags):
@@ -80,7 +83,7 @@ def get_polynomial_parameters(tags):
     assert len(tags["alpha"]) == len(tags["d"])
 
     n_kernels = len(tags["alpha"])
-    return 3, parameters, n_kernels
+    return kt.polynomial, parameters, n_kernels
 
 
 def get_sigmoid_parameters(tags):
@@ -99,7 +102,7 @@ def get_sigmoid_parameters(tags):
     assert len(tags["alpha"]) == len(tags["c"])
     n_kernels = len(tags["alpha"])
 
-    return 4, parameters, n_kernels
+    return kt.sigmoid, parameters, n_kernels
 
 
 def get_multiquadratic_parameters(tags):
@@ -117,7 +120,7 @@ def get_multiquadratic_parameters(tags):
     np.resize(parameters, (1,len(tags["c"])))
     n_kernels = len(tags["c"])
     
-    return 5, parameters, n_kernels
+    return kt.multiquadratic, parameters, n_kernels
 
 
 def get_inverse_multiquadratic_parameters(tags):
@@ -135,7 +138,7 @@ def get_inverse_multiquadratic_parameters(tags):
     np.resize(parameters, (1,len(tags["c"])))
     n_kernels = len(tags["c"])
     
-    return 6, parameters, n_kernels
+    return kt.inv_multiquadratic, parameters, n_kernels
 
 
 def get_bessel_parameters(tags):
@@ -157,7 +160,7 @@ def get_bessel_parameters(tags):
 
     n_kernels = len(tags["sigma"])
 
-    return 7, parameters, n_kernels
+    return kt.bessel, parameters, n_kernels
 
 def get_l2_parameters(tags):
 
@@ -175,7 +178,7 @@ def get_l2_parameters(tags):
     assert len(tags["alpha"]) == len(tags["c"])
     n_kernels = len(tags["alpha"])
 
-    return 8, parameters, n_kernels
+    return kt.l2, parameters, n_kernels
 
 
 def get_matern_parameters(tags):
@@ -204,7 +207,7 @@ def get_matern_parameters(tags):
 
     parameters = parameters.T
 
-    return 9, parameters, n_kernels
+    return kt.matern, parameters, n_kernels
 
 
 def get_cauchy_parameters(tags):
@@ -222,7 +225,8 @@ def get_cauchy_parameters(tags):
     np.resize(parameters, (1,len(tags["sigma"])))
     n_kernels = len(tags["sigma"])
 
-    return 10, parameters, n_kernels
+    return kt.cauchy, parameters, n_kernels
+
 
 def get_polynomial2_parameters(tags):
     
@@ -239,12 +243,13 @@ def get_polynomial2_parameters(tags):
 
     n_kernels = len(tags["coeff"])
     parameters = parameters.T
-    return 11, parameters, n_kernels
+    return kt.polynomial2, parameters, n_kernels
+
 
 def get_kernel_parameters(name, tags):
 
     parameters = None
-    idx = 1
+    idx = kt.gaussian
     n_kernels = 1
    
     if name == "gaussian":
