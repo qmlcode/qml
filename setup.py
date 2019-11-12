@@ -68,6 +68,7 @@ ext_fgradient_kernels = Extension(name = '.kernels.fgradient_kernels',
 ext_ffchl_module = Extension(name = '.fchl.ffchl_module',
                           sources = [
                               'qml/fchl/ffchl_module.f90',
+                              'qml/fchl/ffchl_kernel_types.f90',
                               'qml/fchl/ffchl_kernels.f90',
                               'qml/fchl/ffchl_scalar_kernels.f90',
                               'qml/fchl/ffchl_force_kernels.f90',
