@@ -145,6 +145,7 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
+
 def setup_qml():
 
     setup(
@@ -190,6 +191,7 @@ def setup_qml():
               ext_farad_kernels,
         ],
 )
+
 
 if __name__ == '__main__':
 
