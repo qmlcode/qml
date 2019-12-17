@@ -24,10 +24,12 @@ from __future__ import print_function
 
 import numpy as np
 
-from .fkernels import fgaussian_kernel, fgaussian_kernel_symmetric
-from .fkernels import flaplacian_kernel
+from .fkernels import fgaussian_kernel
 from .fkernels import fgaussian_kernel_symmetric
+from .fkernels import fgaussian_sigmas_kernel
+from .fkernels import flaplacian_kernel
 from .fkernels import flaplacian_kernel_symmetric
+from .fkernels import flaplacian_sigmas_kernel
 from .fkernels import flinear_kernel
 from .fkernels import fsargan_kernel
 from .fkernels import fmatern_kernel_l2
@@ -93,6 +95,32 @@ def laplacian_kernel_symmetric(A, sigma):
 
     return K
 
+def laplacian_sigmas_kernel(A, B, sigmas):
+    """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\prod_{k}^{S} \\big( -\\frac{\\|A_{ik} - B_{jk}\\|_1}{\sigma_{k}} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors and
+        :math:`S` is the size of representation vector.
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of representations - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of representations - shape (M, representation size).
+        :type B: numpy array
+        :param sigmas: Per-feature values of sigma in the kernel matrix - shape (representation_size,)
+        :type sigmas: numpy array
+
+        :return: The Laplacian kernel matrix - shape (N, M)
+        :rtype: numpy array
+    """
+    na = A.shape[0]
+    nb = B.shape[0]
+    K = np.empty((na, nb), order='F')
+    # Note: Transposed for Fortran
+    flaplacian_sigmas_kernel(A.T, na, B.T, nb, K, sigmas)
+    return K
+
 def gaussian_kernel(A, B, sigma):
     """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
 
@@ -146,6 +174,32 @@ def gaussian_kernel_symmetric(A, sigma):
     # Note: Transposed for Fortran
     fgaussian_kernel_symmetric(A.T, na, K, sigma)
 
+    return K
+
+def gaussian_sigmas_kernel(A, B, sigmas):
+    """ Calculates the Gaussian kernel matrix K, where :math:`K_{ij}`:
+
+            :math:`K_{ij} = \\prod_{k}^{S} \\big( -\\frac{\\|A_{ik} - B_{jk}\\|_2^2}{2\sigma_{k}^{2}} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors and
+        :math:`S` is the size of representation vector.
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of representations - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of representations - shape (M, representation size).
+        :type B: numpy array
+        :param sigmas: Per-feature values of sigma in the kernel matrix - shape (representation_size,)
+        :type sigmas: numpy array
+
+        :return: The Gaussian kernel matrix - shape (N, M)
+        :rtype: numpy array
+    """
+    na = A.shape[0]
+    nb = B.shape[0]
+    K = np.empty((na, nb), order='F')
+    # Note: Transposed for Fortran
+    fgaussian_sigmas_kernel(A.T, na, B.T, nb, K, sigmas)
     return K
 
 def linear_kernel(A, B):
