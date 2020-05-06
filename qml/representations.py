@@ -330,8 +330,13 @@ def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     nas = []
     zs_ravel = []
     for zsi in zs:
-        na = len(zsi); nas.append(na)
-        zsil = list(zsi); zs_ravel += zsil
+        if np.issubdtype(int, np.integer):
+            na = 1
+        else:
+            na = len(zsi)
+        nas.append(na)
+        zsil = [zsi]
+        zs_ravel += zsil
         zsmax.update( zsil )
 
     zsmax = np.array( list(zsmax) )
