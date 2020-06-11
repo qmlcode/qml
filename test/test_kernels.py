@@ -300,8 +300,6 @@ def test_wasserstein_kernel():
     X =  np.array(np.random.randint(0, 10, size=(n_train, 3)), dtype=np.float)
     Xs = np.array(np.random.randint(0, 10, size=(n_test, 3)), dtype=np.float)
 
-    print(X)
-    print(Xs)
     sigma = 100.0
 
     Ktest = np.zeros((n_train, n_test))
@@ -310,23 +308,15 @@ def test_wasserstein_kernel():
         for j in range(n_test):
             Ktest[i,j] = np.exp( wasserstein_distance(X[i], Xs[j]) / (-1.0 * sigma))
 
-    K = wasserstein_kernel(X, Xs, sigma, p=2)
-
-    print(K)
-    print(Ktest)
+    K = wasserstein_kernel(X, Xs, sigma)
 
     # Compare two implementations:
     assert np.allclose(K, Ktest), "Error in Wasserstein kernel"
 
-    # Ksymm = wasserstein_kernel(X, X, sigma)
+    Ksymm = wasserstein_kernel(X, X, sigma)
 
-    # # Check for symmetry:
-    # assert np.allclose(Ksymm, Ksymm.T), "Error in Wasserstein kernel"
-
-    # Ksymm2 = wasserstein_kernel_symmetric(X, sigma)
-
-    # # Check for symmetry:
-    # assert np.allclose(Ksymm, Ksymm2), "Error in Wasserstein kernel"
+    # Check for symmetry:
+    assert np.allclose(Ksymm, Ksymm.T), "Error in Wasserstein kernel"
 
 def test_gaussian_kernel():
 
