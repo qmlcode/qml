@@ -27,7 +27,6 @@ import os
 import numpy as np
 import scipy
 from scipy.stats import wasserstein_distance
-from scipy.stats import energy_distance
 
 import sklearn
 from sklearn.decomposition import KernelPCA
@@ -513,11 +512,11 @@ def test_kpca():
 
 if __name__ == "__main__":
 
-    #test_laplacian_kernel()
-    #test_gaussian_kernel()
-    #3test_linear_kernel()
-    #test_matern_kernel()
-    #test_sargan_kernel()
+    test_laplacian_kernel()
+    test_gaussian_kernel()
+    test_linear_kernel()
+    test_matern_kernel()
+    test_sargan_kernel()
     test_wasserstein_kernel()
-    # test_kpca()
+    test_kpca()
 
