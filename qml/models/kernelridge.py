@@ -26,8 +26,6 @@ from time import time
 
 import numpy as np
 
-import ase
-
 from ..representations import generate_coulomb_matrix
 from ..kernels import gaussian_kernel
 from ..math import cho_solve
