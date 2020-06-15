@@ -26,11 +26,13 @@ import sys
 import os
 import numpy as np
 import scipy
+from scipy.stats import wasserstein_distance
 
 import sklearn
 from sklearn.decomposition import KernelPCA
 
 import qml
+from qml.kernels import wasserstein_kernel
 from qml.kernels import laplacian_kernel
 from qml.kernels import gaussian_kernel
 from qml.kernels import laplacian_kernel_symmetric
@@ -286,6 +288,34 @@ def test_kpca():
 
     assert array_nan_close(np.abs(pcas_sklearn.T), np.abs(pcas_qml)), "Error in Kernel PCA decomposition."
 
+def test_wasserstein_kernel():
+
+    np.random.seed(666)
+
+    n_train = 5
+    n_test = 3
+
+    # List of dummy representations
+    X =  np.array(np.random.randint(0, 10, size=(n_train, 3)), dtype=np.float)
+    Xs = np.array(np.random.randint(0, 10, size=(n_test, 3)), dtype=np.float)
+
+    sigma = 100.0
+
+    Ktest = np.zeros((n_train, n_test))
+
+    for i in range(n_train):
+        for j in range(n_test):
+            Ktest[i,j] = np.exp( wasserstein_distance(X[i], Xs[j]) / (-1.0 * sigma))
+
+    K = wasserstein_kernel(X, Xs, sigma)
+
+    # Compare two implementations:
+    assert np.allclose(K, Ktest), "Error in Wasserstein kernel"
+
+    Ksymm = wasserstein_kernel(X, X, sigma)
+
+    # Check for symmetry:
+    assert np.allclose(Ksymm, Ksymm.T), "Error in Wasserstein kernel"
 
 if __name__ == "__main__":
 
@@ -294,4 +324,6 @@ if __name__ == "__main__":
     test_linear_kernel()
     test_matern_kernel()
     test_sargan_kernel()
+    test_wasserstein_kernel()
     test_kpca()
+

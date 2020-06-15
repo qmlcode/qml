@@ -25,6 +25,7 @@ from __future__ import print_function
 import numpy as np
 
 from .fkernels import fgaussian_kernel, fgaussian_kernel_symmetric
+from .fkernels import fwasserstein_kernel
 from .fkernels import flaplacian_kernel
 from .fkernels import fgaussian_kernel_symmetric
 from .fkernels import flaplacian_kernel_symmetric
@@ -37,6 +38,35 @@ from .fkernels import fget_local_kernels_laplacian
 from .fkernels import fget_vector_kernels_gaussian, fget_vector_kernels_gaussian_symmetric
 
 from .fkernels import fkpca
+
+def wasserstein_kernel(A, B, sigma, p=1, q=1):
+    """ Calculates the Wasserstein kernel matrix K, where :math:`K_{ij}`:
+
+        :math:`K_{ij} = \\exp \\big( -\\frac{(W_p(A_i, B_i))^q}{\sigma} \\big)`
+
+        Where :math:`A_{i}` and :math:`B_{j}` are representation vectors.
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        :param A: 2D array of representations - shape (N, representation size).
+        :type A: numpy array
+        :param B: 2D array of representations - shape (M, representation size).
+        :type B: numpy array
+        :param sigma: The value of sigma in the kernel matrix.
+        :type sigma: float
+
+        :return: The Wasserstein kernel matrix - shape (N, M)
+        :rtype: numpy array
+    """
+
+    na = A.shape[0]
+    nb = B.shape[0]
+
+    K = np.empty((na, nb), order='F')
+
+    # Note: Transposed for Fortran
+    fwasserstein_kernel(A.T, na, B.T, nb, K, sigma, p, q)
+
+    return K
 
 def laplacian_kernel(A, B, sigma):
     """ Calculates the Laplacian kernel matrix K, where :math:`K_{ij}`:
