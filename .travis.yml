@@ -1,7 +1,6 @@
 language: python
 
 sudo: required
-dist: trusty
 
 group: edge
 
@@ -15,33 +14,58 @@ deploy:
   github_token: ${GH_TOKEN} # Set in travis-ci.org dashboard
   on:
     branch: master
+    condition: ${TRAVIS_OS_NAME} = "linux"
     # condition: ${TRAVIS_PYTHON_VERSION} = "3.6"
 
 python:
   - "3.6"
 
-before_install:
-  - sudo apt-get update -qq
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc
+            - gfortran
+            - libblas-dev
+            - liblapack-dev
+            - gcc-4.8
+            - gfortran-4.8
+            - pandoc
+          update: true
+
+    - os: osx
+      osx_image: xcode11
+      addons:
+        homebrew:
+          packages:
+          - gcc
+          - openblas
+          - lapack
+          - pandoc
+          update: true
+      language: shell # 'language: python' is an error on Travis CI macOS
 
 install:
- - sudo apt-get install -qq gcc gfortran libblas-dev liblapack-dev
- - sudo apt-get install -qq gcc-4.8 gfortran-4.8
- - sudo apt install pandoc
- - sudo apt-get install python3-numpy
+ - pip3 install --upgrade pip
+ - pip3 install numpy
  - pip3 install scipy
  - pip3 install ase
  - pip3 install pandas
  - pip3 install scikit-learn
  - pip3 install tensorflow
- - pip install --upgrade attrs==19.1.0
- - python3 setup.py build
- - python3 setup.py install
+ - pip3 install --upgrade attrs==19.1.0
+ - pip3 install pytest
+ - pip3 install . 
  - pip3 install sphinx
  - pip3 install nbsphinx
  - pip3 install sphinx-rtd-theme
  - cd ${TRAVIS_BUILD_DIR}/docs
  - make html
-
 
 before_script:
  - cd ${TRAVIS_BUILD_DIR}/test/
