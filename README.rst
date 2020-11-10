@@ -19,6 +19,8 @@ Current list of contributors:
 - Alexandre Tkatchenko (University of Luxembourg)
 - Klaus-Robert Muller (Technische Universitat Berlin/Korea University)
 - \O. Anatole von Lilienfeld (University of Basel)
+- Peter Zaspel (University of Basel)
+- Helmut Harbrecht (University of Basel)
 
 1) Citing QML:
 --------------

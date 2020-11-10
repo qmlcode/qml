@@ -1,0 +1,8 @@
+To be able to use the examples for the CQML approach, please first download
+the file "DataSet_cqml.tgz" from
+
+https://doi.org/10.6084/m9.figshare.9130973
+
+and decompress it in the "examples" folder by
+
+tar xvzf DataSet_cqml.tgz
