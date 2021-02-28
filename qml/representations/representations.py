@@ -630,7 +630,7 @@ def generate_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16], nRs2 = 
 def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
         nRs2=24, nRs3=20, nFourier=1, eta2=0.32, eta3=2.7, zeta=np.pi, rcut=8.0, acut=8.0,
         two_body_decay=1.8, three_body_decay=0.57, three_body_weight=13.4,
-        pad=False, gradients=False):
+        pad=False, gradients=False, cell=None):
     """
     
     FCHL-ACSF
@@ -667,6 +667,8 @@ def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
     :type gradients: boolean
     :return: Atom-centered symmetry functions representation
     :rtype: numpy array
+    :param cell: Unit cell vectors. The presence of this keyword argument will generate a periodic representation.
+    :type cell: numpy array
     """
 
     Rs2 = np.linspace(0, rcut, 1+nRs2)[1:]
@@ -681,11 +683,22 @@ def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
     # Normalization constant for three-body 
     three_body_weight = np.sqrt(eta3/np.pi) * three_body_weight
 
+    natoms_tot=natoms
+    if cell is not None:
+        nExtend = (np.floor(rcut/np.linalg.norm(cell,2,axis = 0)) + 1).astype(int)
+        true_coords=coordinates
+        for i in range(-nExtend[0],nExtend[0] + 1):
+            for j in range(-nExtend[1],nExtend[1] + 1):
+                for k in range(-nExtend[2],nExtend[2] + 1):
+                    if not (i == 0 and j  == 0 and k  == 0):
+                        true_coords = np.append(true_coords, coordinates + i*cell[0,:] + j*cell[1,:] + k*cell[2,:], axis=0)
+                        natoms_tot+=natoms
+        coordinates=true_coords
 
     if gradients is False:
 
         rep = fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, Rs2, Rs3,
-                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size,
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, natoms_tot, descr_size,
                 two_body_decay, three_body_decay, three_body_weight)
 
         if pad is not False:
@@ -705,7 +718,7 @@ def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
             exit()
 
         (rep, grad) = fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, elements, Rs2, Rs3,
-                Ts, eta2, eta3, zeta, rcut, acut, natoms, descr_size,
+                Ts, eta2, eta3, zeta, rcut, acut, natoms, natoms_tot, descr_size,
                 two_body_decay, three_body_decay, three_body_weight)
 
 

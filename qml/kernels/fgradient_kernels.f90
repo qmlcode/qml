@@ -591,6 +591,7 @@ subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, 
     sorted_derivs = 0.0d0
 
     ! Presort the representation derivatives
+!$OMP PARALLEL DO PRIVATE(idx2) schedule(dynamic)
     do b = 1, nm2
         do i2 = 1, n2(b)
             idx2 = 0
@@ -606,10 +607,11 @@ subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, 
             enddo
         enddo
     enddo
+!$OMP END PARALLEL DO
 
     kernel = 0.0d0
 
-    !$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd,idx1_start,idx1) schedule(dynamic)
+!$OMP PARALLEL DO PRIVATE(idx2_end,idx2_start,d,expd,idx1_start,idx1) schedule(dynamic)
     do a = 1, nm1
 
         idx1_start = sum(n1(:a)) - n1(a) + 1
@@ -642,7 +644,7 @@ subroutine fatomic_local_gradient_kernel(x1, x2, dx2, q1, q2, n1, n2, nm1, nm2, 
             enddo
         enddo
     enddo
-    !$OMP END PARALLEL do
+!$OMP END PARALLEL do
 
     deallocate(sorted_derivs)
     deallocate(d)
