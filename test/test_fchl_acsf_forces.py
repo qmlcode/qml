@@ -3,7 +3,6 @@ from __future__ import print_function
 
 
 from time import time
-import ast
 
 import qml
 from qml.math import cho_solve
@@ -36,6 +35,7 @@ import pandas as pd
 np.set_printoptions(linewidth=999, edgeitems=10, suppress=True)
 
 import csv
+from ase.io import extxyz
 
 TRAINING = 7
 TEST     = 5
@@ -59,6 +59,8 @@ LAMBDA_FORCE = 1e-6
 
 np.random.seed(666)
 
+def MAE(model_output, reference_vals):
+    return np.mean(np.abs(model_output-reference_vals))
 
 def get_reps(df):
 
@@ -93,6 +95,44 @@ def get_reps(df):
     # e -= np.mean(e)# - 10 #
 
     f = np.array(f)
+    f *= -1
+    x = np.array(x)
+
+    return x, f, e, np.array(disp_x), q
+
+
+def get_reps_pbc(df_pbc):
+
+    x = []
+    f_list = []
+    e = []
+    disp_x = []
+    q = []
+
+    for i in df_pbc:
+
+        coordinates = i.get_positions()
+        nuclear_charges = i.get_atomic_numbers() 
+        atomtypes = [1, 3]
+
+        force = np.array(i.get_forces())
+        energy = float(i.get_total_energy())
+        cell = i.cell[:]
+
+        (x1, dx1) = generate_fchl_acsf(nuclear_charges, coordinates, gradients=True, \
+                    rcut=1.95, elements = atomtypes, cell = cell)
+
+        x.append(x1)
+        f_list.append(force)
+        e.append(energy)
+
+        disp_x.append(dx1)
+        q.append(nuclear_charges)
+
+    e = np.array(e)
+    # e -= np.mean(e)# - 10 #
+
+    f = np.stack(f_list)
     f *= -1
     x = np.array(x)
 
@@ -163,6 +203,60 @@ def test_fchl_acsf_operator():
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(Fv.flatten(), fYv.flatten())
     print("VALID    FORCE    MAE = %10.4f  slope = %10.4f  intercept = %10.4f  r^2 = %9.6f" % \
             (np.mean(np.abs(Fv.flatten() - fYv.flatten())), slope, intercept, r_value ))
+
+
+def test_fchl_acsf_operator_pbc():
+
+    SIGMA = 20.0
+    TRAINING = 10
+    TEST = 8
+
+
+    print("Representations (pbc) ...")
+
+    xyz_pbc_training = open(TEST_DIR+"/data/LiH_crystal_training.xyz", 'r')
+    DF_TRAIN_PBC = list(extxyz.read_extxyz(xyz_pbc_training, index=slice(None, None, 1)))
+    xyz_pbc_training.close()
+
+    xyz_pbc_test = open(TEST_DIR+"/data/LiH_crystal_test.xyz", 'r')
+    DF_TEST_PBC = list(extxyz.read_extxyz(xyz_pbc_test, index=slice(None, None, 1)))
+    xyz_pbc_test.close()
+
+    X, F, E, dX, Q = get_reps_pbc(DF_TRAIN_PBC)
+    Xs, Fs, Es, dXs, Qs = get_reps_pbc(DF_TEST_PBC)
+
+    F = np.concatenate(F)
+    Fs = np.concatenate(Fs)
+
+    Y = np.concatenate((E, F.flatten()))
+
+    print("Kernels (pbc) ...")
+    Kte = get_atomic_local_kernel(X, X,  Q, Q,  SIGMA)
+    Kse = get_atomic_local_kernel(X, Xs, Q, Qs, SIGMA)
+
+    Kt = get_atomic_local_gradient_kernel(X, X,  dX,  Q, Q,  SIGMA)
+    Ks = get_atomic_local_gradient_kernel(X, Xs, dXs, Q, Qs, SIGMA)
+
+    C = np.concatenate((Kte, Kt))
+
+    print("Alphas operator (pbc) ...")
+    alpha = svd_solve(C, Y, rcond=1e-9)
+    # alpha = qrlq_solve(C, Y)
+
+    eYt = np.dot(Kte, alpha)
+    eYs = np.dot(Kse, alpha)
+
+    fYt = np.dot(Kt, alpha)
+    fYs = np.dot(Ks, alpha)
+
+
+    print("===============================================================================================")
+    print("====  OPERATOR, FORCE + ENERGY (PBC) ==========================================================")
+    print("===============================================================================================")
+
+    print("TEST  ENERGY   MAE = %10.6f      MAE (expected) = %10.6f " % (np.mean(np.abs(Es - eYs)), 2.363580))
+    print("TEST  FORCE    MAE = %10.6f      MAE (expected) = %10.6f " % (np.mean(np.abs(Fs.flatten() - fYs.flatten())), 0.981332))
+
 
 
 def test_fchl_acsf_gaussian_process():
