@@ -144,7 +144,7 @@ def generate_atomic_coulomb_matrix(nuclear_charges, coordinates, size = 23, sort
                  1 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
                  \\tfrac{1}{2} \\big(1 + \\cos\\big(\\pi \\tfrac{\\|{\\bf R}_{i} - {\\bf R}_{j} \\|
                     - r + \Delta r}{\Delta r} \\big)\\big)     
-                    & \\text{if } r - \Delta r < \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r - \Delta r \\\\
+                    & \\text{if } r - \Delta r < \\|{\\bf R}_{i} - {\\bf R}_{j} \\| \\leq r \\\\
                  0 & \\text{if } \\|{\\bf R}_{i} - {\\bf R}_{j} \\| > r
               \\end{cases},
 
