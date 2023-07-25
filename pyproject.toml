@@ -1,0 +1,8 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+# https://numpy.org/devdocs/reference/distutils_status_migration.html
+# Upper limits of versions for old tooling
+requires = [
+    "setuptools<60.0",
+    "numpy<1.23.0"
+]
