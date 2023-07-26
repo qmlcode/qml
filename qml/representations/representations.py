@@ -340,7 +340,7 @@ def get_slatm_mbtypes(nuclear_charges, pbc='000'):
     zsmax = np.array( list(zsmax) )
     nass = []
     for i in range(nm):
-        zsi = np.array(zs[i],np.int)
+        zsi = np.array(zs[i],int)
         nass.append( [ (zi == zsi).sum() for zi in zsmax ] )
 
     nzmax = np.max(np.array(nass), axis=0)
