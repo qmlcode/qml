@@ -685,7 +685,7 @@ def generate_fchl_acsf(nuclear_charges, coordinates, elements = [1,6,7,8,16],
 
     natoms_tot=natoms
     if cell is not None:
-        nExtend = (np.floor(rcut/np.linalg.norm(cell,2,axis = 0)) + 1).astype(int)
+        nExtend = (np.floor(max(rcut,acut)/np.linalg.norm(cell,2,axis = 0)) + 1).astype(int)
         true_coords=coordinates
         for i in range(-nExtend[0],nExtend[0] + 1):
             for j in range(-nExtend[1],nExtend[1] + 1):
