@@ -1063,8 +1063,8 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
     !$OMP PARALLEL DO PRIVATE(m) SCHEDULE(dynamic)
     do j = 2, natoms
         do i = 1, j-1
-            m = element_types(i)
             if (distance_matrix(i,j)>rcut) cycle
+            m = element_types(i)
             rep(j, (m-1)*nbasis2 + 1:m*nbasis2) = rep(j, (m-1)*nbasis2 + 1:m*nbasis2) + add_rep(:, i, j)
             do k=1, 3
                 grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) = grad(j, (m-1)*nbasis2 + 1:m*nbasis2, j, k) - add_grad(:, k, i, j)
