@@ -52,6 +52,19 @@ def suitable_cell(coords):
             min_coords=np.minimum(min_coords, atom_coords)
     return np.diag((max_coords-min_coords)*(1.0+cell_added_cutoff))
 
+def pbc_corrected_drep(drep, num_atoms):
+    new_shape=list(drep.shape)
+    new_shape[0]=num_atoms
+    new_shape[2]=num_atoms
+    new_drep=np.zeros(new_shape)
+    num_atoms_tot=drep.shape[0]
+    for i in range(num_atoms):
+        for j in range(num_atoms_tot):
+            true_j=j % num_atoms
+            new_drep[i, :, true_j, :] +=drep[i, :, j, :]
+    return new_drep
+
+
 def generate_fchl_acsf_brute_pbc(nuclear_charges, coordinates, cell, gradients=False):
     num_atoms=len(nuclear_charges)
     all_coords=deepcopy(coordinates)
@@ -70,7 +83,7 @@ def generate_fchl_acsf_brute_pbc(nuclear_charges, coordinates, cell, gradients=F
         rep=generate_fchl_acsf(all_charges, all_coords, gradients=False, **REP_PARAMS)
     rep=rep[:num_atoms,:]
     if gradients:
-        drep=drep[:num_atoms,:,:num_atoms,:]
+        drep= pbc_corrected_drep(drep, num_atoms)
         return rep, drep
     else:
         return rep
@@ -79,12 +92,14 @@ def ragged_array_close(arr1, arr2, error_msg):
     for el1, el2 in zip(arr1, arr2):
         assert np.allclose(el1, el2), error_msg
 
+
+
 def test_fchl_acsf_pbc():
     
     qm7_dir = os.path.dirname(os.path.realpath(__file__))+"/qm7"
     os.chdir(qm7_dir)
     all_xyzs=os.listdir()
-    test_xyzs=random.sample(all_xyzs, 5)
+    test_xyzs=random.sample(all_xyzs, 16)
 
     reps_no_grad1=[]
     reps_no_grad2=[]

@@ -96,6 +96,17 @@ function calc_cos_angle(a, b, c) result(cos_angle)
 
 end function calc_cos_angle
 
+function true_atom_id(atom_id, natoms) result(tatom_id)
+    integer, intent(in):: atom_id, natoms
+    integer:: tatom_id
+
+    if (atom_id <= tatom_id) then
+        tatom_id=atom_id
+    else
+        tatom_id=modulo(atom_id-1, natoms)+1
+    endif
+end function true_atom_id
+
 end module acsf_utils
 
 
@@ -637,7 +648,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
                           & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, natoms_tot, rep_size, &
                           & two_body_decay, three_body_decay, three_body_weight, rep)
 
-    use acsf_utils, only: decay, calc_angle, calc_cos_angle
+    use acsf_utils, only: decay, calc_angle, calc_cos_angle, true_atom_id
 
     implicit none
 
@@ -661,7 +672,7 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
     double precision, intent(out), dimension(natoms, rep_size) :: rep
 
     integer:: two_body_rep_size
-    integer :: i, j, k, l, n, m, o, p, q, s, z, nelements, nbasis2, nbasis3, nabasis, j_id, j_id_max
+    integer :: i, j, k, l, n, m, o, p, q, s, z, nelements, nbasis2, nbasis3, nabasis, j_id, j_id_max, true_i
     integer, allocatable, dimension(:) :: element_types
     double precision :: rij, rik, angle, cos_1, cos_2, cos_3, invcut
     ! double precision :: angle_1, angle_2, angle_3
@@ -691,8 +702,9 @@ subroutine fgenerate_fchl_acsf(coordinates, nuclear_charges, elements, &
     ! Store element index of every atom
     !$OMP PARALLEL DO SCHEDULE(dynamic)
     do i = 1, natoms_tot
+        true_i=true_atom_id(i, natoms)
         do j = 1, nelements
-            if (nuclear_charges(modulo(i-1, natoms)+1) .eq. elements(j)) then
+            if (nuclear_charges(true_i) .eq. elements(j)) then
                 element_types(i) = j
                 exit
             endif
@@ -869,7 +881,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
     & Rs2, Rs3, Ts, eta2, eta3, zeta, rcut, acut, natoms, natoms_tot, rep_size, &
     & two_body_decay, three_body_decay, three_body_weight, rep, grad)
 
-    use acsf_utils, only: decay, calc_angle, calc_cos_angle
+    use acsf_utils, only: decay, calc_angle, calc_cos_angle, true_atom_id
 
     implicit none
 
@@ -903,7 +915,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
     double precision, dimension(:, :, :), allocatable:: add_rep
     double precision, dimension(:, :, :, :), allocatable :: add_grad
 
-    integer :: i, j, k, l, m, n,  p, q, s, t, z, nelements, nbasis2, nbasis3, nabasis, twobody_size
+    integer :: i, j, k, l, m, n,  p, q, s, t, z, nelements, nbasis2, nbasis3, nabasis, twobody_size, true_j, true_k
     integer, allocatable, dimension(:) :: element_types
     double precision :: rij, rik, angle, dot, rij2, rik2, invrij, invrik, invrij2, invrik2, invcut
     double precision, allocatable, dimension(:) :: radial_base, radial, angular, a, b, c, atom_rep
@@ -937,13 +949,13 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
     ! Number of unique elements
     nelements = size(elements)
     ! Allocate temporary
-    allocate(element_types(natoms_tot))
+    allocate(element_types(natoms))
 
     ! Store element index of every atom
     !$OMP PARALLEL DO SCHEDULE(dynamic)
-    do i = 1, natoms_tot
+    do i = 1, natoms
         do j = 1, nelements
-            if (nuclear_charges(modulo(i-1, natoms)+1) .eq. elements(j)) then
+            if (nuclear_charges(i) .eq. elements(j)) then
                 element_types(i) = j
                 exit
             endif
@@ -1013,12 +1025,14 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
     !$OMP scaling, radial_base, radial, dx, part, dscal, ddecay) SCHEDULE(dynamic)
     do i = 1, natoms
         ! The element index of atom i
-        m = element_types(i) ! moved inside loop to enable COLLAPSE
+        m = element_types(i)
         do j = i + 1, natoms_tot
             rij = distance_matrix(i,j)
             if (rij > rcut) continue
+            true_j=true_atom_id(i, natoms)
+            if (true_j < i) continue
             ! The element index of atom j
-            n = element_types(j)
+            n = element_types(true_j)
             ! Distance between atoms i and j
             invrij = inv_distance_matrix(i,j)
             mu    = log(rij / sqrt(1.0d0 + eta2  * inv_sq_distance_matrix(i, j)))
@@ -1034,7 +1048,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
             radial(:) = radial_base(:) * scaling * rdecay(i,j)
 
             rep(i, (n-1)*nbasis2 + 1:n*nbasis2) = rep(i, (n-1)*nbasis2 + 1:n*nbasis2) + radial
-            if (j<=natoms) add_rep(:, i, j)=radial
+            add_rep(:, i, true_j)=add_rep(:, i, true_j)+radial
             do k = 1, 3
                 dx = -(coordinates(i,k) - coordinates(j,k))
                 part(:) = ((log_Rs2(:) - mu) * (-dx *(rij**2 * exp_s2 + eta2) / (rij * sqrt(exp_s2))**3) &
@@ -1050,11 +1064,9 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
 
                 ! The gradients wrt coordinates
                 grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, i, k) + part
-                if (j<=natoms) then
-                    grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, j, k) - part
-                    grad(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) = grad(j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) + part
-                    add_grad(:, k, i, j)=part
-                endif
+                grad(i, (n-1)*nbasis2 + 1:n*nbasis2, true_j, k) = grad(i, (n-1)*nbasis2 + 1:n*nbasis2, true_j, k) - part
+                grad(true_j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) = grad(true_j, (m-1)*nbasis2 + 1:m*nbasis2, i, k) + part
+                add_grad(:, k, i, true_j)=add_grad(:, k, i, true_j)+part
             enddo
         enddo
     enddo
@@ -1152,7 +1164,8 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
             rij = distance_matrix(i,j)
             if (rij > acut) cycle
             ! index of the element of atom j
-            n = element_types(j)
+            true_j=true_atom_id(j, natoms)
+            n = element_types(true_j)
             ! squared distance between atom i and j
             rij2 = sq_distance_matrix(i,j)
             ! inverse distance between atom i and j
@@ -1165,7 +1178,8 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                 rik = distance_matrix(i,k)
                 if (rik > acut) cycle
                 ! index of the element of atom k
-                m = element_types(k)
+                true_k=true_atom_id(k, natoms)
+                m = element_types(true_k)
                 ! squared distance between atom i and k
                 rik2 = sq_distance_matrix(i,k)
                 ! inverse distance between atom i and k
@@ -1254,6 +1268,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                 ! Get index of where the contributions of atoms i,j,k should be added
                 s = nbasis3 * nabasis * (-(p * (p + 1))/2 + q + nelements * p) + 1
 
+
                 do l = 1, nbasis3
 
                     ! Get index of where the contributions of atoms i,j,k should be added
@@ -1273,8 +1288,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                             & + atm_k * d_atm_ik(t) + d_atm_extra_i(t)) * three_body_weight * rdecay(i,j) * rdecay(i,k) + &
                             & angular * radial(l) * (d_ijdecay(t) * rdecay(i,k) + rdecay(i,j) * d_ikdecay(t)) * atm
                         ! Add up all gradient contributions wrt atom j
-                        if (j<=natoms) &
-                        atom_grad(z:z + nabasis - 1, j, t) = atom_grad(z:z + nabasis - 1, j, t) + &
+                        atom_grad(z:z + nabasis - 1, true_j, t) = atom_grad(z:z + nabasis - 1, true_j, t) + &
                             & d_angular * d_angular_d_j(t) * radial(l) * atm * rdecay(i,j) * rdecay(i,k) + &
                             & angular * d_radial(l) * d_radial_d_j(t) * atm * rdecay(i,j) * rdecay(i,k) + &
                             & angular * radial(l) * (atm_i * d_atm_ji(t) + atm_j * d_atm_jj(t) &
@@ -1282,8 +1296,7 @@ subroutine fgenerate_fchl_acsf_and_gradients(coordinates, nuclear_charges, eleme
                             & angular * radial(l) * d_ijdecay(t) * rdecay(i,k) * atm
 
                         ! Add up all gradient contributions wrt atom k
-                        if (k<=natoms) &
-                        atom_grad(z:z + nabasis - 1, k, t) = atom_grad(z:z + nabasis - 1, k, t) + &
+                        atom_grad(z:z + nabasis - 1, true_k, t) = atom_grad(z:z + nabasis - 1, true_k, t) + &
                             & d_angular * d_angular_d_k(t) * radial(l) * atm * rdecay(i,j) * rdecay(i,k) + &
                             & angular * d_radial(l) * d_radial_d_k(t) * atm * rdecay(i,j) * rdecay(i,k) + &
                             & angular * radial(l) * (atm_i * d_atm_ki(t) + atm_j * d_atm_kj(t) &
